@@ -1,0 +1,26 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+lint: |
+  set -e
+  yamllint .
+  ansible-lint
+  flake8
+platforms:
+  - name: "instance-centos8-${INSTANCE_ID:-local}"
+    hostname: iinst-cent8-rem.imp.ac.at
+    image: docker.artifactory.imp.ac.at/it/molecule/centos8:latest
+    command: /sbin/init
+    privileged: true
+provisioner:
+  name: ansible
+  options:
+    extra-vars: "@${ONEPASS_VARS:-/missing/1password/credentials.file}"
+  env:
+    ONEPASS_VARS: "${ONEPASS_VARS}"
+scenario:
+  name: remove-centos8
+verifier:
+  name: testinfra

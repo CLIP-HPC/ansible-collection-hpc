@@ -1,0 +1,3 @@
+---
+# vars file for role-sudoers
+role_sudoers_filename: role_sudoers

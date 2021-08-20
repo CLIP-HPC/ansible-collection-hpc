@@ -1,0 +1,8 @@
+---
+- name: restart-chronyd
+  service:
+    name: chronyd
+    enabled: true
+    state: restarted
+
+# vim: sts=2:ai

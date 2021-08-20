@@ -1,0 +1,17 @@
+---
+# setup forwarding client
+
+- name: put rsyslog templates into place
+  become: true
+  template:
+    src: rsyslog_client/{{ item }}.j2
+    dest: /etc/rsyslog.d/{{ item }}
+    mode: '0644'
+  loop:
+    - globals.conf
+    - resilient.conf
+  notify:
+    - restart syslog
+
+- name: flush handlers to activate syslog forwarding
+  meta: flush_handlers

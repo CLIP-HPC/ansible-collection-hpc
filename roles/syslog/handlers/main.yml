@@ -1,0 +1,9 @@
+---
+# handlers file for role-syslog
+- name: restart syslog
+  become: true
+  systemd:
+    name: "{{ syslog_service }}"
+    enabled: true
+    daemon_reload: true
+    state: restarted

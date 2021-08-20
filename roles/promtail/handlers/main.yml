@@ -1,0 +1,9 @@
+---
+# handlers file for role-promtail
+- name: "Restart promtail service"
+  become: true
+  systemd:
+    name: promtail
+    state: restarted
+    daemon_reload: true
+    enabled: true

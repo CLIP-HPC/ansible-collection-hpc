@@ -1,0 +1,15 @@
+---
+- name: Prepare
+  hosts: all
+  vars:
+    role_sudoers_privileges:
+      - name: '%group1'
+      - name: 'bar'
+        nopasswd: true
+      - name: '%group3'
+        runas: user1,user2
+
+  tasks:
+    - name: Include sudoers role
+      include_role:
+        name: sudoers

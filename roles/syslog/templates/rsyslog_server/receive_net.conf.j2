@@ -1,0 +1,17 @@
+# Provides UDP syslog reception
+# https://www.rsyslog.com/doc/v8-stable/configuration/modules/imudp.html
+module(load="imudp") # needs to be done just once
+input(type="imudp" port="514" ruleset="ResilientLog")
+
+# Provides TCP syslog reception
+# https://www.rsyslog.com/doc/v8-stable/configuration/modules/imtcp.html
+module(load="imtcp" MaxSessions="500")
+input(type="imtcp" port="514" ruleset="ResilientLog")
+
+# relp format
+# reliable event logging protocol
+# https://www.rsyslog.com/doc/v8-stable/configuration/modules/imrelp.html
+# requires SELinux+firewalld setup for the port
+#module(load="imrelp") # needs to be done just once
+#input(type="imrelp" port="2514" ruleset="ResilientLog")
+

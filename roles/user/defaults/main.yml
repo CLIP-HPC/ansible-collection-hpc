@@ -1,0 +1,7 @@
+---
+# defaults file for role-passwords
+role_base_user_publickey_username:
+role_base_user_publickey_key:
+role_base_user_linux_username:
+role_base_user_linux_password:
+role_base_user_linux_salt: "{{ lookup('password', '/dev/null length=15 chars=ascii_letters') }}"

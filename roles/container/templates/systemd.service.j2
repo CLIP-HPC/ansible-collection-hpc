@@ -1,0 +1,120 @@
+# {{ ansible_managed }}
+[Unit]
+Description=This service manages the container "{{ role_container_service.name }}"
+After=network.target
+
+[Service]
+Type=simple
+TimeoutStartSec=5m
+{% if role_container_service.ip is defined %}
+ExecStartPre=-/bin/rm -f /var/lib/cni/networks/podman/{{ role_container_service.ip }}
+{% endif %}
+ExecStartPre=-/usr/bin/podman rm -f "{{ role_container_service.name }}"
+
+ExecStart=/usr/bin/podman run \
+--name {{ role_container_service.name }} \
+{% if role_container_service.ip is defined %}
+--ip {{ role_container_service.ip }} \
+{% endif %}
+{% if role_container_service.mac_address is defined %}
+--mac-address {{ role_container_service.mac_address }} \
+{% endif %}
+{% if role_container_service.files is defined %}
+{% for element in role_container_service.files %}
+--volume /srv/containers/{{ role_container_service.name }}/files/{{element.name}}:{{element.path}}{% if role_container_service.selinux is defined and role_container_service.selinux %}:Z{% endif %} \
+{% endfor %}
+{% endif %}
+{% if role_container_service.shares is defined %}
+{% for element in role_container_service.shares %}
+--volume /srv/shares/{{ element.name }}:{{ element.container }} \
+{% endfor %}
+{% endif %}
+{% if role_container_service.volumes is defined %}
+{% for element in role_container_service.volumes %}
+--volume /srv/containers/{{ role_container_service.name }}/volume_{{element.name}}:{{element.path}}{% if role_container_service.selinux is defined and role_container_service.selinux %}:Z{% endif %} \
+{% endfor %}
+{% endif %}
+{% if role_container_service.hostdirs is defined %}
+{% for element in role_container_service.hostdirs %}
+--volume {{element.src}}:{{element.container}} \
+{% endfor %}
+{% endif %}
+{% if role_container_service.certificate is defined and role_container_service.certificate %}
+--volume /srv/containers/{{ role_container_service.name }}/certificates:/srv/certificates{% if role_container_service.selinux is defined and role_container_service.selinux %}:Z{% endif %} \
+{% endif %}
+{% if role_container_service.map_user is defined and  role_container_service.map_user %}
+--userns host \
+--user {{ role_container_service.uid }}:{{ role_container_service.gid }} \
+{% endif %}
+{% if role_container_service.environment_variables is defined and role_container_service.environment_variables | length > 0 %}
+--env-file /srv/containers/{{ role_container_service.name }}/environment-file.txt \
+{% endif %}
+{% if role_container_service.ports is defined and role_container_service.ports | length > 0 %}
+{% for item in role_container_service.ports %}
+--publish {{item.host}}:{{item.container}}{% if item.protocol is defined %}/{{item.protocol}}{% endif %} \
+{% endfor %}
+{% endif %}
+{% if role_container_service.hosts is defined and role_container_service.hosts | length > 0 %}
+{% for etc_host in role_container_service.hosts %}
+--add-host={{ etc_host }} \
+{% endfor %}
+{% endif %}
+{% if role_container_service.dns_search is defined and role_container_service.dns_search | length > 0 %}
+{% for dns_search in role_container_service.dns_search %}
+--dns-search={{ dns_search }} \
+{% endfor %}
+{% endif %}
+{% if role_container_service.ulimits is defined %}
+{% if role_container_service.ulimits is mapping %}
+{% for key, value in role_container_service.ulimits.items() %}
+{% if value is mapping %}
+{% set soft=value.soft | default(value.hard | default('')) %}
+{% set hard=value.hard | default(value.soft | default('')) %}
+{% set ulimit = soft | string +':'+hard | string %}
+{% else %}
+{% set ulimit = value %}
+{% endif %}
+--ulimit {{ key }}={{ ulimit }} \
+{% endfor %}
+{% else %}
+--ulimit {{ role_container_service.ulimits }} \
+{% endif %}
+{% endif %}
+{% if role_container_service.privileged is defined and role_container_service.privileged %}
+--privileged=true \
+{% else %}
+--cap-add=CAP_AUDIT_WRITE \
+{% endif %}
+{% if role_container_service.capabilities is defined %}
+{% for element in role_container_service.capabilities %}
+{% if element.action in ['add', 'drop'] %}
+--cap-{{element.action}}={{element.name}} \
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if role_container_service.devices is defined %}
+{% for element in role_container_service.devices %}
+--device={{element.src}}:{{element.container}}:{{element.permissions}} \
+{% endfor %}
+{% endif %}
+{{role_container_service.image}}:{{role_container_service.tag}}{%if role_container_service.cmd is defined %} {{ role_container_service.cmd }}{% endif %}
+
+{% if role_container_service.exec_startpost is defined %}
+{% for element in role_container_service.exec_startpost %}
+ExecStartPost=-{{ element }}
+{% endfor %}
+{% endif %}
+{% if role_container_service.exec_prestop is defined %}
+ExecStop=-{{ role_container_service.exec_prestop }}
+{% endif %}
+ExecStop=-/usr/bin/podman stop "{{ role_container_service.name }}"
+
+TimeoutStopSec=180
+Restart=always
+RestartSec=20
+
+# set syslog process tag, otherwise just 'podman'
+SyslogIdentifier={{ role_container_service.name }}
+
+[Install]
+WantedBy=multi-user.target

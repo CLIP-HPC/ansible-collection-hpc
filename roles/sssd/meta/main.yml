@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  author: Uemit Seren <uemit.seren@gmi.oeaw.ac.at>
+  description: Role to enroll a machine in domain and configure SSD using realmd
+  company: VBC
+  namespace: vbc
+
+  license: MIT
+
+  min_ansible_version: 2.6
+
+
+  platforms:
+    - name: Centos
+      versions:
+        - 7
+    - name: RedHat
+      versions:
+        - 7
+
+  galaxy_tags: []
+
+dependencies: []

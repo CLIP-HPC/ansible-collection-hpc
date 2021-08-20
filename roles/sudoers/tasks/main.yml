@@ -1,0 +1,42 @@
+---
+# tasks file for role-sudoers
+- name: Ensure that the sudo package is installed
+  become: true
+  package:
+    name: sudo
+    state: present
+
+- name: Create sudoers.d directory
+  become: true
+  file:
+    path: /etc/sudoers.d
+    owner: root
+    group: root
+    mode: 0750
+    state: directory
+
+- name: Set includedir in sudoers
+  become: true
+  lineinfile:
+    dest: /etc/sudoers
+    line: "#includedir /etc/sudoers.d"
+    state: present
+    validate: "/usr/sbin/visudo -cf %s"
+
+- name: Create sudoers
+  become: true
+  template:
+    src: sudoers.d.j2
+    dest: "/etc/sudoers.d/{{ role_sudoers_filename }}"
+    mode: 0440
+    owner: root
+    group: root
+    validate: "/usr/sbin/visudo -cf %s"
+  when: role_sudoers_present|bool
+
+- name: Remove sudoers
+  become: true
+  file:
+    path: "/etc/sudoers.d/{{ role_sudoers_filename }}"
+    state: absent
+  when: not role_sudoers_present|bool

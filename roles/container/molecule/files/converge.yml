@@ -1,0 +1,39 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+
+  vars:
+    role_container_service:
+      name: 'webservice'
+      image: "docker.artifactory.imp.ac.at/it/molecule/tests/httpd"
+      tag: "2.4.39-alpine"
+      uid: 222
+      gid: 333
+      selinux: true
+      files:
+        - name: "test-1.txt"
+          path: "/opt/test-a.txt"
+        - name: "test-2.txt"
+          path: "/opt/test-b.txt"
+
+  pre_tasks:
+    - name: Prepare directory
+      file:
+        path: /srv/containers/webservice/files
+        state: directory
+        mode: '0770'
+    - name: Create fake files
+      become: true
+      copy:
+        content: ""
+        dest: "/srv/containers/webservice/files/test-{{ item }}.txt"
+        force: false
+        group: root
+        owner: root
+        mode: '0500'
+      with_items: ['1', '2']
+  tasks:
+    - name: Include container role
+      include_role:
+        name: container

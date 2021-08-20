@@ -1,0 +1,29 @@
+# all resilient monitoring logging locations
+{% for log_target in syslog_target_dirs %}
+{{ log_target.dir }}/{{ log_target.glob }}
+{% endfor %}
+{
+    # rotate daily, keep for a year
+    weekly
+    rotate 52
+
+    compress
+    # use more efficient xz compression
+    compresscmd /usr/bin/xz
+    uncompresscmd /usr/bin/unxz
+    compressext .xz
+    # date extensions
+    # dateyesterday
+    #
+    # use default date extension -YYMMDD
+    # dateformat -%Y-%m-%d
+
+    # non existent log files are ok
+    missingok
+
+    # run postrotate once for all
+    sharedscripts
+    postrotate
+        {{ syslog_reload }}
+    endscript
+}

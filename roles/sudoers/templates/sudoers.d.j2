@@ -1,0 +1,5 @@
+# {{ ansible_managed }}
+{% for item in role_sudoers_privileges %}
+{%   set runas = item.runas if item.runas is defined else 'ALL' %}
+{{ item.name }} ALL = ({{ runas }}) {% if item.nopasswd is defined and item.nopasswd %}NOPASSWD: {% endif %}ALL
+{% endfor %}

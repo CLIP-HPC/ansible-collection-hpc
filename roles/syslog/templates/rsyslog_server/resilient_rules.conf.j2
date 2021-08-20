@@ -1,0 +1,37 @@
+
+# load UTF-8 fixing module
+module(load="mmutf8fix")
+
+
+template(name="PerHostFile" type="string" string="/var/log/host/%HOSTNAME%/%HOSTNAME%.log")
+
+template(name="PerPrioFile" type="string" string="/var/log/logrule/%syslogseverity-text%.log")
+
+# tunings via https://www.rsyslog.com/doc/v8-stable/examples/high_performance.html
+# this is buffered, there might be a write delay, depending on log traffic
+ruleset(name="ResilientLog"
+        queue.type="fixedArray"
+        queue.size="250000"
+        queue.dequeueBatchSize="4096"
+        queue.workerThreads="4"
+        queue.workerThreadMinimumMessages="60000") {  
+  # this could be turned on conditionally
+  # https://www.rsyslog.com/doc/v8-stable/configuration/modules/mmutf8fix.html
+  action(type="mmutf8fix")
+
+  # critical and above get sent to their own priority file logs
+  if ( prifilt("*.crit") ) then {
+    action(type="omfile" dynaFile="PerPrioFile")
+  }
+
+  # Example for application specific logging
+  # if ($programname == ["nginx", "httpd"]) then {
+  #   action(type="omfile" File="/var/log/logrule/web.log")
+  # }
+
+  # once the message ends up in it's per host collect all, we can stop processing
+  action(type="omfile" dynaFile="PerHostFile")  
+  stop
+}
+
+

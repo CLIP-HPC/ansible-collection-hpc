@@ -1,0 +1,5 @@
+---
+role_sssd_allowed_groups: ['perm.sssd.allowed']
+role_sssd_domain: 'VBC'
+role_sssd_present: true
+role_sssd_use_ssh_key: true

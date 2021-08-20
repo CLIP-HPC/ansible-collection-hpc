@@ -1,0 +1,14 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: False
+  tasks:
+    - name: Install sshd
+      yum:
+        name: openssh-server
+        state: present
+
+    - name: Enable sshd
+      service:
+        name: sshd
+        state: started

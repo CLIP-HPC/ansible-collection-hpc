@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+
+[active-directory]
+default-client = sssd
+os-name = {{ ansible_distribution  }}
+os-version = {{ ansible_distribution_version }}
+
+[users]
+default-home = /home/%U
+default-shell = /bin/bash
+
+[service]
+automatic-install = no
+
+
+[{{ domain_to_join.name }}]
+automatic-id-mapping = {{ domain_to_join.automatic_id_mapping }}
+fully-qualified-names = {{ domain_to_join.fully_qualified_names }}
+{% if 'computer_ou' in domain_to_join %}
+computer-ou = {{ domain_to_join.computer_ou }}
+{% endif %}

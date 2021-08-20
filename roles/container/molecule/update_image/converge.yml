@@ -1,0 +1,19 @@
+# prepare step installs old image, that will be updated here
+# must be done in prepare for idempotency of this playbook
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+  vars:
+    role_container_service:
+      name: 'webservice'
+      image: "docker.artifactory.imp.ac.at/it/molecule/tests/httpd"
+      tag: "2.4.39-alpine"
+      uid: 222
+      gid: 333
+      selinux: true
+
+  tasks:
+    - name: Include container role
+      include_role:
+        name: container

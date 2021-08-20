@@ -1,0 +1,5 @@
+
+# forward to {{ role_syslog_server }}
+# see https://www.rsyslog.com/doc/v8-stable/configuration/modules/omfwd.html
+action(type="omfwd" Target="{{ role_syslog_server }}" Port="514" Protocol="udp")
+

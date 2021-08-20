@@ -1,0 +1,103 @@
+---
+# tasks file for role-firewalld
+- name: Assure firewalld is installed, enabled and running
+  block:
+    - name: " Package"
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - firewalld
+        - iptables
+    - name: " Service"
+      service:
+        name: firewalld
+        enabled: true
+        state: started
+  when: role_firewalld_present
+
+# clean up old services
+- name: fetch current zone services
+  command: "firewall-cmd --list-services --zone {{ item.zone | default(role_firewalld_default_zone, true) }}"
+  loop: "{{ role_firewalld_interfaces }}"
+  register: current_services
+  changed_when: false
+
+- name: set fact current_services.results
+  set_fact:
+    y: "{{ current_services.results |  map(attribute='stdout') | list }}"
+
+- name: set fact services to remove
+  set_fact:
+    service_list: "{{ y[i].split() | difference(zone.services) }}"
+  loop: "{{ role_firewalld_interfaces }}"
+  loop_control:
+    loop_var: zone
+    index_var: i
+  register: removal
+
+- name: remove loop services
+  include_tasks: remove_loop.yml
+  loop: "{{ role_firewalld_interfaces }}"
+  loop_control:
+    loop_var: zone
+    index_var: i
+
+# clean up oldports
+- name: fetch current zone ports
+  command: "firewall-cmd --list-ports --zone {{ item.zone | default(role_firewalld_default_zone, true) }}"
+  loop: "{{ role_firewalld_interfaces }}"
+  register: current_ports
+  changed_when: false
+
+- name: set fact current_ports.results
+  set_fact:
+    y: "{{ current_ports.results |  map(attribute='stdout') | list }}"
+
+- name: set fact ports to remove
+  set_fact:
+    port_list: "{{ y[i].split() | difference(zone.ports) }}"
+  loop: "{{ role_firewalld_interfaces }}"
+  loop_control:
+    loop_var: zone
+    index_var: i
+  register: removal
+
+- name: remove loop ports
+  include_tasks: remove_loop_ports.yml
+  loop: "{{ role_firewalld_interfaces }}"
+  loop_control:
+    loop_var: zone
+    index_var: i
+
+- name: Deploy interface to zone
+  firewalld:
+    interface: "{{ item.ifname | default(ansible_default_ipv4.interface, true) }}"
+    zone: "{{ item.zone | default(role_firewalld_default_zone, true) }}"
+    state: enabled
+    immediate: true
+    permanent: true
+  loop: "{{ role_firewalld_interfaces }}"
+  notify: "restart firewalld"
+
+- name: Deploy services to zone
+  firewalld:
+    zone: "{{ item[0].zone | default(role_firewalld_default_zone, true) }}"
+    state: enabled
+    service: "{{ item[1] }}"
+    immediate: true
+    permanent: true
+  loop: "{{ role_firewalld_interfaces | subelements('services') }}"
+  notify: "restart firewalld"
+
+- name: Deploy ports to zone
+  firewalld:
+    zone: "{{ item[0].zone | default(role_firewalld_default_zone, true) }}"
+    state: enabled
+    port: "{{ item[1] }}"
+    immediate: true
+    permanent: true
+  loop: "{{ role_firewalld_interfaces | subelements('ports') }}"
+  notify: "restart firewalld"
+
+# vim: sts=2:ai:

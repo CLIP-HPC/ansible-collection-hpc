@@ -1,0 +1,9 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: Include sudoers role
+      include_role:
+        name: sudoers
+      vars:
+        role_sudoers_present: false

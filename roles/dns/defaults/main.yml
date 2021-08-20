@@ -1,0 +1,12 @@
+---
+# defaults file for role-dns
+#
+# example:
+#
+# role_dns_hostname: cert-test-1.vbc.ac.at
+# role_dns_aliases:
+#   - san1-cert-test.vbc.ac.at
+#   - san2-cert-test.vbc.ac.at
+#
+role_dns_hostname: ''
+role_dns_aliases: []

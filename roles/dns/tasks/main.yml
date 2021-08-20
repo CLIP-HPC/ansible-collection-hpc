@@ -1,0 +1,43 @@
+---
+# tasks file for role-dns
+- name: Test if role variables are set
+  assert:
+    that:
+      - "role_dns_hostname is defined"
+      - "role_dns_aliases is defined"
+    fail_msg: "ROLE VARS NOT DEFINED"
+    success_msg: 'OK'
+
+- name: Test if nios_provider is set
+  assert:
+    that:
+      - "nios_provider is defined"
+      - "nios_provider.host is defined"
+      - "nios_provider.username is defined"
+      - "nios_provider.password is defined"
+    fail_msg: "NIOS_PROVIDER NOT DEFINED"
+    success_msg: 'OK'
+
+- name: Fetch host record
+  set_fact:
+    host: "{{ lookup('nios', 'record:host', filter={'name': role_dns_hostname}, provider=nios_provider) }}"
+
+- name: Dump the host record return variable
+  debug:
+    var: host
+
+- name: InfoBlox add aliases
+  delegate_to: localhost
+  become: false
+  nios_host_record:
+    name: "{{ role_dns_hostname }}"
+    aliases: "{{ role_dns_aliases }}"
+    provider: "{{ nios_provider }}"
+    ipv4:
+      - address: "{{ host.ipv4addrs[0].ipv4addr }}"
+        configure_for_dhcp: "{{ host.ipv4addrs[0].configure_for_dhcp }}"
+        mac: "{{ host.ipv4addrs[0].mac }}"
+    state: present
+    view: intern
+
+# vim: sts=2:ai:list

@@ -1,0 +1,46 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+
+  vars:
+    role_container_service:
+      name: webservice
+      image: docker.artifactory.imp.ac.at/it/molecule/tests/httpd
+      tag: 2.4.39-alpine
+      uid: 222
+      gid: 333
+      ip: '10.88.0.10'
+      selinux: true
+      cmd: httpd-foreground
+      ports:
+        - host: 80
+          container: 8080
+        - host: 443
+          container: 4433
+          protocol: tcp
+      capabilities:
+        - name: SYS_ADMIN
+          action: add
+        - name: NET_ADMIN
+          action: drop
+      devices:
+        - src: /dev/random
+          container: /srv/random
+          permissions: r
+      environment_variables:
+        key_a: value_a
+        key_b: value_b
+      volumes:
+        - name: "data"
+          path: "/opt/test_1"
+        - name: "config"
+          path: "/opt/test_2"
+      hostdirs:
+        - src: /tmp
+          container: /mnt
+
+  tasks:
+    - name: Include container role
+      include_role:
+        name: container

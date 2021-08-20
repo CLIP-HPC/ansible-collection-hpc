@@ -1,0 +1,23 @@
+---
+- name: Converge
+  hosts: all
+  vars:
+    role_base_user_linux_salt: abcdefghijklmnop
+    role_base_user_linux_username: user_linux
+    role_base_user_linux_password: 0123456789
+    role_base_user_publickey_username: user_key
+    role_base_user_publickey_key:
+      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDN4GA0Uz7ati7z\
+      IaBpDKKV6ptSMuEzaBL6ZbPtwIimpbt7h6YwUjmzAiZB6GQasf0F9rL\
+      OBDZmRNtjm1MpkZAzi0LKeZcX47VQB/COPNDIGZOMyLMJHIyHUpYvAW\
+      iPfo+fIjAOarWzD8b/5bmP95H94XA8wWJq5LTOEAvXUA+aCQ== \
+      tower@test"
+      - "ssh-rsa DDAAB3NzaC1yc2EAAAADAQABAAAAgQDN4GA0Uz7ati7z\
+      IaBpDKKV6ptSMuEzaBL6ZbPtwIimpbt7h6YwUjmzAiZB6GQasf0F9rL\
+      OBDZmRNtjm1MpkZAzi0LKeZcX47VQB/COPNDIGZOMyLMJHIyHUpYvAW\
+      iPfo+fIjAOarWzD8b/5bmP95H94XA8wWJq5LTOEAvXUA+aCQ== \
+      satellite@test"
+  tasks:
+    - name: Include user role
+      include_role:
+        name: user

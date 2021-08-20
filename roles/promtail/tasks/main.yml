@@ -1,0 +1,74 @@
+---
+# tasks file for role-promtail
+- name: Install dependencies
+  become: true
+  dnf:
+    name: unzip
+    state: present
+
+- name: Create user group
+  become: true
+  group:
+    name: "{{ role_promtail_group }}"
+    state: present
+
+- name: Create user
+  become: true
+  user:
+    name: "{{ role_promtail_user }}"
+    group: "{{ role_promtail_group }}"
+    state: present
+    create_home: false
+    shell: /sbin/nologin
+    groups: "{{ role_promtail_additional_groups }}"
+    append: true
+
+- name: Create base directory
+  become: true
+  file:
+    path: "{{ role_promtail_basedir }}"
+    state: directory
+    owner: "{{ role_promtail_user }}"
+    group: "{{ role_promtail_group }}"
+    mode: 0755
+
+- name: Create config directory
+  become: true
+  file:
+    path: "{{ role_promtail_confdir }}"
+    state: directory
+    owner: root
+    group: "{{ role_promtail_group }}"
+    mode: 0755
+
+- name: Download and unpack binary
+  become: true
+  unarchive:
+    src: "{{ role_promtail_source_uri }}"
+    dest: "{{ role_promtail_basedir }}"
+    remote_src: true
+    owner: root
+    group: "{{ role_promtail_group }}"
+    mode: 0755
+
+- name: Render configuration template
+  become: true
+  template:
+    src: templates/config.yml.j2
+    dest: "{{ role_promtail_config_file }}"
+    owner: root
+    group: "{{ role_promtail_group }}"
+    mode: 0644
+  notify:
+    - "Restart promtail service"
+
+- name: Render systemd service unit template
+  become: true
+  template:
+    src: templates/systemd.service.j2
+    dest: /etc/systemd/system/promtail.service
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - "Restart promtail service"

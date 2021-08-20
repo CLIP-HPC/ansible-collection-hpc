@@ -1,0 +1,21 @@
+---
+# all the server tasks
+# tasks file for role-syslog
+- name: put logrotate config into place
+  become: true
+  template:
+    src: logrotate.conf.j2
+    dest: /etc/logrotate.d/resilient
+    mode: '0644'
+
+- name: put rsyslog templates into place
+  become: true
+  template:
+    src: rsyslog_server/{{ item }}.j2
+    dest: /etc/rsyslog.d/{{ item }}
+    mode: '0644'
+  loop:
+    - receive_net.conf
+    - resilient_rules.conf
+  notify:
+    - restart syslog

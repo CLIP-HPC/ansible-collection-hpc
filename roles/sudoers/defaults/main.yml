@@ -1,0 +1,15 @@
+---
+# defaults file for role-sudoers
+
+# Who has sudo access - use %foo for groups
+# role_sudoers_privileges:
+#  - name: '%group1'
+#  - name: 'bar'
+#    nopasswd: yes
+#  - name: '%group3'
+#    runas: user1,user2 (default: ALL)
+#
+role_sudoers_privileges: []
+
+# Add or remove sudoers.d file
+role_sudoers_present: true

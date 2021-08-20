@@ -1,0 +1,36 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+
+  vars:
+    all_services:
+      - name: 'ulimits_dict'
+        image: "docker.artifactory.imp.ac.at/it/molecule/tests/httpd"
+        tag: "2.4.39-alpine"
+        uid: 222
+        gid: 333
+        ulimits:
+          nproc: 65535
+          nofile:
+            soft: 10000
+            hard: 15000
+        selinux: true
+      - name: 'ulimits_string'
+        image: "docker.artifactory.imp.ac.at/it/molecule/tests/httpd"
+        tag: "2.4.39-alpine"
+        uid: 222
+        gid: 333
+        ulimits: host
+        selinux: true
+
+
+  tasks:
+    - name: bring up container services
+      vars:
+        role_container_hostname: "{{ role_container_service.name }}"
+      include_role:
+        name: container
+      loop_control:
+        loop_var: role_container_service
+      loop: "{{ all_services }}"

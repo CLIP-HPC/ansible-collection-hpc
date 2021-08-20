@@ -1,0 +1,120 @@
+---
+# tasks for enrolling a node
+- name: Install realmd package
+  package:
+    name: "{{ role_sssd_packages }}"
+    state: present
+
+- name: Copy realmd.conf
+  become: true
+  template:
+    src: templates/realmd.conf.j2
+    dest: /etc/realmd.conf
+    mode: "0644"
+  notify: restart realmd
+
+- name: Flush handlers
+  meta: flush_handlers
+
+- include_tasks: check.yml
+
+- name: Enroll machine in AD
+  shell: >
+    set -o pipefail;
+    echo '{{ role_sssd_ad_password  }}' |
+    realm join --membership-software adcli --unattended --verbose -U {{ domain_to_join.ad_username }} {{ domain_to_join.name }}
+  register: enroll_result
+  failed_when: "enroll_result.rc > 0"
+  changed_when: true
+  when: realmd_bound is failed
+
+- block:
+    - name: Change access_provider to simple
+      ini_file:
+        path: /etc/sssd/sssd.conf
+        section: "domain/{{ domain_to_join.name }}"
+        option: access_provider
+        value: simple
+        mode: 0600
+      notify: restart sssd
+
+    - name: Add groups to simple_allow_groups
+      ini_file:
+        path: /etc/sssd/sssd.conf
+        section: "domain/{{ domain_to_join.name }}"
+        option: simple_allow_groups
+        value: "{{ role_sssd_allowed_groups | default([]) | join(',') }}"
+        mode: 0600
+      notify: restart sssd
+  when: role_sssd_allowed_groups | length > 0
+
+- name: Enable password authentication in ssh config
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^PasswordAuthentication'
+    line: 'PasswordAuthentication yes'
+    mode: 0600
+  notify: restart sshd
+
+
+- name: Set override homedir in sssd.conf
+  ini_file:
+    path: /etc/sssd/sssd.conf
+    section: "domain/{{ domain_to_join.name }}"
+    option: override_homedir
+    value: "{{ role_sssd_override_homedir }}"
+    mode: 0600
+  notify: restart sssd
+  when: role_sssd_override_homedir is defined
+
+
+- block:
+    - name: Set LDAP extra attributes for ssh key
+      ini_file:
+        path: /etc/sssd/sssd.conf
+        section: "domain/{{ domain_to_join.name }}"
+        option: ldap_user_extra_attrs
+        value: "altSecurityIdentities"
+        mode: 0600
+      notify: restart sssd
+
+    - name: Set LDAP user public key field
+      ini_file:
+        path: /etc/sssd/sssd.conf
+        section: "domain/{{ domain_to_join.name }}"
+        option: ldap_user_ssh_public_key
+        value: "altSecurityIdentities"
+        mode: 0600
+      notify: restart sssd
+
+    - name: Add ssh to sssd services
+      ini_file:
+        path: /etc/sssd/sssd.conf
+        section: sssd
+        option: services
+        value: nss, pam, ssh
+        mode: 0600
+      notify: restart sssd
+
+    - name: Set AuthorizedKeysCommand to sss command
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^AuthorizedKeysCommand'
+        insertafter: "^#AuthorizedKeysCommand"
+        line: 'AuthorizedKeysCommand /usr/bin/sss_ssh_authorizedkeys'
+        state: present
+        mode: 0600
+      notify: restart sshd
+
+
+    - name: Set AuthorizedUsername to nobody
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        insertafter: "^#AuthorizedKeysCommandUser"
+        regexp: '^AuthorizedKeysCommandUser'
+        line: 'AuthorizedKeysCommandUser nobody'
+        state: present
+        mode: 0600
+      notify: restart sshd
+
+  when: role_sssd_use_ssh_key

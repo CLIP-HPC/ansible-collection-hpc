@@ -1,0 +1,114 @@
+---
+# 1. check the currently deployed certificate for validity
+
+# Variable checks
+- name: Check required variables
+  assert:
+    that:
+      - "{{ item | mandatory }} is defined"
+  with_items:
+    - role_certificate_hostname
+    - role_certificate_tls_dir
+    - role_certificate_renew_days
+
+# Local working directory
+- name: Create a temporary directory on the localhost
+  become: false
+  tempfile:
+    state: directory
+    prefix: cert
+    suffix: "{{ role_certificate_hostname }}"
+  changed_when: false
+  register: tmp_dir
+  delegate_to: localhost
+
+- name: Define local basepath
+  set_fact:
+    cert_basepath: "{{ tmp_dir.path }}/{{ role_certificate_hostname }}"
+
+# Remote certificate directory
+- name: Check that the remote tls dir exists
+  become: true
+  file:
+    state: directory
+    path: "{{ role_certificate_tls_dir }}"
+    owner: root
+    group: root
+    mode: 0700
+
+- name: Copy current certificate
+  become: true
+  changed_when: false
+  ignore_errors: true
+  fetch:
+    src: "{{ host_tls_dir }}.crt"
+    dest: "{{ cert_basepath }}.crt"
+    flat: true
+  register: current_cert
+
+- name: Copy current csr from remote host
+  become: true
+  changed_when: false
+  ignore_errors: true
+  fetch:
+    src: "{{ host_tls_dir }}.csr"
+    dest: "{{ cert_basepath }}.csr"
+    flat: true
+
+- name: Copy current key from remote host
+  become: true
+  changed_when: false
+  ignore_errors: true
+  fetch:
+    src: "{{ host_tls_dir }}.key"
+    dest: "{{ cert_basepath }}.key"
+    flat: true
+
+- name: Set key permissions to default
+  become: false
+  changed_when: false
+  ignore_errors: true
+  delegate_to: localhost
+  file:
+    path: "{{ cert_basepath }}.key"
+    mode: 0600
+
+- name: Generate private key
+  delegate_to: localhost
+  openssl_privatekey:
+    path: "{{ cert_basepath }}.key"
+  register: new_key
+
+- name: Generate certificate signing request
+  delegate_to: localhost
+  openssl_csr:
+    path: "{{ cert_basepath }}.csr"
+    privatekey_path: "{{ cert_basepath }}.key"
+    common_name: "{{ role_certificate_hostname }}"
+    subject_alt_name: "{{ openssl_alt_names }}"
+  register: new_csr
+
+- name: Check the current certificate
+  delegate_to: localhost
+  openssl_certificate_info:
+    path: "{{ cert_basepath }}.crt"
+    valid_at:
+      custom: "+{{ role_certificate_renew_days | default('30') }}d"
+      # fail: "-1d"
+  register: current_cert_info
+  when: current_cert is succeeded
+
+- name: Create certificate
+  include_tasks: create.yml
+  when: new_csr is changed or not current_cert_info.valid_at.custom
+
+- name: push certificate to remote host
+  become: true
+  copy:
+    src: "{{ cert_basepath }}.{{ item }}"
+    dest: "{{ host_tls_dir }}.{{ item }}"
+    owner: root
+    group: root
+    mode: 0600
+  with_items: ["key", "crt", "csr"]
+  when: new_csr is changed or not current_cert_info.valid_at.custom

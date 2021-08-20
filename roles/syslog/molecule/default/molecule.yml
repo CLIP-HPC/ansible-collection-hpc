@@ -1,0 +1,134 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+  network:
+    - name: "syslog-net-${INSTANCE_ID:-local}"
+lint: |
+  set -e
+  yamllint .
+  ansible-lint
+  flake8
+platforms:
+  - name: "syslog-server-centos7-${INSTANCE_ID:-local}"
+    hostname: "syslog-server.logtest"
+    image: docker.artifactory.imp.ac.at/it/molecule/centos7:latest
+    command: /usr/sbin/init
+    privileged: true
+    volume_mounts:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:rw"
+    tty: true
+    env:
+      container: docker
+      INSTANCE_ID: "${INSTANCE_ID:-local}"
+    exposed_ports:
+      - 514/udp
+      - 514/tcp
+      - 2514/tcp
+    networks:
+      - name: "syslog-net-${INSTANCE_ID:-local}"
+        links:
+          - "syslog-client-centos7-${INSTANCE_ID:-local}:syslog-client"
+    groups:
+      - syslog-server
+  - name: "syslog-client-centos7-${INSTANCE_ID:-local}"
+    hostname: "syslog-client.logtest"
+    image: docker.artifactory.imp.ac.at/it/molecule/centos7:latest
+    command: /usr/sbin/init
+    privileged: true
+    volume_mounts:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:rw"
+    tty: true
+    env:
+      container: docker
+      INSTANCE_ID: "${INSTANCE_ID:-local}"
+    networks:
+      - name: "syslog-net-${INSTANCE_ID:-local}"
+        links:
+          - "syslog-server-centos7-${INSTANCE_ID:-local}:syslog-server"
+    groups:
+      - syslog-client
+  - name: "syslog-server-centos8-${INSTANCE_ID:-local}"
+    hostname: "syslog-server.logtest"
+    image: docker.artifactory.imp.ac.at/it/molecule/centos8:latest
+    command: /usr/sbin/init
+    privileged: true
+    volume_mounts:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:rw"
+    tty: true
+    env:
+      container: docker
+      INSTANCE_ID: "${INSTANCE_ID:-local}"
+    exposed_ports:
+      - 514/udp
+      - 514/tcp
+      - 2514/tcp
+    networks:
+      - name: "syslog-net-${INSTANCE_ID:-local}"
+        links:
+          - "syslog-client-centos8-${INSTANCE_ID:-local}:syslog-client"
+    groups:
+      - syslog-server
+  - name: "syslog-client-centos8-${INSTANCE_ID:-local}"
+    hostname: "syslog-client.logtest"
+    image: docker.artifactory.imp.ac.at/it/molecule/centos8:latest
+    command: /usr/sbin/init
+    privileged: true
+    volume_mounts:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:rw"
+    tty: true
+    env:
+      container: docker
+      INSTANCE_ID: "${INSTANCE_ID:-local}"
+    networks:
+      - name: "syslog-net-${INSTANCE_ID:-local}"
+        links:
+          - "syslog-server-centos8-${INSTANCE_ID:-local}:syslog-server"
+    groups:
+      - syslog-client
+  # UBI
+  - name: "syslog-server-ubi8.4-1-${INSTANCE_ID:-local}"
+    hostname: "syslog-server.logtest"
+    image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.4-1
+    command: /usr/sbin/init
+    privileged: true
+    volume_mounts:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:rw"
+    tty: true
+    env:
+      container: docker
+      INSTANCE_ID: "${INSTANCE_ID:-local}"
+    exposed_ports:
+      - 514/udp
+      - 514/tcp
+      - 2514/tcp
+    networks:
+      - name: "syslog-net-${INSTANCE_ID:-local}"
+        links:
+          - "syslog-client-ubi8.4-1-${INSTANCE_ID:-local}:syslog-client"
+    groups:
+      - syslog-server
+  - name: "syslog-client-ubi8.4-1-${INSTANCE_ID:-local}"
+    hostname: "syslog-client.logtest"
+    image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.4-1
+    command: /usr/sbin/init
+    privileged: true
+    volume_mounts:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:rw"
+    tty: true
+    env:
+      container: docker
+      INSTANCE_ID: "${INSTANCE_ID:-local}"
+    networks:
+      - name: "syslog-net-${INSTANCE_ID:-local}"
+        links:
+          - "syslog-server-ubi8.4-1-${INSTANCE_ID:-local}:syslog-server"
+    groups:
+      - syslog-client
+provisioner:
+  name: ansible
+verifier:
+  name: testinfra
+  env:
+    INSTANCE_ID: "${INSTANCE_ID:-local}"

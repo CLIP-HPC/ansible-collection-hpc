@@ -1,0 +1,19 @@
+---
+# handlers file for role-firewalld
+- name: iptables-save
+  shell: /sbin/iptables-save -t nat > /etc/baseline-iptables-save-nat
+  listen: "restart firewalld"
+
+- name: runtime-to-permanent
+  command: /usr/bin/firewall-cmd --runtime-to-permanent
+  listen: "restart firewalld"
+
+- name: reload
+  command: /usr/bin/firewall-cmd --reload
+  listen: "restart firewalld"
+
+- name: iptables-restore
+  shell: /sbin/iptables-restore < /etc/baseline-iptables-save-nat
+  listen: "restart firewalld"
+
+# vim: sts=2:ai:list

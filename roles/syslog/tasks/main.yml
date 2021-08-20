@@ -1,0 +1,17 @@
+---
+# depending on the var setting, it will run server or client
+- name: check syslog mode validity
+  assert:
+    that:
+      - "role_syslog_mode in ['server', 'client']"
+    success_msg: "running syslog deployment for {{ role_syslog_mode }}"
+    fail_msg: "var 'role_syslog_mode' must be one of: 'client', 'server'"
+
+- name: install additional packages (logrotate, xz, rsyslog modules)
+  become: true
+  yum:
+    name: "logrotate,xz,rsyslog,rsyslog-relp,rsyslog-gnutls"
+    state: present
+
+- name: setting up syslog
+  include_tasks: "{{ role_syslog_mode }}.yml"

@@ -1,0 +1,28 @@
+---
+- name: Cleamup
+  hosts: all
+  gather_facts: false
+  vars_files:
+    - vars/vars.yml
+    - ../../vars/main.yml
+    - "{{ lookup('env', 'ONEPASS_VARS') }}"
+
+  tasks:
+    - import_tasks: tasks/test_vars.yml
+
+    - name: install infoblox-client pip
+      delegate_to: localhost
+      pip:
+        name: infoblox-client
+
+    - name: InfoBlox destroy test host record
+      delegate_to: localhost
+      nios_host_record:
+        name: "{{ role_dns_hostname }}"
+        provider: "{{ nios_provider }}"
+        state: absent
+        view: intern
+        comment: This is a molecule role-dns test instance
+      register: cleanup_result
+
+# vim: sts=2:ai:list

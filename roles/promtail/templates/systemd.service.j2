@@ -1,0 +1,16 @@
+{{ ansible_managed | comment }}
+
+[Unit]
+Description=promtail
+After=network-online.target
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutSec=5
+User={{ role_promtail_user }}
+Group={{ role_promtail_group }}
+ExecStart={{ role_promtail_bin_path }} -config.file={{ role_promtail_config_file }} -log.level={{ role_promtail_log_level }}
+
+[Install]
+WantedBy=multi-user.target

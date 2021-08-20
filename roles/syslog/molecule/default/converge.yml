@@ -1,0 +1,21 @@
+---
+- name: syslog server
+  hosts: syslog-server
+  gather_facts: false
+  tasks:
+    - name: Include syslog role
+      include_role:
+        name: syslog
+      vars:
+        role_syslog_mode: server
+
+# setup client
+- name: syslog client
+  hosts: syslog-client
+  gather_facts: false
+  tasks:
+    - name: Include syslog role
+      include_role:
+        name: syslog
+      vars:
+        role_syslog_server: "syslog-server"

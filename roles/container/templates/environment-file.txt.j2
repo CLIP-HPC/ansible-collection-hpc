@@ -1,0 +1,4 @@
+# {{ ansible_managed }}
+{% for key,value in role_container_service.environment_variables.items() %}
+{{key}}={{value}}
+{% endfor %}

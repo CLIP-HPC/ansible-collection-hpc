@@ -1,0 +1,6 @@
+# global rsyslog settings go here, they can only be set once
+
+# don't strip dns domain, even if target host is in the same dns zone
+# we want this, since multiple domain names are possible
+global(PreserveFQDN="on")
+

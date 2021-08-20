@@ -1,0 +1,26 @@
+---
+# defaults file for role-promtail
+role_promtail_user: promtail
+role_promtail_group: promtail
+role_promtail_additional_groups: systemd-journal
+role_promtail_basedir: /opt/promtail
+role_promtail_bin_path: "{{ role_promtail_basedir }}/promtail-linux-amd64"
+role_promtail_confdir: /etc/promtail
+role_promtail_version: 2.0.0
+role_promtail_source_uri: "https://github.com/grafana/loki/releases/download/v{{ role_promtail_version }}/promtail-linux-amd64.zip"
+role_promtail_config_file: "{{ role_promtail_confdir }}/promtail.yml"
+role_promtail_log_level: info
+
+role_promtail_config_server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+role_promtail_config_positions:
+  filename: "{{ role_promtail_basedir }}/positions.yml"
+
+role_promtail_loki_server_url: http://127.0.0.1:3100
+
+role_promtail_config_clients:
+  - url: "{{ role_promtail_loki_server_url }}/loki/api/v1/push"
+
+role_promtail_config_scrape_configs: []

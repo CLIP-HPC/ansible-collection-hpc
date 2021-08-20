@@ -1,0 +1,15 @@
+{{ ansible_managed | comment }}
+
+server:
+  {{ role_promtail_config_server | to_nice_yaml(indent=2) | indent(2, False) }}
+
+positions:
+  {{ role_promtail_config_positions | to_nice_yaml(indent=2) | indent(2, False) }}
+
+clients:
+  {{ role_promtail_config_clients | to_nice_yaml(indent=2) | indent(2, False) }}
+
+scrape_configs:
+  {% if role_promtail_config_scrape_configs|length %}
+{{ role_promtail_config_scrape_configs | to_nice_yaml(indent=2) | indent(2, False) }}
+  {% endif %}

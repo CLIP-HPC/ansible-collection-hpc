@@ -1,0 +1,36 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  vars_files:
+    - vars/vars.yml
+    - ../../vars/main.yml
+    - "{{ lookup('env', 'ONEPASS_VARS') }}"
+
+  tasks:
+    - import_tasks: tasks/test_vars.yml
+
+    - name: install bind-utils
+      yum:
+        name: bind-utils
+        state: present
+
+    - name: install infoblox-client pip
+      delegate_to: localhost
+      pip:
+        name: infoblox-client
+
+    - name: InfoBlox create test host record
+      delegate_to: localhost
+      nios_host_record:
+        name: "{{ role_dns_hostname }}"
+        provider: "{{ nios_provider }}"
+        ipv4:
+          - address: 111.111.111.111
+            configure_for_dhcp: true
+            mac: ff-ff-ff-ff-ff-ff
+        state: present
+        view: intern
+        comment: This is a molecule role-dns test instance
+
+# vim: sts=2:ai:list

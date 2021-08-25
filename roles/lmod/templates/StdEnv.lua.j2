@@ -1,0 +1,52 @@
+-- Author: Uemit Seren
+--
+help([[
+        Loads the {{ role_lmod_syshost }} default environment modules.
+]])
+whatis([[ Loads the default modules for {{ role_lmod_syshost }}]])
+
+require("os")
+require("lfs")
+
+-- Make module sticky
+add_property("lmod", "sticky")
+
+if not isloaded("{{ role_lmod_build_env_name }}") then
+  load("build-env/{{ role_lmod_build_env }}")
+end
+
+
+{% for module in role_additional_modules %}
+if not isloaded("{{ module.split('/') | first }}") then
+    try_load("{{ module }}")
+end
+{% endfor %}
+
+local home=os.getenv("HOME") or ""
+
+setenv("OMPI_MCA_btl", "{{ role_lmod_ompi_mca_btl }}")
+{% if role_lmod_ompi_mca_if_include is defined and role_lmod_ompi_mca_if_include | length > 0 %}
+setenv("OMPI_MCA_btl_tcp_if_include","{{ role_lmod_ompi_mca_if_include }}")
+setenv("OMPI_MCA_oob_tcp_if_include","{{ role_lmod_ompi_mca_if_include }}")
+{% endif %}
+setenv("I_MPI_PMI_LIBRARY", "{{ role_lmod_intel_pmi_lib }}")
+setenv("NXF_OPTS", "{{ role_lmod_nf_opts }}")
+setenv("LMOD_AUTO_SWAP", "{{ role_lmod_autoswap }}")
+setenv("LMOD_CACHED_LOADS", "{{ role_lmod_cached_loads }}")
+setenv("LMOD_EXACT_MATCH", "{{ role_lmod_exact_match }}")
+setenv("LMOD_REDIRECT", "{{ role_lmod_redirect }}")
+setenv("LMOD_PIN_VERSIONS", "{{ role_lmod_pin_versions }}")
+setenv("LMOD_SITE_NAME", "{{ role_lmod_site_name }}")
+setenv("LMOD_SYSHOST", "{{ role_lmod_syshost }}")
+setenv("LMOD_USE_DOT_FILES", "{{ role_lmod_use_dot_files }}")
+setenv("LMOD_COLORIZE", "{{ role_lmod_colorize }}")
+setenv("LMOD_RC", "{{ role_lmod_rc_folder  }}/lmod.rc")
+-- due to https://github.com/TACC/Lmod/issues/405
+setenv("LMOD_EXTENDED_DEFAULT", "no")
+-- disable user spider cache
+setenv("LMOD_SHORT_TIME", "86400")
+prepend_path("PATH","{{ role_lmod_system_folder }}/utils")
+
+if home ~= "" then
+   setenv("SINGULARITY_TMPDIR", home)
+end

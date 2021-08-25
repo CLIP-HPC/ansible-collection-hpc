@@ -1,0 +1,49 @@
+# Make sure that OpenHPC repo is available
+---
+- name: Install OpenHPC package
+  hosts: all
+  vars:
+    role_slurm_version: 20.11.5-1.el{{ansible_distribution_major_version}}
+  tasks:
+    - name: Install epel-release and versionlock
+      yum:
+        name:
+          - epel-release
+          - hostname
+          - yum-plugin-versionlock
+          - "{{ (ansible_distribution_major_version=='8') | ternary('policycoreutils-python-utils','policycoreutils-python') }}"
+        state: installed
+      failed_when: false
+
+      # Until 2.11 ansible is released: https://github.com/ansible/ansible/commit/7f0eb7ad799e531a8fbe5cc4f46046a4b1aeb093
+    - name: Retrieve centos-release string
+      slurp:
+        src: /etc/centos-release
+      register: centos_release
+
+    - name: Setup artifactory
+      vars:
+        os_distro: "{{ ((centos_release['content'] | b64decode).find('Stream') != -1) | ternary('stream','centos') }}"
+      yum_repository:
+        name: artifactory
+        description: Artifactory slurm RPM repo
+        file: external_repos
+        baseurl: "https://artifactory.imp.ac.at/localSLURM/{{ os_distro }}{{ ansible_distribution_major_version }}"
+        gpgcheck: false
+
+    - name: Setup MariaDB Upstream
+      yum_repository:
+        name: mariadb
+        description: MariaDB upstream RPM repo
+        file: external_repos
+        baseurl: "http://yum.mariadb.org/10.5/centos{{ ansible_distribution_major_version }}-amd64"
+        gpgcheck: false
+      when:
+        - ansible_os_family == 'RedHat'
+        - ansible_distribution_major_version | int == 7
+
+    - name: Lock the version of slurm
+      shell: "yum versionlock slurm*-{{ role_slurm_version }}"
+      register: version_lock
+      failed_when: version_lock.stdout.find('No package found for') != -1
+      changed_when: version_lock.stdout.find('Adding versionlock') != -1

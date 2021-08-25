@@ -1,0 +1,33 @@
+---
+# tasks file for role-cuda
+- block:
+
+  - name: Make sure that kernel headers and development packages are installed
+    yum:
+      name:
+        - gcc
+        - kernel-devel-{{ ansible_kernel }}
+        - kernel-headers-{{ ansible_kernel }}
+      state: present
+
+  - name: Install Cuda drivers
+    yum:
+      name: "{{ role_cuda_packages }}"
+      state: present
+
+  - name: Retrieve nouveau kernel module status
+    command: /usr/sbin/lsmod | /bin/grep nouveau
+    register: nouveau_reg
+    failed_when: false
+
+  - name: Ensure nouveau is not loaded
+    command: /usr/sbin/modprobe -r nouveau
+    when: nouveau_reg.changed
+
+  - name: Ensure that nvidia-persistenced is enabled and running
+    service:
+      name: nvidia-persistenced
+      enabled: true
+      state: started
+
+  when: role_cuda_gpu

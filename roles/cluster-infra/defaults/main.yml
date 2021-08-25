@@ -1,0 +1,22 @@
+---
+cluster_venv:
+cluster_auth_type:
+cluster_auth:
+cluster_cloud:
+cluster_state: "present"
+cluster_name: "cluster"
+cluster_environment_nodenet: "{{ role_path }}/files/environments/nodenet-library.yaml"
+cluster_environment_instance: "{{ role_path }}/files/environments/instance-library.yaml"
+cluster_environment:
+  - "{{ cluster_environment_nodenet }}"
+  - "{{ cluster_environment_instance }}"
+cluster_template: "{{ role_path }}/files/resources/cluster-infra.yaml"
+cluster_params: {}
+cluster_roles: []
+cluster_group_vars: {}
+cluster_inventory: "{{ playbook_dir }}/inventory-{{ cluster_name }}"
+cluster_ssh_timeout: 600
+cluster_environment_group:
+cluster_additional_networks: {}
+home_dir: "{{ lookup('env', 'HOME') }}"
+cluster_wait_for_hosts: false

@@ -1,0 +1,14 @@
+# Make sure that Beegfs repo is available
+---
+- name: Install Beegfs repository
+  hosts: all
+  tasks:
+    - name: Setup artifactory
+      vars:
+        baseurl: "https://www.beegfs.io/release/beegfs_7.2.1/dists/rhel{{ ansible_distribution_major_version }}"
+      yum_repository:
+        name: beegfs
+        description: Beegfs RPM repo
+        file: beegfs_repos
+        baseurl: "{{ baseurl }}"
+        gpgcheck: false

@@ -1,0 +1,100 @@
+# task related to installing LMOD
+---
+- name: Install LMOD
+  package:
+    name: Lmod
+    state: installed
+
+- name: Add group easybuild
+  group: name=easybuild state=present
+
+- name: Add user easybuild
+  user: name=easybuild
+        group=easybuild
+        shell=/bin/bash
+        state=present
+        home={{ role_lmod_home_dir }}/easybuild
+        uid=1001
+
+- name: Ensure that system module path exists
+  file:
+    mode: 0755
+    state: directory
+    path: "{{ item }}"
+    owner: easybuild
+    group: "{{ role_lmod_write_group }}"
+  with_items:
+    - "{{ role_lmod_core_folder }}"
+    - "{{ role_lmod_rc_folder }}"
+    - "{{ role_lmod_build_env_install_folder }}"
+    - "{{ role_lmod_easybuild_install_folder }}"
+    - "{{ role_lmod_easybuild_build_folder }}"
+    - "{{ role_lmod_easybuild_source_folder }}"
+    - "{{ role_lmod_easybuild_install_folder }}/ebfiles_repo"
+    - "{{ role_lmod_easybuild_nms_folder }}"
+    - "{{ role_lmod_easybuild_cache_folder }}"
+  run_once: "{{ role_lmod_shared_module_fs }}"
+
+- name: Easybuild naming schema python file
+  copy:
+    mode: 0644
+    src: "lowercase_mns.py"
+    dest: "{{ role_lmod_easybuild_nms_folder }}"
+  run_once: "{{ role_lmod_shared_module_fs }}"
+
+- name: Temlate lmod.rc file
+  template:
+    mode: 0644
+    src: "lmod.rc.j2"
+    dest: "{{ role_lmod_rc_folder }}/lmod.rc"
+  run_once: "{{ role_lmod_shared_module_fs }}"
+
+- name: Template Default module files
+  template:
+    mode: 0644
+    src: "StdEnv.lua.j2"
+    dest: "{{ role_lmod_core_folder }}/{{ role_lmod_syshost }}.lua"
+  run_once: "{{ role_lmod_shared_module_fs }}"
+
+- name: Template build-env module files
+  template:
+    mode: 0644
+    src: "build-env.lua.j2"
+    dest: "{{ role_lmod_build_env_install_folder }}/{{ role_lmod_build_env }}.lua"
+  run_once: "{{ role_lmod_shared_module_fs }}"
+
+- name: Template profile files
+  template:
+    mode: 0644
+    src: "{{ item }}"
+    dest: "/etc/profile.d/"
+  with_items:
+    - z01_default_modules.sh
+    - z01_default_modules.csh
+
+- name: Update modulepath_root in /etc/profile.d/00-modulepathroot.sh
+  copy:
+    mode: 0644
+    content: "export MODULEPATH_ROOT={{ role_lmod_system_modules_folder }}"
+    dest: /etc/profile.d/00-modulepathroot.sh
+
+
+- name: Update modulepath_root in /etc/profile.d/00-modulepathroot.csh
+  copy:
+    mode: 0644
+    content: 'setenv MODULEPATH_ROOT "{{ role_lmod_system_modules_folder }}"'
+    dest: /etc/profile.d/00-modulepathroot.csh
+
+
+- name: Update modulepath in /etc/profile.d/00-modulepath.sh
+  lineinfile:
+    line: "  export MODULEPATH={{ role_lmod_core_folder }}  || :"
+    regexp: '^  export MODULEPATH='
+    path: /etc/profile.d/00-modulepath.sh
+
+
+- name: Update modulepath in /etc/profile.d/00-modulepath.csh
+  lineinfile:
+    line: '  setenv MODULEPATH "{{ role_lmod_core_folder }}"'
+    regexp: '^  setenv MODULEPATH'
+    path: /etc/profile.d/00-modulepath.csh

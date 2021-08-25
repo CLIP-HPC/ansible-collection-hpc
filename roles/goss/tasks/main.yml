@@ -1,0 +1,70 @@
+---
+# ================================================================================
+## deploy goss binary
+# ================================================================================
+- name: download goss binary to local folder
+  become: false
+  get_url:
+    url: "https://github.com/aelsabbahy/goss/releases/download/v{{ goss_version }}/goss-linux-amd64"
+    dest: "/tmp/goss-linux-amd64"
+  delegate_to: localhost
+
+- name: make sure goss_install_dir exists
+  file:
+    mode: 0755
+    name: "{{ goss_install_dir }}"
+    state: directory
+
+- name: propagate goss binary
+  copy:
+    src: "/tmp/goss-linux-amd64"
+    dest: "{{ goss_install_dir }}"
+    mode: 0755
+    owner: root
+
+# ================================================================================
+# deploy cron job, shell script and test file
+# ================================================================================
+- name: Make sure that cronie package is installed
+  package:
+    name: cronie
+    state: installed
+
+- name: deploy /etc/cron.d/prometheus_goss file
+  template:
+    src: "templates/prometheus_goss.cron.j2"
+    dest: "/etc/cron.d/prometheus_goss"
+    mode: 0644
+
+- name: deploy prometheus_goss.sh file
+  tags:
+    - always
+    - goss_reconfigure
+  template:
+    src: "templates/prometheus_goss.sh.j2"
+    dest: "{{ goss_install_dir }}/prometheus_goss.sh"
+    owner: root
+    group: root
+    mode: 0750
+
+- name: deploy goss test .yml file
+  tags:
+    - always
+    - goss_reconfigure
+  copy:
+    src: "files/{{ goss_test_file }}"
+    dest: "{{ goss_install_dir }}/{{ goss_test_file }}"
+    mode: 0644
+
+- name: deploy goss test variables .yml file
+  tags:
+    - always
+    - goss_reconfigure
+  copy:
+    content: "{{ goss_template_vars | to_nice_yaml }}"
+    dest: "{{ goss_install_dir }}/{{ goss_template_vars_file }}"
+    mode: 0644
+  when: goss_template_vars | default(False)
+
+#
+# vim: sts=2:ai:list:cursorcolumn

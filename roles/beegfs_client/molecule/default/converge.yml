@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: Include beegfs_client role
+      include_role:
+        name: beegfs_client

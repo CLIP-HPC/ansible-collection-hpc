@@ -1,0 +1,18 @@
+# NHC check for testing nvidia page retirement
+# check if there are pending retired pages (from ECC failure)
+#  example:
+# GPU 00000000:00:08.0
+#    Retired Pages
+#        Single Bit ECC                    : 0
+#        Double Bit ECC                    : 2
+#        Pending Page Blacklist            : Yes
+
+DEBUG=""
+
+function check_nvidia_smi_page_retirement() {
+
+  RETIREMENT_DATA=$(nvidia-smi -q -d PAGE_RETIREMENT | grep -B4 Yes)
+  if [ -n "$DEBUG" ]; then echo "pending page retirement:"; echo $RETIREMENT_DATA ; fi
+  return $(echo $RETIREMENT_DATA | grep -c Yes)
+}
+

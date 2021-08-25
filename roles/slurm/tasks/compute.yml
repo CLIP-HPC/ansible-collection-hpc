@@ -1,0 +1,13 @@
+---
+- name: Install OpenHPC compute image packages
+  yum:
+    name:
+      - "libicu"
+      - "numactl"
+      - "slurm-pam_slurm"
+      - "slurm-libpmi"
+    state: installed
+
+- name: Select the SLURM service to control
+  set_fact:
+    role_slurm_service: slurmd

@@ -1,0 +1,45 @@
+---
+- name: Restart Munge service
+  service:
+    name: "munge"
+    state: restarted
+  when: role_slurm_service_enabled | bool
+
+- name: restart slurmdbd
+  service:
+    name: slurmdbd
+    state: restarted
+  delegate_to: "{{ role_slurm_db_host }}"
+  run_once: true
+  when: role_slurm_db_host in hostvars
+
+- name: Restart slurmctld
+  service:
+    name: "slurmctld"
+    state: restarted
+  delegate_to: "{{ role_slurm_control_host }}"
+  run_once: true
+  when:
+    - not (role_slurm_reconfigure | bool)
+
+- name: Restart SLURM service
+  service:
+    name: "{{ role_slurm_service }}"
+    state: restarted
+  when:
+    - role_slurm_service is not none
+    - role_slurm_service_enabled | bool
+    - not (role_slurm_reconfigure | bool)
+
+- name: Restart mariadb service
+  service:
+    name: mariadb
+    state: restarted
+  delegate_to: "{{ role_slurm_db_host }}"
+  run_once: true
+
+- name: Reconfigure
+  listen: "Restart SLURM service"
+  run_once: true
+  delegate_to: "{{ role_slurm_control_host }}"
+  command: "/bin/scontrol reconfigure"

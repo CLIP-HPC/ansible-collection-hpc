@@ -1,0 +1,164 @@
+# Install SlurmDBD services and packages
+---
+- block:
+  - name: Create new mariadb datadir folder
+    file:
+      mode: 0755
+      state: directory
+      path: "{{ role_slurm_db_data_dir }}"
+
+  - name: Symlink default datadir
+    file:
+      force: true
+      dest: /var/lib/mysql
+      src: "{{ role_slurm_db_data_dir }}"
+      state: link
+  when: role_slurm_db_data_dir and role_slurm_db_data_dir != '/var/lib/mysql' and role_slurm_db_data_dir | length > 0
+
+- name: install slurmdbd specific packages
+  vars:
+    mariadb_prefix: "{{ (role_slurm_maria_upstream | bool) | ternary('MariaDB','mariadb') }}"
+  yum:
+    name:
+      - "{{ mariadb_prefix }}"
+      - "{{ mariadb_prefix }}-server"
+      - "{{ mariadb_prefix }}-devel"
+      - "{{ (ansible_distribution_major_version=='8') | ternary('python3-mysql','MySQL-python') }}"
+      - "slurm-slurmdbd"
+    state: installed
+  notify:
+    - Restart mariadb service
+
+- block:
+    - name: Add Selinux policy
+      command: "semanage fcontext -a -e /var/lib/mysql {{ role_slurm_db_data_dir }}"
+      register: selinux_policy
+      changed_when: selinux_policy.rc != 1
+      failed_when: false
+
+    - name: Apply Selinux policy
+      command: "restorecon -R -v {{ role_slurm_db_data_dir }}"
+      register: restore_result
+      changed_when: restore_result.stdout | length > 0
+
+    - name: Modify /etc/my.conf to point to new datadir
+      ini_file:
+        path: /etc/my.cnf
+        mode: 0644
+        section: mysqld
+        option: "datadir"
+        value: "{{ role_slurm_db_data_dir }}"
+
+  when: role_slurm_db_data_dir and role_slurm_db_data_dir != '/var/lib/mysql' and role_slurm_db_data_dir | length > 0
+
+- name: template in custom mariadb config
+  ini_file:
+    path: /etc/my.cnf
+    mode: 0644
+    section: mysqld
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+  loop:
+    - { option: 'innodb_buffer_pool_size', value: "{{ (hostvars[role_slurm_db_host].ansible_memtotal_mb / 2) | int }}M" }
+    - { option: 'innodb_log_file_size', value: 64M }
+    - { option: 'innodb_lock_wait_timeout', value: '900'}
+  notify: "Restart mariadb service"
+
+- name: Enable replication
+  ini_file:
+    path: /etc/my.cnf
+    mode: 0644
+    section: mariadb
+    allow_no_value: true
+    option: "{{ item.option }}"
+    value: "{{ item.value | default(omit) }}"
+  loop:
+    - { option: 'log-bin'}
+    - { option: 'server_id', value: "{{ role_slurm_db_server_id }}"}
+    - { option: 'log-basename', value: 'slurmdb_master{{ role_slurm_db_server_id }}'}
+    - { option: 'binlog-format', value: 'mixed'}
+  when: role_slurm_db_enable_replication | bool
+  notify: "Restart mariadb service"
+
+- name: start and enable mariadb/mysql
+  service: name=mariadb state=started enabled=yes
+
+- name: wait for mysql in port 3306 to start
+  wait_for: port=3306 delay=10 timeout=60
+
+- name: Set root sql user password
+  # If .my.cnf already exists, this will cause an mysql-root-password update.
+  # check_implicit_admin means it tries without password first
+  mysql_user:
+    name: root
+    password: "{{ role_slurm_db_root_password }}"
+    check_implicit_admin: true
+    host: "{{ item }}"
+  ignore_errors: true
+  with_items:
+    - "::1"
+    - "127.0.0.1"
+    - "localhost"
+
+- name: template .my.cnf
+  template:
+    src: ".my.cnf.j2"
+    dest: "/root/.my.cnf"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: delete anonymous sql server user for localhost
+  mysql_user: user="" state=absent
+
+- name: remove the mysql test database
+  mysql_db: db=test state=absent
+
+- name: Create replication user
+  mysql_user:
+    name: replication
+    host: "%"
+    password: "{{ role_slurm_db_replication_pw }}"
+    priv: "*.*:REPLICATION SLAVE"
+    state: present
+  when: role_slurm_db_enable_replication | bool and role_slurm_db_replication_pw is defined
+
+- name: create slurm acct db
+  mysql_db: name=slurm_acct_db state=present
+
+- name: create slurm sql user
+  mysql_user:
+    name: slurm
+    state: present
+    password: "{{ role_slurm_db_password }}"
+  register: mysqlslurmuser
+  ignore_errors: true
+
+- name: print mysqlslurmuser
+  debug: var=mysqlslurmuser verbosity=1
+  changed_when: false
+
+- name: ensure slurm sql user has a password and privileges if it does not exist or if it was just added
+  mysql_user:
+    name: slurm
+    password: "{{ role_slurm_db_password }}"
+    priv: "slurm_acct_db.*:ALL"
+    state: present
+    update_password: always
+  when: mysqlslurmuser is failed or mysqlslurmuser is changed
+
+- name: Flush handlers
+  meta: flush_handlers
+
+- name: add slurm etc dir
+  file: path="/etc/slurm" state=directory owner=root group=root mode=0755
+
+- name: template in slurmdbd.conf
+  template:
+    src: slurmdbd.conf.j2
+    dest: /etc/slurm/slurmdbd.conf
+    owner: slurm
+    mode: 0600
+    backup: true
+  notify:
+    - restart slurmdbd

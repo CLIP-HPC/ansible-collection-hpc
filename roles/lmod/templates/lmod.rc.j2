@@ -1,0 +1,41 @@
+local i18n = require("i18n")
+propT = {
+   arch = {
+      validT = { mic = 1, offload = 1, gpu = 1, },
+      displayT = {
+         ["mic:offload"]     = { short = "(*)",  color = "blue", full_color = false, doc = "built for host, native MIC and offload to the MIC",  },
+         ["mic"]             = { short = "(m)",  color = "blue", full_color = false, doc = "built for host and native MIC", },
+         ["offload"]         = { short = "(o)",  color = "blue", full_color = false, doc = "built for offload to the MIC only",},
+         ["gpu"]             = { short = "(gpu)",  color = "green" , full_color = false, doc = "built for GPU",},
+         ["gpu:mic"]         = { short = "(gm)", color = "red" , full_color = false, doc = "built natively for MIC and GPU",},
+         ["gpu:mic:offload"] = { short = "(@)",  color = "red" , full_color = false, doc = "built natively for MIC and GPU and offload to the MIC",},
+      },
+   },
+   state = {
+      validT = { experimental = 1, testing = 1, obsolete = 1 },
+      displayT = {
+         experimental  = { short = "(E)", full_color = false,  color = "blue",  doc = i18n("ExplM"), },
+         testing       = { short = "(T)", full_color = false,  color = "green", doc = i18n("TstM"), },
+         obsolete      = { short = "(O)", full_color = false,  color = "red",   doc = i18n("ObsM"), },
+      },
+   },
+   lmod = {
+      validT = { sticky = 1 },
+      displayT = {
+         sticky = { short = "(S)",  color = "red",    doc = i18n("StickyM"), }
+      },
+   },
+   status = {
+      validT = { active = 1, },
+      displayT = {
+         active = { short = "(L)",  color = "yellow", doc = i18n("LoadedM")},
+     },
+   },
+}
+scDescriptT = {
+   {
+      ["dir"]       = "{{ role_lmod_easybuild_cache_folder }}/cacheDir",
+      ["timestamp"] = "{{ role_lmod_easybuild_cache_folder }}/cacheTS.txt",
+   },
+}
+

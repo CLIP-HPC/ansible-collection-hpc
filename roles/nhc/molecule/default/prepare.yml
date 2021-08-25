@@ -1,0 +1,22 @@
+# Prepare repo
+---
+- name: Install FGCI repo
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Install FGCI repo
+      package:
+        pkg: http://idris.fgi.csc.fi/fgci7/x86_64/fgci/rpms/fgci-release7-1-1.el7.noarch.rpm
+        disable_gpg_check: true
+
+
+    - name: Install packages (sshd, hostname)
+      package:
+        pkg:
+          - openssh-server
+          - hostname  # missing in stream8
+          - procps-ng  # missing in stream8
+        state: installed
+
+    - name: Ensure sshd is running
+      service: name=sshd state=started

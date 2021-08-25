@@ -1,0 +1,15 @@
+---
+- name: Create slurm group
+  group:
+    name: slurm
+    gid: 202
+    system: true
+
+- name: Create slurm user
+  user:
+    name: slurm
+    comment: SLURM resource manager
+    system: true
+    shell: /sbin/nologin
+    uid: 202
+    group: slurm

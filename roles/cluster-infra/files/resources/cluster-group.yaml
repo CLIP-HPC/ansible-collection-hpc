@@ -1,0 +1,166 @@
+---
+heat_template_version: pike
+
+description: >
+  Heat stack containing a group of Nova instances.
+
+parameters:
+  cluster_prefix:
+    type: string
+    label: Instance name prefix
+    default: "cluster"
+  cluster_groups:
+    type: json
+    label: List of dicts defining parameters for all node groups
+  cluster_keypair:
+    type: string
+    label: SSH key pair name
+  cluster_az:
+    type: string
+    label: Availability zone
+    default: nova
+  cluster_config_drive:
+    type: boolean
+    label: Whether to provide metadata via a configdrive
+    default: false
+  cluster_net:
+    type: json
+    label: Network names and subnets to which the nodes should be attached
+  cluster_node_resource:
+    type: string
+    label: Cluster-wide default to use for node resources
+    constraints:
+      - allowed_values:
+          - "Cluster::Instance"
+          - "Cluster::InstanceWithVolume"
+  cluster_nodenet_resource:
+    type: string
+    label: Default node network resource for the cluster
+    default: "Cluster::NodeNet"
+    constraints:
+      - allowed_values:
+          - "Cluster::NodeNet"
+          - "Cluster::NodeNet1"
+          - "Cluster::NodeNet2"
+          - "Cluster::NodeNet3"
+          - "Cluster::NodeNet2WithSriov"
+          - "Cluster::NodeNet3WithSriov"
+  cluster_dns_zone:
+    type: string
+    label: DNS zone in which the hostnames should be created
+
+  rhel_reg_id:
+    type: string
+    label: SoftwareConfig id of RHEL registration
+    default: ""
+
+  group_idx:
+    type: number
+    label: Cluster group index
+
+  default_security_groups:
+    type: json
+    label: List of UUIDs/names of default security groups
+    default: []
+
+conditions:
+  volume_size_set:
+    yaql:
+      expression: $.data.cluster_group.containsKey('volume_size')
+      data:
+        cluster_group: { get_param: [cluster_groups, {get_param: group_idx}] }
+  volume_type_set:
+    yaql:
+      expression: $.data.cluster_group.containsKey('volume_type')
+      data:
+        cluster_group: { get_param: [cluster_groups, {get_param: group_idx}] }
+  node_resource_set:
+    yaql:
+      expression: $.data.cluster_group.containsKey('node_resource')
+      data:
+        cluster_group: { get_param: [cluster_groups, {get_param: group_idx}] }
+  nodenet_resource_set:
+    yaql:
+      expression: $.data.cluster_group.containsKey('nodenet_resource')
+      data:
+        cluster_group: { get_param: [cluster_groups, {get_param: group_idx}] }
+  nodenet_fips_set:
+    yaql:
+      expression: $.data.cluster_group.containsKey('nodenet_fips')
+      data:
+        cluster_group: { get_param: [cluster_groups, {get_param: group_idx}] }
+  dns_network_set:
+    yaql:
+      expression: $.data.cluster_group.containsKey('dns_network')
+      data:
+        cluster_group: { get_param: [cluster_groups, {get_param: group_idx}] }
+
+resources:
+  port_group:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: [cluster_groups, {get_param: group_idx}, num_nodes] }
+      resource_def:
+        type:
+          if:
+            - nodenet_resource_set
+            - { get_param: [cluster_groups, {get_param: group_idx}, nodenet_resource ] }
+            - { get_param: cluster_nodenet_resource }
+        properties:
+          cluster_net: { get_param: cluster_net }
+          default_security_groups: { get_param: default_security_groups }
+          cluster_fips:
+            if:
+              - nodenet_fips_set
+              - { get_param: [cluster_groups, {get_param: group_idx}, nodenet_fips ] }
+              - []
+          node_idx: "%index%"
+
+  node_group:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: [cluster_groups, {get_param: group_idx}, num_nodes] }
+      resource_def:
+        type:
+          if:
+            - node_resource_set
+            - { get_param: [cluster_groups, {get_param: group_idx}, node_resource ] }
+            - { get_param: cluster_node_resource }
+        properties:
+          name:
+            list_join:
+            - '-'
+            - [ { get_param: cluster_prefix },
+                { get_param: [cluster_groups, {get_param: group_idx}, name] },
+                '%index%' ]
+          flavor: { get_param: [cluster_groups, {get_param: group_idx}, flavor] }
+          image: { get_param: [cluster_groups, {get_param: group_idx}, image] }
+          volume_size:
+            if:
+              - volume_size_set
+              - { get_param: [cluster_groups, {get_param: group_idx}, volume_size] }
+              - 0
+          volume_type:
+            if:
+              - volume_type_set
+              - { get_param: [cluster_groups, {get_param: group_idx}, volume_type] }
+              - ""
+          dns_network: {if: [dns_network_set, { get_param: [cluster_groups, {get_param: group_idx}, dns_network] }, ""] }
+          key_name: { get_param: cluster_keypair }
+          availability_zone: { get_param: cluster_az }
+          config_drive: { get_param: cluster_config_drive }
+          group_node_ports: { get_attr: [port_group, networks] }
+          group_node_ips: { get_attr: [port_group, primary_ip] }
+          zone: { get_param: cluster_dns_zone }
+          rhel_reg_id: { get_param: rhel_reg_id }
+
+          node_idx: "%index%"
+
+
+outputs:
+  group_data:
+    description: Instance data for nodes in this group
+    value:
+      group: { get_param: [cluster_groups, {get_param: group_idx}, name] }
+      nodes: { get_attr: [ node_group, instance_data ] }
+      nodenet: { get_attr: [ port_group, networks ] }

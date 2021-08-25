@@ -1,0 +1,88 @@
+# {{ ansible_managed }}
+# See the slurmdbd.conf man page for more information.
+#
+
+{% if slurmdbd_ArchiveDir is defined %}
+ArchiveDir={{ slurmdbd_ArchiveDir }}
+{% endif %}
+{% if slurmdbd_ArchiveEvents is defined %}
+ArchiveEvents={{ slurmdbd_ArchiveEvents }}
+{% endif %}
+{% if slurmdbd_ArchiveJobs is defined %}
+ArchiveJobs={{ slurmdbd_ArchiveJobs }}
+{% endif %}
+{% if slurmdbd_ArchiveResvs is defined %}
+ArchiveResvs={{ slurmdbd_ArchiveResvs }}
+{% endif %}
+{% if slurmdbd_ArchiveScript is defined %}
+ArchiveScript={{ slurmdbd_ArchiveScript }}
+{% endif %}
+{% if slurmdbd_ArchiveSteps is defined %}
+ArchiveSteps={{ slurmdbd_ArchiveSteps }}
+{% endif %}
+{% if slurmdbd_ArchiveSuspend is defined %}
+ArchiveSuspend={{ slurmdbd_ArchiveSuspend }}
+{% endif %}
+{% if slurmdbd_ArchiveTXN is defined %}
+ArchiveTXN={{ slurmdbd_ArchiveTXN }}
+{% endif %}
+{% if slurmdbd_ArchiveUsage is defined %}
+ArchiveUsage={{ slurmdbd_ArchiveUsage }}
+{% endif %}
+
+{% if slurmdbd_PurgeEventAfter is defined %}
+PurgeEventAfter={{ slurmdbd_PurgeEventAfter }}
+{% endif %}
+{% if slurmdbd_PurgeJobAfter is defined %}
+PurgeJobAfter={{ slurmdbd_PurgeJobAfter }}
+{% endif %}
+{% if slurmdbd_PurgeResvAfter is defined %}
+PurgeResvAfter={{ slurmdbd_PurgeResvAfter }}
+{% endif %}
+{% if slurmdbd_PurgeStepAfter is defined %}
+PurgeStepAfter={{ slurmdbd_PurgeStepAfter }}
+{% endif %}
+{% if slurmdbd_PurgeSuspendAfter is defined %}
+PurgeSuspendAfter={{ slurmdbd_PurgeSuspendAfter }}
+{% endif %}
+{% if slurmdbd_PurgeTXNAfter is defined %}
+PurgeTXNAfter={{ slurmdbd_PurgeTXNAfter }}
+{% endif %}
+{% if slurmdbd_PurgeUsageAfter is defined %}
+PurgeUsageAfter={{ slurmdbd_PurgeUsageAfter }}
+{% endif %}
+
+
+# Authentication info
+AuthType=auth/munge
+#AuthInfo=/var/run/munge/munge.socket.2
+#
+# slurmDBD info
+DbdHost={{ role_slurm_db_host }}
+#DbdPort=7031
+SlurmUser=slurm
+#MessageTimeout=300
+DebugLevel=4
+#DefaultQOS=normal,standby
+PidFile=/var/run/slurmdbd.pid
+#PluginDir=/usr/lib/slurm
+#PrivateData=accounts,users,usage,jobs
+#TrackWCKey=yes
+#LogFile=/var/log/slurm/slurmdbd.log
+DebugLevelSyslog=info
+
+#
+# Database info
+StorageType=accounting_storage/mysql
+StorageHost=localhost
+StoragePort=1234
+StoragePass={{ role_slurm_db_password }}
+StorageUser=slurm
+StorageLoc=slurm_acct_db
+
+{% if slurm_slurmdbd_conf_version_specific_params_list is defined %}
+# Slurm Version Specific Parameters
+{% for slurm_v_param in slurm_slurmdbd_conf_version_specific_params_list %}
+{{ slurm_v_param }}
+{% endfor %}
+{% endif %}

@@ -1,0 +1,239 @@
+---
+- name: Fail if role_slurm_control_host or role_slurm_cluster_name or role_slurm_partitions are undefined
+  run_once: true
+  fail:
+    msg: "Undefined role_slurm_control_host or role_slurm_cluster_name or role_slurm_partitions."
+  when:
+    role_slurm_control_host == none or
+    role_slurm_cluster_name == none or
+    role_slurm_partitions | length == 0
+
+- name: Install Runtime Slurm packages
+  yum:
+    name:
+      - slurm
+      - slurm-slurmd
+    state: installed
+
+- name: Copy slurm_completion.sh
+  copy:
+    src: "slurm_completion.sh"
+    dest: /etc/bash_completion.d/
+    mode: "0644"
+
+
+# Noop in OpenHPC
+- name: Ensure the Slurm spool directory exists
+  file:
+    path: /var/spool/slurm
+    owner: slurm
+    group: slurm
+    mode: 0755
+    state: directory
+  when: role_slurm_enable.runtime | bool
+
+# Noop in OpenHPC
+- name: Ensure the Munge service is enabled
+  service:
+    name: munge
+    enabled: "{{ role_slurm_service_enabled | bool }}"
+  notify:
+    - Restart Munge service
+
+# in OpenHPC this is a noop because installer will generate a random key during install
+- block:
+    - name: Generate a Munge key for the platform
+      command: "dd if=/dev/urandom of=/etc/munge/munge.key bs=1 count=1024"
+      args:
+        creates: "/etc/munge/munge.key"
+      notify:
+        - Restart Munge service
+
+    - name: Fix munge key permissions
+      file:
+        path: "/etc/munge/munge.key"
+        owner: munge
+        group: munge
+        mode: "0400"
+  delegate_to: "{{ role_slurm_control_host }}"
+  run_once: true
+  when: role_slurm_munge_key is not defined
+
+
+- name: Copy external munge key if provided
+  copy:
+    content: "{{ role_slurm_munge_key | b64decode }}"
+    dest: "/etc/munge/munge.key"
+    owner: munge
+    group: munge
+    mode: "0400"
+  delegate_to: "{{ role_slurm_control_host }}"
+  run_once: true
+  when: role_slurm_munge_key is defined
+  notify:
+    - Restart Munge service
+
+- name: Make sure that Munge is running on control host
+  service:
+    name: munge
+    state: started
+  delegate_to: "{{ role_slurm_control_host }}"
+  run_once: true
+
+- name: Retrieve Munge key from Slurm control host
+  slurp:
+    src: "/etc/munge/munge.key"
+  register: slurm_munge_key
+  delegate_to: "{{ role_slurm_control_host }}"
+  run_once: true
+
+
+- name: Write Munge key
+  copy:
+    content: "{{ slurm_munge_key['content'] | b64decode }}"
+    dest: "/etc/munge/munge.key"
+    owner: munge
+    group: munge
+    mode: "0400"
+  notify:
+    - Restart Munge service
+
+- name: add slurm log dir
+  file:
+    path: /var/log/slurm
+    state: directory
+    owner: slurm
+    group: slurm
+    mode: "0750"
+  when: role_slurm_enable.runtime | bool
+
+- name: Ensure Slurmdbd service is enabled
+  service:
+    name: "slurmdbd"
+    enabled: "true"
+  delegate_to: "{{ role_slurm_db_host }}"
+  run_once: true
+  notify:
+    - restart slurmdbd
+
+- name: Ensure Slurm services are enabled
+  service:
+    name: "{{ role_slurm_service }}"
+    enabled: "{{ role_slurm_service_enabled | bool }}"
+  when: role_slurm_service is not none
+  notify:
+    - Restart SLURM service
+
+- name: Make sure to call reconfigure
+  set_fact:
+    role_slurm_reconfigure: true
+  tags:
+    - never
+    - reconfigure
+
+- name: Apply customised SLURM configurations on controller
+  run_once: true
+  tags: reconfigure
+  template:
+    src: "{{ item }}"
+    dest: "/etc/slurm/{{ item | regex_replace('\\.j2','') }}"
+    owner: root
+    group: root
+    mode: 0644
+    backup: true
+  delegate_to: "{{ role_slurm_control_host }}"
+  register: slurm_changed_result
+  with_items:
+    - slurm.conf.j2
+    - cgroup.conf.j2
+    - cgroup_allowed_devices_file.conf.j2
+    - gres.conf.j2
+  notify:
+    - Restart slurmctld
+    - Restart SLURM service
+
+- name: Copy sysconfig for configless slurm
+  template:
+    mode: 0644
+    src: sysconfig.j2
+    dest: /etc/sysconfig/slurmd
+  when: (role_slurm_enable.batch | bool or role_slurm_enable.slurmd | bool) and not role_slurm_configless_dns | bool
+  notify:
+    - Restart SLURM service
+
+
+- name: Flush handlers
+  meta: flush_handlers
+
+- name: Ensure Slurmdbd service is running
+  service:
+    name: "slurmdbd"
+    state: "started"
+  delegate_to: "{{ role_slurm_db_host }}"
+  run_once: true
+
+# In case the service isn't running and the config hasn't changed to trigger
+# the handler, ensure it's running here.
+- name: Ensure Slurm services are running
+  service:
+    name: "{{ role_slurm_service }}"
+    state: "{{ 'started' if role_slurm_service_enabled | bool else 'stopped' }}"
+  when: role_slurm_service is not none
+
+- block:
+
+    - name: Add cluster to accounting
+      slurm:
+        state: present
+        entity: cluster
+        name: "{{ role_slurm_cluster_name }}"
+      notify:
+        - Restart slurmctld
+
+    - name: Flush handlers
+      meta: flush_handlers
+  delegate_to: "{{ role_slurm_control_host }}"
+  run_once: true
+  when: role_slurm_db_host is defined
+
+- block:
+    - name: Add QOS
+      tags: qos
+      slurm:
+        state: present
+        entity: qos
+        name: "{{ item.name }}"
+        priority: "{{ item.priority | default(omit) }}"
+        maxtres: "{{ item.maxtres | default(omit) }}"
+        grptres: "{{ item.grptres | default(omit) }}"
+        maxwall: "{{ item.maxwall | default(omit) }}"
+        maxtresperuser: "{{ item.maxtresperuser | default(omit) }}"
+      with_items: "{{ role_slurm_qos }}"
+
+
+    - name: Add custom QOSes to root user
+      tags: qos
+      slurm:
+        state: present
+        entity: user
+        name: root
+        account: root
+        qoslevel: "{{ role_slurm_qos | map(attribute='name') | join(',') }}"
+        defaultqos: "{{ role_slurm_default_qos | default((role_slurm_qos | first).name) }}"
+      when: role_slurm_qos | length > 0
+      changed_when: false   # required because not idempotent
+
+    - name: Add custom QOSes to cluster
+      tags: qos
+      slurm:
+        state: present
+        entity: cluster
+        name: "{{ role_slurm_cluster_name }}"
+        qoslevel: "{{ role_slurm_qos | map(attribute='name') | join(',') }}"
+        defaultqos: "{{ role_slurm_default_qos | default((role_slurm_qos | first).name) }}"
+      when: role_slurm_qos | length > 0
+      changed_when: false   # required because not idempotent
+  when: role_slurm_db_host is defined
+  delegate_to: "{{ role_slurm_control_host }}"
+  run_once: true
+...

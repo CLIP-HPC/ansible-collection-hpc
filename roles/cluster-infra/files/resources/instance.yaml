@@ -1,0 +1,108 @@
+---
+heat_template_version: pike
+
+description: >
+  Heat stack containing a Nova instance.
+
+parameters:
+  name:
+    type: string
+    label: Instance name
+  flavor:
+    type: string
+    label: Flavor name or UUID
+  image:
+    type: string
+    label: Image name or UUID
+  volume_size:
+    type: number
+    label: Volume size in GB
+  volume_type:
+    type: string
+    label: Volume type
+  key_name:
+    type: string
+    label: SSH key pair name
+  availability_zone:
+    type: string
+    label: Availability zone
+    default: nova
+  config_drive:
+    type: boolean
+    label: Whether to provide metadata via a configdrive
+    default: false
+  group_node_ips:
+    type: json
+    label: List of primary IPs for all nodes in this group
+  group_node_ports:
+    type: json
+    label: Nested list of port resources for all nodes in this group
+  zone:
+    type: string
+    label: DNS zone in which the hostname should be created
+    default: ""
+  rhel_reg_id:
+    type: string
+    label: ID of the SoftwareConfig for RHEL Registration
+    default: ""
+  node_idx:
+    type: number
+    label: Resource group index of this node
+  dns_network:
+    type: string
+    label: Name of the network to retrieve the IP from for DNS entry
+    default: ""
+
+
+conditions:
+  has_dns:
+    and:
+      - not:
+          equals:
+          - get_param: zone
+          - ""
+      - not:
+          equals:
+          - get_param: dns_network
+          - ""
+
+resources:
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: name }
+      flavor: { get_param: flavor }
+      image: { get_param: image }
+      key_name: { get_param: key_name }
+      networks:
+        yaql:
+          expression: "$.data != '' and $.data.select({'port' => $.port}) or []"
+          data: {get_param: [group_node_ports, {get_param: node_idx}]}
+      availability_zone: { get_param: availability_zone }
+      config_drive: { get_param: config_drive }
+      user_data_format: SOFTWARE_CONFIG
+      user_data: { get_param: rhel_reg_id }
+
+  dns:
+    type: OS::Designate::RecordSet
+    properties:
+      zone: { get_param: zone }
+      name: { get_param: name }
+      type: "A"
+      records:
+       - {get_attr: [instance, addresses, { get_param: dns_network }, 1, addr ]}
+    condition: has_dns
+
+outputs:
+  OS::stack_id:
+    description: ID of the Nova instance
+    value: { get_resource: instance }
+
+  instance_data:
+    description: ID of the primary IP
+    value:
+      rhel_reg_id: { get_param: rhel_reg_id }
+      name: {get_param: name}
+      ip: {get_param: [group_node_ips, {get_param: node_idx}]}
+      id: {get_resource: instance}

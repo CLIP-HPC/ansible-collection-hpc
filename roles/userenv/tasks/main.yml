@@ -1,0 +1,36 @@
+# tasks file for role-userenv
+---
+- name: Make sure that bash-completion package is installed
+  package:
+    name: bash-completion
+    state: installed
+
+- name: Copy skel folder
+  copy:
+    src: "files/skel"
+    dest: /etc/
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Copy profile.d files
+  copy:
+    src: "{{ item }}"
+    dest: /etc/profile.d/
+    backup: true
+    mode: 0644
+  with_fileglob: "files/profile.d/*"
+
+- name: Ensure that folder for user utils exists
+  file:
+    state: directory
+    mode: 0755
+    path: "{{ role_userenv_user_scripts }}"
+    recurse: true
+
+- name: Copy User scripts
+  copy:
+    src: "{{ item }}"
+    dest: "{{ role_userenv_user_scripts }}"
+    mode: 0755
+  with_fileglob: "files/scripts/*"

@@ -1,0 +1,9 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: Include cuda role
+      include_role:
+        name: cuda
+      vars:
+        role_cuda_gpu: true

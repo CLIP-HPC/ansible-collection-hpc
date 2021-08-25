@@ -1,0 +1,35 @@
+conflict("{{ role_lmod_build_env_name }}")
+help([[        Loads the {{ role_lmod_syshost }} build environment configuration.
+]])
+whatis(" Loads the build environment configuration for {{ role_lmod_syshost }}")
+setenv("EASYBUILD_GROUP_WRITABLE_INSTALLDIR","{{ role_lmod_write_group }}")
+setenv("EASYBUILD_MODULES_TOOL","Lmod")
+-- required due to https://easybuild.readthedocs.io/en/latest/EasyBuild4-overview-of-changes.html#disabling-fixed-installdir-naming-scheme
+setenv("EASYBUILD_DISABLE_FIXED_INSTALLDIR_NAMING_SCHEME","1")
+setenv("EASYBUILD_MODULE_SYNTAX","Lua")
+setenv("EASYBUILD_PREFIX","{{ role_lmod_easybuild_install_folder }}")
+setenv("EASYBUILD_BUILDPATH","{{ role_lmod_easybuild_build_folder }}")
+setenv("EASYBUILD_MINIMAL_TOOLCHAINS","False")
+setenv("EASYBUILD_RECURSIVE_MODULE_UNLOAD","True")
+setenv("EASYBUILD_HIDE_TOOLCHAINS","gompi")
+setenv("EASYBUILD_JOB_BACKEND", "Slurm")
+setenv("EASYBUILD_ADD_DUMMY_TO_MINIMAL_TOOLCHAINS","False")
+setenv("EASYBUILD_INCLUDE_MODULE_NAMING_SCHEMES","{{ role_lmod_easybuild_nms_folder }}/*.py")
+setenv("EASYBUILD_MODULE_NAMING_SCHEME","{{ role_lmod_easybuild_nms }}")
+setenv("EASYBUILD_GIT_WORKING_DIRS_PATH","{{ role_lmod_easybuild_git_work_folder }}")
+setenv("EASYBUILD_SOURCEPATH","{{ role_lmod_easybuild_source_folder }}")
+prepend_path("EASYBUILD_ROBOT_PATHS","{{ role_lmod_easybuild_easyconfig_folder }}/easybuild/easyconfigs")
+prepend_path("EASYBUILD_ROBOT_PATHS","{{ role_lmod_easybuild_install_folder }}/ebfiles_repo")
+setenv("EASYBUILD_HIDE_DEPS","{{ role_lmod_easybuild_hide_deps }}")
+
+{% if role_lmod_easyblock_repo %}
+setenv("EASYBUILD_INCLUDE_EASYBLOCKS","{{ role_lmod_easybuild_block_folder }}/*.py")
+{% endif %}
+
+if lfs.attributes([[{{ role_lmod_easybuild_install_folder }}/modules]]) then
+  for file in lfs.dir[[{{ role_lmod_easybuild_install_folder }}/modules]] do
+   if file ~= "." and file ~= ".." and file ~= "all" then
+     prepend_path("MODULEPATH","{{ role_lmod_easybuild_install_folder }}/modules/" .. file)
+   end
+  end
+end

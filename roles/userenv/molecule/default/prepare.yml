@@ -1,0 +1,9 @@
+# Make sure that OpenHPC repo is available
+---
+- name: Install OpenHPC package
+  hosts: all
+  tasks:
+    - name: Install openhpc repo
+      package:
+        name: openssh-clients
+        state: present

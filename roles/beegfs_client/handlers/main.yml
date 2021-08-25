@@ -1,0 +1,14 @@
+---
+# handlers file for role-beegfs-client
+- name: Restart BeeGFS client service
+  systemd:
+    name: "{{ item }}"
+    daemon-reload: true
+    state: restarted
+  with_items:
+    - beegfs-helperd
+    - beegfs-client
+  retries: 3
+  delay: 3
+  register: result
+  until: result is success

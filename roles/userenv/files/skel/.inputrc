@@ -1,0 +1,18 @@
+$include /etc/inputrc
+
+# Perform file completion in a case insensitive fashion
+set completion-ignore-case On
+#
+# # Display matches for ambiguous patterns at first tab press
+set show-all-if-ambiguous On
+
+set show-all-if-unmodified On
+
+# Immediately add a trailing slash when autocompleting symlinks to directories
+set mark-symlinked-directories On
+
+set completion-prefix-display-length 3
+
+# only support with readline 6.3 (Centos 7 is 6.2)
+set colored-stats On
+set visible-stats On

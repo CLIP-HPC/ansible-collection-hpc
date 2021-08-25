@@ -1,0 +1,15 @@
+# NHC check for functioning sssd
+# parameter is a group name from which to randomly pick a user
+# this is to reduce the effect of SSD caching if the sssd upstream connection is bad
+
+DEBUG=""
+
+function check_id_from_group() {
+
+  GROUPNAME=$1
+  TESTUSER=$(getent group $GROUPNAME | awk 'BEGIN{ FS=":"}{print $4; }' | tr ',' '\n' | sort -R | tail -n 1)
+  if [ -n "$DEBUG" ]; then echo "checking ${TESTUSER} from ${GROUPNAME}" ; fi
+  USERDATA=$(id $TESTUSER)
+
+  return $?
+}

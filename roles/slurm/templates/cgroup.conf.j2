@@ -1,0 +1,14 @@
+# {{ ansible_managed }}
+#
+# Slurm cgroup support configuration file
+#
+CgroupMountpoint="/sys/fs/cgroup"
+CgroupAutomount=yes
+
+ConstrainCores=yes
+TaskAffinity=no # due to recommendation from https://slurm.schedmd.com/slurm.conf.html
+ConstrainKmemSpace=no
+ConstrainRAMSpace=yes
+ConstrainSwapSpace=no
+AllowedSwapSpace=0
+ConstrainDevices=yes

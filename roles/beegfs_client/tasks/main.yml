@@ -1,0 +1,89 @@
+---
+# tasks file for role-beegfs-client
+- name: Install packages for BeeGFS client
+  package:
+    name:
+    - elfutils-libelf-devel
+    - beegfs-client
+    - beegfs-helperd
+    - beegfs-utils
+    state: "present"
+  notify: Restart BeeGFS client service
+
+- name: Define client kernel build for IB
+  lineinfile:
+    path: "/etc/beegfs/beegfs-client-autobuild.conf"
+    regexp: "^buildArgs="
+    line: "{{ item.line }}"
+  when: item.condition
+  with_items:
+    - { line: "buildArgs=-j8 BEEGFS_OPENTK_IBVERBS=1", condition: "{{ role_beegfs_client_rdma | bool }}" }
+    - { line: "buildArgs=-j8", condition: "{{ not role_beegfs_client_rdma | bool }}" }
+  notify: Restart BeeGFS client service
+
+- name: Ensure kernel development headers are present
+  package:
+    name: "kernel-devel-{{ ansible_kernel }}"
+    state: present
+  notify: Restart BeeGFS client service
+
+- name: Ensure gcc is installed
+  package:
+    name: "gcc"
+    state: present
+  notify: Restart BeeGFS client service
+
+- name: Rebuild the BeeGFS client kernel module
+  command: /etc/init.d/beegfs-client rebuild
+  args:
+    creates: "/lib/modules/{{ ansible_kernel }}/updates/fs/beegfs_autobuild/beegfs.ko"
+  notify: Restart BeeGFS client service
+
+- name: Ensure the BeeGFS mount point exists
+  file:
+    mode: 0755
+    path: "{{ role_beegfs_client_path }}"
+    state: directory
+  notify: Restart BeeGFS client service
+
+- name: Copy over beegfs-mounts config file
+  template:
+    src: beegfs-mounts.conf.j2
+    dest: /etc/beegfs/beegfs-mounts.conf
+    mode: 0644
+  notify: Restart BeeGFS client service
+
+
+- name: Copy over connInterfacesFile file
+  template:
+    src: connInterfacesFile.j2
+    dest: /etc/beegfs/connInterfacesFile
+    mode: 0644
+  notify: Restart BeeGFS client service
+
+- name: Make of copy of BeeGFS client config file if it doesn't exist
+  copy:
+    mode: 0644
+    remote_src: true
+    src: /etc/beegfs/beegfs-client.conf
+    dest: "/etc/beegfs/beegfs-client-{{ role_beegfs_client_mgmt_host }}.conf"
+    force: false
+  notify: Restart BeeGFS client service
+
+- name: Configure beegfs-client config file to point to the specified management host
+  lineinfile:
+    dest: "/etc/beegfs/beegfs-client-{{ role_beegfs_client_mgmt_host }}.conf"
+    regexp: "^sysMgmtdHost"
+    line: "sysMgmtdHost = {{ role_beegfs_client_mgmt_host }}"
+
+- name: Configure beegfs-client config file to use the specified port
+  lineinfile:
+    dest: "/etc/beegfs/beegfs-client-{{ role_beegfs_client_mgmt_host }}.conf"
+    regexp: "^connClientPortUDP"
+    line: "connClientPortUDP = {{ role_beegfs_client_port }}"
+
+- name: Configure beegfs-client config file to ensure the specifed connection interface is used
+  lineinfile:
+    dest: "/etc/beegfs/beegfs-client-{{ role_beegfs_client_mgmt_host }}.conf"
+    regexp: "^connInterfacesFile"
+    line: "connInterfacesFile = /etc/beegfs/connInterfacesFile"

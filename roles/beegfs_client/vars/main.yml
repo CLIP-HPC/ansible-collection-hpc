@@ -1,0 +1,3 @@
+---
+# vars file for role-beegfs-client
+role_beegfs_client_port: 8004

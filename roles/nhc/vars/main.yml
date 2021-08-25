@@ -1,0 +1,10 @@
+---
+# vars file for role-nhc
+
+nhc_scripts:
+ - "healthcheck.nhc"
+ - "nvidia_smi.nhc"
+ - "sssd.nhc"
+ - "nvidia_smi_page_retirement.nhc"
+
+nhc_rm: slurm

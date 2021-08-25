@@ -1,0 +1,37 @@
+# Task related to easybuild
+---
+- name: Make sure required packages are installed
+  yum:
+    name:
+      - "@Development tools"
+      - rdma-core-devel    # required for easybuild openmpi
+      - openssl-devel
+    state: installed
+
+- name: Make sure that required packages are installed
+  package:
+    name: "{{ role_lmod_eb_pkgs }}"
+    state: installed
+
+- name: Install python2-pip for centos7
+  yum:
+    name: python2-pip
+    state: installed
+  when: ansible_distribution_major_version =='7'
+
+- name: Install easybuild
+  become_user: easybuild
+  become: true
+  run_once: "{{ role_lmod_shared_module_fs }}"
+  pip:
+    name: easybuild
+    version: "{{ role_lmod_easybuild_bootstrap_version }}"
+    extra_args: --user
+
+- name: Checkout Easyconfig github repo
+  run_once: "{{ role_lmod_shared_module_fs }}"
+  git:
+    repo: '{{ role_lmod_easybuild_github_repo }}'
+    dest: '{{ role_lmod_easybuild_easyconfig_folder }}'
+    version: develop
+    update: false

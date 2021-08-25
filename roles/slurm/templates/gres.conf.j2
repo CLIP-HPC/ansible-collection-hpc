@@ -1,0 +1,22 @@
+# {{ ansible_managed }}
+# GRES configuration
+{% set nodes_list = [] -%}
+{% for part in role_slurm_partitions -%}
+{% for group in part.get('groups', [part]) -%}
+{% if (group.num_nodes | int) > 0 and group.name not in nodes_list -%}
+{{ nodes_list.append(group.name) -}}
+{% set group_name = group.cluster_name|default(role_slurm_cluster_name) ~ '_' ~ group.name -%}
+{# due to https://github.com/ansible/ansible/issues/66945 we need to check which hosts are really reachable -#}
+{% set active_hosts = hostvars | dict2items | json_query('[?value.ansible_processor_cores].key') -%}
+{# If using --limit, the first host in each group may not have facts available. Find one that does. -#}
+{% set group_hosts = groups[group_name] | intersect(active_hosts) -%}
+{% if group_hosts | length > 0 -%}
+{% set first_host_hv = hostvars[group_hosts | first] -%}
+{% set gpu_info = first_host_hv.ansible_local.gpus | default({'found': false, 'count': 0}) -%}
+{% if gpu_info.found | bool and gpu_info.count > 0  -%}
+NodeName={{group.cluster_name|default(role_slurm_node_prefix)}}-{{group.name}}-[0-{{ (group.num_nodes | int)-1}}] Name=gpu Type={{ gpu_info['type'] }} File=/dev/nvidia[0-{{ (gpu_info['count'] | int) - 1 }}] AutoDetect=nvml
+{% endif -%}
+{% endif -%}
+{% endif -%}
+{% endfor -%}
+{% endfor %}

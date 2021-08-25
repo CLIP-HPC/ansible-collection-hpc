@@ -1,0 +1,23 @@
+---
+# vars file for role-lmod
+role_lmod_site_name: VBC
+role_lmod_syshost: CLIP
+role_lmod_build_env_name: "build-env"
+role_lmod_system_folder: "{{ role_lmod_base_folder }}/system"
+role_lmod_system_modules_folder: "{{ role_lmod_system_folder }}/modules"
+
+role_lmod_core_folder: "{{ role_lmod_system_modules_folder }}/core"
+role_lmod_rc_folder: "{{ role_lmod_system_modules_folder }}/.lmod"
+role_lmod_build_env_install_folder: "{{ role_lmod_core_folder }}/{{ role_lmod_build_env_name }}"
+
+role_lmod_easybuild_install_folder: "{{ role_lmod_base_folder }}/{{ role_lmod_build_env }}"
+role_lmod_easybuild_build_folder: "{{ role_lmod_base_folder }}/build-tmp"
+role_lmod_easybuild_source_folder: "{{ role_lmod_base_folder }}/sources"
+role_lmod_easybuild_nms_folder: "{{ role_lmod_system_folder }}/easybuild-MNS"
+role_lmod_easybuild_cache_folder: "{{ role_lmod_base_folder }}/.lmodcache"
+role_lmod_easybuild_block_folder: "{{ role_lmod_system_folder }}/easybuild-blocks"
+role_lmod_easybuild_git_work_folder: "{{ role_lmod_system_folder }}"
+role_lmod_easybuild_easyconfig_folder: "{{ role_lmod_easybuild_git_work_folder }}/easyconfigs"
+role_lmod_easybuild_nms: "LowerCaseMNS"
+role_lmod_easybuild_hide_deps: "FTGL,libdrm,libsndfile,GMP,Mesa,pixman,fontconfig,Bison,Doxygen,JasPer,NASM,SQLite,Szip,Tcl,bzip2,cURL,flex,freetype,libjpeg-turbo,libpng,libreadline,libtool,libxml2,ncurses,zlib,M4,Serf,APR,APR-util,expat,SCons,binutils,Coreutils,GLib,Qt,SCOTCH,Tk,hwloc,libffi,libunwind,make,numactl,pkg-config,gettext,Autotools,Automake,Autoconf,OPARI2,OTF2,UDUNITS,ZeroMQ,OpenPGM,util-linux,libsodium,libQGLViewer,Eigen,GTS,GL2PS,PyGTS,PyQt,IPython,Python-Xlib,LOKI,SIP,NASM,PIL,libjpeg-turbo,libxcb,libX11,libXau,xproto,kbproto,inputproto,libpthread-stubs,xextproto,libXdmcp,xcb-proto,xtrans,LibTIFF,byacc,guile,libunistring,CMake,PCRE,PROJ,libutempter,libevent,GDAL,GEOS,SWIG,libGLU,NLopt,nettle,protobuf-python,protobuf,libgtextutils,cairo,pyyaml,pyflakes,networkx,libyaml,OpenJPEG,pyzmq,file,libharu,libmaus2"
+role_lmod_easybuild_github_repo: https://github.com/easybuilders/easybuild-easyconfigs.git

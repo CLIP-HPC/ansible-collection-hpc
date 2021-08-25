@@ -1,0 +1,7 @@
+.cache
+tests/output
+.vscode
+__pycache__
+*.swp
+*.pyc
+junit.xml

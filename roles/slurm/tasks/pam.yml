@@ -1,0 +1,49 @@
+---
+# Setup slurm_adopt and restrict ssh access
+- name: copy /etc/pam.d/sshd
+  copy:
+    mode: 0644
+    src: "files/pam.d/{{ item }}"
+    dest: /etc/pam.d
+  loop:
+    - sshd
+    - slurm
+
+- name: fix pam_systemd lines in /etc/pam.d/ auth files
+  lineinfile:
+    path: "{{ item }}"
+    regexp: "pam_systemd"
+    state: absent
+  loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+
+- name: install selinux rpm
+  yum:
+    name: slurm_pam_slurm_adopt_selinux
+    state: present
+  when: role_slurm_adopt_selinux | bool
+
+- name: SELINUX fix context on /var/spool/slurm
+  command: /sbin/restorecon -Fvri /var/spool/slurm
+  when: role_slurm_adopt_selinux | bool
+
+- name: stop, disable, mask systemd-logind
+  systemd:
+    name: systemd-logind
+    state: stopped
+    enabled: false
+    masked: true
+
+- name: fix /etc/security/access.conf
+  blockinfile:
+    path: /etc/security/access.conf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    insertafter: EOF
+    block: |
+      {% for item in role_slurm_ssh_access | default([]) %}+:{{ item }}:ALL
+      {% endfor %}
+      {% if ansible_user is defined %}+:{{ ansible_user }}:ALL
+      {% endif %}
+      +:root:cron crond
+      -:ALL:ALL

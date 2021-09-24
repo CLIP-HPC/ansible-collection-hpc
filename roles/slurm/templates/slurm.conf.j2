@@ -90,6 +90,7 @@ PriorityUsageResetPeriod={{ role_slurm_prio_usage_period }}
 {% endif %}
 PriorityCalcPeriod={{role_slurm_prio_calc_period}}
 PriorityWeightAge={{ role_slurm_prio_weight_age }}
+PriorityWeightAssoc={{ role_slurm_prio_weight_assoc }}
 PriorityWeightFairshare={{ role_slurm_prio_weight_fairshare }}
 PriorityWeightJobSize={{ role_slurm_prio_weight_jobsize }}
 PriorityWeightPartition={{ role_slurm_prio_weight_partition }}
@@ -98,7 +99,6 @@ PriorityMaxAge={{ role_slurm_prio_max_age }}
 {% if role_slurm_prio_weight_tres %}
 PriorityWeightTRES={{ role_slurm_prio_weight_tres }}
 {% endif %}
-PriorityWeightAssoc={{ role_slurm_prio_weight_assoc }}
 PriorityFavorSmall={{ role_slurm_prio_favor_small }}
 PreemptType=preempt/none
 PreemptMode=OFF

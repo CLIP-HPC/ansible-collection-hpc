@@ -6,3 +6,4 @@ skip_list:
  - no-handler
  - command-instead-of-module
  - ignore-errors
+ - consider-using-f-string

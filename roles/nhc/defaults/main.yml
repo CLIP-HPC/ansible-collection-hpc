@@ -19,5 +19,6 @@ nhc_group_random_user: "role.cbe.users"
 
 nhc_checks:
  - { match: "*", name: "check_reboot_slurm", arguments: "" }
+ - { match: "*", name: "check_goss", arguments: "" }
  - { match: "*", name: "check_id_from_group", arguments: "{{ nhc_group_random_user }}" }
  - { match: "*-g*-*", name: "check_nvidia_smi_page_retirement", arguments: "" }

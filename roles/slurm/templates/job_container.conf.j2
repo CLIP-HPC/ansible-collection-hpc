@@ -1,0 +1,8 @@
+###
+# Sample job_container.conf file 2
+# Define 1 basepath that will be on all nodes and automatically created.
+###
+AutoBasePath=true
+{% if role_slurm_job_container_base_path %}
+BasePath={{ role_slurm_job_container_base_path }}
+{% endif %}

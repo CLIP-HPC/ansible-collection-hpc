@@ -98,6 +98,7 @@ PriorityMaxAge={{ role_slurm_prio_max_age }}
 {% if role_slurm_prio_weight_tres %}
 PriorityWeightTRES={{ role_slurm_prio_weight_tres }}
 {% endif %}
+PriorityWeightAssoc={{ role_slurm_prio_weight_assoc }}
 PriorityFavorSmall={{ role_slurm_prio_favor_small }}
 PreemptType=preempt/none
 PreemptMode=OFF
@@ -141,6 +142,10 @@ JobSubmitPlugins=lua
 # CHECKPOINTING
 CheckpointType=checkpoint/none
 
+#JOB CONTAINER PLUGIN
+{% if role_slurm_job_container_base_path %}
+JobContainerType=job_container/tmpfs
+{% endif %}
 
 #
 # COMPUTE NODES

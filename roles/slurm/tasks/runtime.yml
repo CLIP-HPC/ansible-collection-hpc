@@ -148,6 +148,7 @@
     - cgroup.conf.j2
     - cgroup_allowed_devices_file.conf.j2
     - gres.conf.j2
+    - job_container.conf.j2
   notify:
     - Restart slurmctld
     - Restart SLURM service

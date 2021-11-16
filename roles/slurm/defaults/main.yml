@@ -27,12 +27,12 @@ role_slurm_prio_decay_half_time: "7-0"
 role_slurm_prio_usage_period:
 role_slurm_prio_calc_period: "00:05:00"
 role_slurm_prio_weight_age: 1000
+role_slurm_prio_weight_assoc: 0
 role_slurm_prio_weight_fairshare: 2000
 role_slurm_prio_weight_jobsize: 1000
 role_slurm_prio_weight_partition: 500
 role_slurm_prio_weight_qos: 500
 role_slurm_prio_weight_tres:
-role_slurm_prio_weight_assoc: 0
 role_slurm_prio_max_age: "7-0"
 role_slurm_prio_favor_small: "no"
 role_slurm_accounting_storage_tres: ['gres/gpu']

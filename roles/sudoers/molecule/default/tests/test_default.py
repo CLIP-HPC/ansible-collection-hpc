@@ -27,6 +27,6 @@ def test_sudoers(host):
     cred1 = "%group1 ALL = (ALL) ALL"
     cred2 = "bar ALL = (ALL) NOPASSWD: ALL"
     cred3 = "%group3 ALL = (user1,user2) AL"
-    host.run_expect([0], 'cat %s | grep "%s"' % (sudoers_file, cred1))
-    host.run_expect([0], 'cat %s | grep "%s"' % (sudoers_file, cred2))
-    host.run_expect([0], 'cat %s | grep "%s"' % (sudoers_file, cred3))
+    host.run_expect([0], f'cat {sudoers_file} | grep "{cred1}"')
+    host.run_expect([0], f'cat {sudoers_file} | grep "{cred2}"')
+    host.run_expect([0], f'cat {sudoers_file} | grep "{cred3}"')

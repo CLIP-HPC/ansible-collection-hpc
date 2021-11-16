@@ -45,22 +45,22 @@ def test_ad_user(host):
 
 def test_permit(host):
     ap = "access_provider = simple"
-    host.run_expect([0], 'cat /etc/sssd/sssd.conf | grep "%s"' % ap)
+    host.run_expect([0], f'cat /etc/sssd/sssd.conf | grep "{ap}"')
     host.run_expect([0], 'cat /etc/sssd/sssd.conf | grep is.grp')
 
 
 def test_password_auth_enabled(host):
     pw = "^PasswordAuthentication yes"
-    host.run_expect([0], 'cat /etc/ssh/sshd_config | grep "%s"' % pw)
+    host.run_expect([0], f'cat /etc/ssh/sshd_config | grep "{pw}"')
 
 
 def test_override_homedir(host):
     homedir = "override_homedir = /users/%u"
-    host.run_expect([0], 'cat /etc/sssd/sssd.conf | grep "%s"' % homedir)
+    host.run_expect([0], f'cat /etc/sssd/sssd.conf | grep "{homedir}"')
 
 
 def test_sss_sshd_public_key(host):
     user = 'svc_realmd_test_join@IMP.UNIVIE.AC.AT'
-    key = host.run("sudo -u nobody /usr/bin/sss_ssh_authorizedkeys %s" % user)
+    key = host.run(f"sudo -u nobody /usr/bin/sss_ssh_authorizedkeys {user}")
     assert key.succeeded
     assert key.stdout == 'dummy-invalid-demo-key\n'

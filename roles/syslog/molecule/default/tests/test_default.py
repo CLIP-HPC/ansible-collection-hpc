@@ -33,7 +33,7 @@ def test_host_logs(host):
     # domain = "syslog-net-{0}".format(os.environ.get("INSTANCE_ID"))
     client_name = "syslog-client"
     client_fqdn = client_name + ".logtest"
-    log_file = "/var/log/host/{0}/{0}.log".format(client_fqdn)
+    log_file = f"/var/log/host/{client_fqdn}/{client_fqdn}.log"
 
     assert host.file(log_file).exists
     # hostname in container is syslog-client

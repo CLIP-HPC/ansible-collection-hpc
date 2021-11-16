@@ -1,5 +1,3 @@
-@Library('vbc-cicd@ansible_collections') _
-
 //Note: the dict keys are literals, not strings
 // testing ansible collection
 testAnsibleCollection([

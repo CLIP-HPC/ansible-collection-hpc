@@ -1,5 +1,7 @@
 ---
 # defaults file for role-beegfs-client
-role_beegfs_client_rdma: false
 role_beegfs_client_path: /mnt/beegfs
 role_beegfs_client_interfaces: []
+role_beegfs_client_enabled_quota: false
+role_beegfs_client_ofed_include_path:
+role_beegfs_client_scope_config: true

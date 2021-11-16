@@ -65,12 +65,12 @@ def test_eb_config(host):
             config_key, config_value = config_line.split('(E) = ')
             config_dict[config_key.strip()] = config_value.strip()
         base_folder = "/software"
-        install_dir = '%s/%s' % (base_folder, "2019")
-        assert config_dict['buildpath'] == '%s/build-tmp' % base_folder
+        install_dir = f"{base_folder}/2019"
+        assert config_dict['buildpath'] == f"{base_folder}/build-tmp"
         assert config_dict['group-writable-installdir'] == 'True'
         assert config_dict['installpath'] == install_dir
         assert config_dict['prefix'] == install_dir
-        assert config_dict['repositorypath'] == '%s/ebfiles_repo' % install_dir
+        assert config_dict['repositorypath'] == f"{install_dir}/ebfiles_repo"
 
 
 def test_singularity_not_installed(host):
@@ -83,7 +83,7 @@ def test_sub_shell(host):
     if host.system_info.release.split('.')[0] == '8':
         sf = 'modules.csh'
     bash = 'bash -lc \'source ~/.bash_profile && echo "$MODULEPATH"\''
-    csh = 'csh -c \'source /etc/profile.d/%s && echo "$MODULEPATH"\'' % sf
+    csh = f'csh -c \'source /etc/profile.d/{sf} && echo "$MODULEPATH"\''
     module_bash_cmd = host.check_output(bash)
     module_csh_cmd = host.check_output(csh)
     assert len(module_bash_cmd.split(':')) == 1

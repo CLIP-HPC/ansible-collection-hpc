@@ -32,6 +32,7 @@ role_slurm_prio_weight_jobsize: 1000
 role_slurm_prio_weight_partition: 500
 role_slurm_prio_weight_qos: 500
 role_slurm_prio_weight_tres:
+role_slurm_prio_weight_assoc: 0
 role_slurm_prio_max_age: "7-0"
 role_slurm_prio_favor_small: "no"
 role_slurm_accounting_storage_tres: ['gres/gpu']
@@ -45,3 +46,4 @@ role_slurm_conf_scheduler_parameters: ''
 role_slurm_conf_debug_flags: ''
 role_slurm_reboot_program: /usr/sbin/reboot
 role_slurm_maria_upstream: false
+role_slurm_job_container_base_path:

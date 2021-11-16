@@ -1,5 +1,0 @@
----
-resource_registry:
-  Cluster::InstanceWithVolume: ../resources/instance-w-volume.yaml
-  Cluster::Instance: ../resources/instance.yaml
-  Cluster::InstanceBeegfs: ../resources/instance-beegfs.yaml

@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=consider-using-f-string
+
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 

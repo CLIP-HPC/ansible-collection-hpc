@@ -49,22 +49,23 @@ def test_systemd_login_not_running(host):
 def test_pam_d_adopt(host):
     sshd_file = '/etc/pam.d/sshd'
     adopt = "pam_slurm_adopt.so"
-    host.run_expect([0], 'cat %s | grep "%s"' % (sshd_file, adopt))
+    host.run_expect([0], f'cat {sshd_file} | grep "{adopt}"')
 
 
 def test_pam_d_not_systemd(host):
     system_auth_file = '/etc/pam.d/system-auth'
     password_auth_file = '/etc/pam.d/password-auth'
     systemd = "pam_systemd"
-    host.run_expect([1], 'cat %s | grep "%s"' % (system_auth_file, systemd))
-    host.run_expect([1], 'cat %s | grep "%s"' % (password_auth_file, systemd))
+    host.run_expect([1], f'cat {system_auth_file} | grep "{systemd}"')
+    host.run_expect([1], f'cat {password_auth_file} | grep "{systemd}"')
 
 
 def test_pam_ssh_access(host):
     access_file = '/etc/security/access.conf'
     admin_group = "admins"
-    command = 'cat %s | egrep "%s"'
-    host.run_expect([0], command % (access_file, "^\\+:%s:ALL$" % admin_group))
+    regex = f"^\\+:{admin_group}:ALL$"
+    command = f'cat {access_file} | egrep "{regex}"'
+    host.run_expect([0], command)
 
 
 def test_pam_slurm_exists(host):

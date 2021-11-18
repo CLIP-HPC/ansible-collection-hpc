@@ -1,6 +1,6 @@
 # Prepare repo
 ---
-- name: Install FGCI repo
+- name: Prepare NHC testing
   hosts: all
   gather_facts: false
   tasks:
@@ -17,6 +17,15 @@
           - hostname  # missing in stream8
           - procps-ng  # missing in stream8
         state: installed
+
+    - name: Mock goss executable
+      copy:
+        remote_src: true
+        src: /usr/bin/true
+        dest: /usr/local/bin/goss-linux-amd64
+        owner: root
+        group: root
+        mode: '0755'
 
     - name: Ensure sshd is running
       service: name=sshd state=started

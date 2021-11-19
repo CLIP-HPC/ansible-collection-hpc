@@ -105,12 +105,12 @@
 # The following illustrates how to assert an NFSv3 mount (or any other specific mount option).
 #   * || check_fs_mount -s bluearc0:/home -t nfs -o '/(^|,)vers=3(,|$)/' -f /home
 
-{% if nhc_fs_mount_check | length > 0 %}
-{% for item in nhc_fs_mount_check %}
-   *  || check_fs_mount_rw  -r  -s {{item.location }} -t nfs -o '{{ item.options | default(nhc_fs_mount_default_opts) }}' -f {{ item.path }}
-{% endfor %}
-{% endif %}
-   *  || check_fs_mount_rw /dev/pts '/(none|devpts)/' devpts
+## {% if nhc_fs_mount_check | length > 0 %}
+## {% for item in nhc_fs_mount_check %}
+##    *  || check_fs_mount_rw  -r  -s {{item.location }} -t nfs -o '{{ item.options | default(nhc_fs_mount_default_opts) }}' -f {{ item.path }}
+## {% endfor %}
+## {% endif %}
+##    *  || check_fs_mount_rw /dev/pts '/(none|devpts)/' devpts
 
 
 #######################################################################
@@ -140,7 +140,7 @@
 ### Process checks
 ###
 # Everybody needs sshd running, right?  But don't use -r (restart)!
-   * || check_ps_service -u root -S sshd
+##   * || check_ps_service -u root -S sshd
 
 # The cron daemon is another useful critter...
 #   * || check_ps_service -r crond

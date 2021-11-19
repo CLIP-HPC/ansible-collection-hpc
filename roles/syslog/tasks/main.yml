@@ -10,7 +10,7 @@
 - name: install additional packages (logrotate, xz, rsyslog modules)
   become: true
   yum:
-    name: "logrotate,xz,rsyslog,rsyslog-relp,rsyslog-gnutls"
+    name: "logrotate,xz,rsyslog"
     state: present
 
 - name: setting up syslog

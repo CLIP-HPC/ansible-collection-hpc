@@ -1,26 +1,5 @@
 ---
 # tasks file for role-beegfs-client
-- name: Install packages for BeeGFS client
-  package:
-    name:
-    - elfutils-libelf-devel
-    - beegfs-client
-    - beegfs-helperd
-    - beegfs-utils
-    state: "present"
-  notify: Restart BeeGFS client service
-
-- name: Define client kernel build for IB
-  lineinfile:
-    path: "/etc/beegfs/beegfs-client-autobuild.conf"
-    regexp: "^buildArgs="
-    line: "{{ item.line }}"
-  when: item.condition
-  with_items:
-    - { line: "buildArgs=-j8 OFED_INCLUDE_PATH={{ role_beegfs_client_ofed_include_path }}", condition: "{{ role_beegfs_client_ofed_include_path }}" }
-    - { line: "buildArgs=-j8", condition: "{{ not role_beegfs_client_ofed_include_path }}" }
-  notify: Restart BeeGFS client service
-
 - name: Ensure kernel development headers are present
   package:
     name: "kernel-devel-{{ ansible_kernel }}"
@@ -33,11 +12,56 @@
     state: present
   notify: Restart BeeGFS client service
 
+- name: Install support packages for BeeGFS
+  package:
+    name:
+    - elfutils-libelf-devel
+    - beegfs-helperd
+    - beegfs-utils
+    state: "present"
+  notify: Restart BeeGFS client service
+
+- name: Define override for beegfs-client-build.mk
+  copy:
+    dest: /etc/beegfs/beegfs-client-build.mk
+    content: |
+      # BeeGFS client module DKMS build configuration
+      # This file is only used when building via DKMS.
+      # The module needs to be rebuilt after this file has been changed.
+
+      # If using thirdparty OFED specify the path to the installation here.
+      # Examples:
+      #OFED_INCLUDE_PATH=/usr/src/ofa_kernel/default/include
+      #OFED_INCLUDE_PATH=/usr/src/openib/include
+      {% if role_beegfs_client_ofed_include_path %}
+      OFED_INCLUDE_PATH={{ role_beegfs_client_ofed_include_path }}
+      {% endif %}
+  when: role_beegfs_client_use_dkms | bool
+
+- name: Install beegfs-client or dkms
+  package:
+    name: "{{ (role_beegfs_client_use_dkms | bool) | ternary('beegfs-client-dkms','beegfs-client') }}"
+    state: present
+  notify: Restart BeeGFS client service
+
+
+- name: Define client kernel build for IB
+  lineinfile:
+    path: "/etc/beegfs/beegfs-client-autobuild.conf"
+    regexp: "^buildArgs="
+    line: "{{ item.line }}"
+  when: item.condition and not role_beegfs_client_use_dkms | bool
+  with_items:
+    - { line: "buildArgs=-j8 OFED_INCLUDE_PATH={{ role_beegfs_client_ofed_include_path }}", condition: "{{ role_beegfs_client_ofed_include_path }}" }
+    - { line: "buildArgs=-j8", condition: "{{ not role_beegfs_client_ofed_include_path }}" }
+  notify: Restart BeeGFS client service
+
 - name: Rebuild the BeeGFS client kernel module
   command: /etc/init.d/beegfs-client rebuild
   args:
     creates: "/lib/modules/{{ ansible_kernel }}/updates/fs/beegfs_autobuild/beegfs.ko"
   notify: Restart BeeGFS client service
+  when: not role_beegfs_client_use_dkms | bool
 
 - name: Ensure the BeeGFS mount point exists
   file:
@@ -52,6 +76,7 @@
     dest: /etc/beegfs/beegfs-mounts.conf
     mode: 0644
   notify: Restart BeeGFS client service
+  when: not role_beegfs_client_use_dkms | bool
 
 
 - name: Copy over connInterfacesFile file
@@ -95,3 +120,28 @@
     dest: "/etc/beegfs/{{ role_beegfs_client_config_file }}"
     regexp: "^quotaEnabled"
     line: "quotaEnabled = {{ (role_beegfs_client_enabled_quota | bool) | ternary('true', 'false') }}"
+
+- block:
+  - name: Make sure to load beegfs module after reboot
+    copy:
+      dest: /etc/modules-load.d/beegfs-client-dkms.conf
+      content: |
+        # Load the BeeGFS client module at boot
+        beegfs
+
+  - name: Load beegfs module
+    modprobe:
+      name: beegfs
+      state: present
+
+  - name: Flush handlers
+    meta: flush_handlers
+
+  - name: Mount beegfs storage
+    mount:
+      fstype: "beegfs"
+      name: "{{ role_beegfs_client_path }}"
+      opts: "rw,relatime,cfgFile=/etc/beegfs/{{ role_beegfs_client_config_file }},_netdev,x-systemd.after=beegfs-helperd.service"
+      src: "beegfs_nodev"
+      state: mounted
+  when: role_beegfs_client_use_dkms | bool

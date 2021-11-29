@@ -5,3 +5,4 @@ role_beegfs_client_interfaces: []
 role_beegfs_client_enabled_quota: false
 role_beegfs_client_ofed_include_path:
 role_beegfs_client_scope_config: true
+role_beegfs_client_use_dkms: true

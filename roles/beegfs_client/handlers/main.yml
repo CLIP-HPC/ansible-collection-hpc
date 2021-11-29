@@ -1,14 +1,21 @@
 ---
 # handlers file for role-beegfs-client
-- name: Restart BeeGFS client service
+
+- name: Restart BeeGFS helperd
   systemd:
-    name: "{{ item }}"
+    name: "beegfs-helperd"
     daemon-reload: true
     state: restarted
-  with_items:
-    - beegfs-helperd
-    - beegfs-client
+  listen: "Restart BeeGFS client service"
+
+- name: Restart BeeGFS client
+  systemd:
+    name: "beegfs-client"
+    daemon-reload: true
+    state: restarted
+  when: not role_beegfs_client_use_dkms | bool
   retries: 3
   delay: 3
   register: result
   until: result is success
+  listen: Restart BeeGFS client service

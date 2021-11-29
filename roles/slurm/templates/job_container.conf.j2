@@ -1,8 +1,18 @@
-###
-# Sample job_container.conf file 2
-# Define 1 basepath that will be on all nodes and automatically created.
-###
-AutoBasePath=true
+# {{ ansible_managed }}
 {% if role_slurm_job_container_base_path %}
+{% if not role_slurm_job_container_shared_storage %}
+AutoBasePath=true
 BasePath={{ role_slurm_job_container_base_path }}
+{% else %}
+{% for part in role_slurm_partitions %}
+{% for group in part.get('groups', [part]) %}
+{% if (group.num_nodes | int) > 0  %}
+{% for ix in range(0, group.num_nodes | int) %}
+{% set nodename=group.cluster_name|default(role_slurm_node_prefix) +'-' + group.name + '-' + (ix | string) %}
+NodeName={{ nodename }} AutoBasePath=true BasePath={{ role_slurm_job_container_base_path }}/{{ nodename }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
 {% endif %}

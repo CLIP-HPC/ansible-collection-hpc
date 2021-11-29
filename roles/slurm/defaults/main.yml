@@ -47,3 +47,4 @@ role_slurm_conf_debug_flags: ''
 role_slurm_reboot_program: /usr/sbin/reboot
 role_slurm_maria_upstream: false
 role_slurm_job_container_base_path:
+role_slurm_job_container_shared_storage: false

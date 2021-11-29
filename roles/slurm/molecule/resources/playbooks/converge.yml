@@ -3,6 +3,7 @@
   hosts: all
   tasks:
     - name: Include slurm role
+      #tags: reconfigure
       include_role:
         name: slurm
       vars:
@@ -55,3 +56,5 @@
         role_slurm_configless_dns: false
         role_slurm_db_replication_pw: replicationpw
         role_slurm_db_upstream: "{{ ansible_distribution_major_version == '7' }}"
+        role_slurm_job_container_base_path: /mnt
+        role_slurm_job_container_shared_storage: true

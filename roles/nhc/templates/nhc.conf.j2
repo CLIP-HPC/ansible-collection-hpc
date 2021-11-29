@@ -57,10 +57,10 @@
 #   * || check_hw_physmem_free 1MB
 
 # Same, but for swap space.
-   * || check_hw_swap_free {{ nhc_hw_swap_free }}
+#   * || check_hw_swap_free 0
 
 # Check for some sort of free memory of either type.
-   * || check_hw_mem_free {{ nhc_hw_mem_free }}
+#   * || check_hw_mem_free 1M
 
 # Checks that there's a FDR IB interface that's ACTIVE and shows LinkUp.
 #   * || check_hw_ib 56
@@ -105,12 +105,12 @@
 # The following illustrates how to assert an NFSv3 mount (or any other specific mount option).
 #   * || check_fs_mount -s bluearc0:/home -t nfs -o '/(^|,)vers=3(,|$)/' -f /home
 
-{% if nhc_fs_mount_check | length > 0 %}
-{% for item in nhc_fs_mount_check %}
-   *  || check_fs_mount_rw  -r  -s {{item.location }} -t nfs -o '{{ item.options | default(nhc_fs_mount_default_opts) }}' -f {{ item.path }}
-{% endfor %}
-{% endif %}
-   *  || check_fs_mount_rw /dev/pts '/(none|devpts)/' devpts
+## {% if nhc_fs_mount_check | length > 0 %}
+## {% for item in nhc_fs_mount_check %}
+##    *  || check_fs_mount_rw  -r  -s {{item.location }} -t nfs -o '{{ item.options | default(nhc_fs_mount_default_opts) }}' -f {{ item.path }}
+## {% endfor %}
+## {% endif %}
+##    *  || check_fs_mount_rw /dev/pts '/(none|devpts)/' devpts
 
 
 #######################################################################
@@ -121,7 +121,7 @@
    * || check_file_test -r -w -x -d -k /tmp /var/tmp
 
 # These should always be readable and should never be empty.
-   * || check_file_test -r -s /etc/passwd /etc/group
+#   * || check_file_test -r -s /etc/passwd /etc/group
 
 # Assert common properties for /dev/null (which occasionally gets clobbered).
    * || check_file_test -c -r -w /dev/null /dev/zero
@@ -140,7 +140,7 @@
 ### Process checks
 ###
 # Everybody needs sshd running, right?  But don't use -r (restart)!
-   * || check_ps_service -u root -S sshd
+##   * || check_ps_service -u root -S sshd
 
 # The cron daemon is another useful critter...
 #   * || check_ps_service -r crond
@@ -211,25 +211,24 @@
 # Verify settings for an Ethernet interface.
 #   * || check_cmd_output -m '/addr:10\.0\.0\.1/' -m '/Bcast:10\.0\.0\.255/' -m '/Mask:255\.255\.255\.0/' -m '/^[[:space:]]*UP /' /sbin/ifconfig eth3
 
+
+#######################################################################
+### More CLIP specific checks
+###
+
+# run Goss tests
+    * || check_goss
+
+# check if sssd is properly resolving user ids
+    * || check_id_from_group role.cbe.users
+
 # nVidia HealthMon GPU health checks (requires Tesla Development Kit)
 #   * || check_nv_healthmon
 
-{% if gpu == true %}
 # use this as Tesla Devleopment Kit is deprecated and this is https://developer.nvidia.com/data-center-gpu-manager-dcgm recommend but needs an account
 # nVidia-smi GPU health checks (requires Tesla Development Kit)
-   * || check_nvsmi_healthmon
-{% endif %}
+   *-g*-* || check_nvsmi_healthmon
 
-{% if nhc_scripts.0 is defined %}
-#######################################################################
-### nhc_scripts is a list of extra nhc scripts which are copied in via ansible
-###
-### More checks
-###
-#
+# check for page retirement errors that require GPU device re-init
+   *-g*-* || check_nvidia_smi_page_retirement
 
-{% for nhc_check in nhc_checks %}
-    {{ nhc_check.match }} || {{ nhc_check.name }} {{ nhc_check.arguments }}
-{% endfor %}
-
-{% endif %}

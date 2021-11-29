@@ -16,7 +16,10 @@ def test_pkgs(host):
 
 def test_files(host):
     host.file("/etc/nhc/nhc.conf").exists
-    host.file("/etc/nhc/healthcheck.nhc").exists
+    host.file("/etc/nhc/scripts/goss.nhc").exists
+    host.file("/etc/nhc/scripts/nvidia_smi.nhc").exists
+    host.file("/etc/nhc/scripts/nvidia_smi_page_retirement.nhc").exists
+    host.file("/etc/nhc/scripts/sssd.nhc").exists
 
 
 def test_nhc_rc(host):

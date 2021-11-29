@@ -1,0 +1,13 @@
+#!/bin/sh
+
+DEBUG=""
+GOSS_FORMAT="silent"
+
+function check_goss() {
+
+  if [ -n "$DEBUG" ]; then echo "running goss tests"; GOSS_FORMAT="rspecish" ; fi
+  /usr/local/bin/goss-linux-amd64 --gossfile /usr/local/bin/goss_compute.yml  --vars /usr/local/bin/goss_vars.yml validate --format ${GOSS_FORMAT}
+  GOSS_RESULT=$?
+
+  return ${GOSS_RESULT}
+}

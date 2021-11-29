@@ -32,3 +32,7 @@ def test_slurmctld_service_running(host):
     slurmctld_service = host.service("slurmctld")
     assert slurmctld_service.is_enabled
     assert slurmctld_service.is_running
+
+
+def test_job_container_file(host):
+    assert host.file('/etc/slurm/job_container.conf').exists

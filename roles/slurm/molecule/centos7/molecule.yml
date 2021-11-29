@@ -42,6 +42,8 @@ platforms:
     children:
       - cluster_compute1
     command: /sbin/init
+    security_opts:
+      - apparmor:unconfined
     tmpfs:
       - /tmp
       - /run
@@ -60,6 +62,8 @@ platforms:
     children:
       - cluster_compute2
     command: /sbin/init
+    security_opts:
+      - apparmor:unconfined
     tmpfs:
       - /tmp
       - /run

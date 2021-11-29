@@ -28,6 +28,12 @@ def test_no_slurm_configs(host):
     assert not host.file('/etc/slurm/').exists
 
 
+def test_job_container_dir_exists(host):
+    hostname = host.check_output('hostname -s')
+    assert host.file(f'/mnt/{hostname}').exists
+    assert host.file(f'/mnt/{hostname}').is_directory
+
+
 def test_munge_service_running(host):
     munge_service = host.service("munge")
     assert munge_service.is_enabled

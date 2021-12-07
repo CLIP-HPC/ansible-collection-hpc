@@ -22,7 +22,6 @@
     mode: "0644"
 
 
-# Noop in OpenHPC
 - name: Ensure the Slurm spool directory exists
   file:
     path: /var/spool/slurm
@@ -32,7 +31,6 @@
     state: directory
   when: role_slurm_enable.runtime | bool
 
-# Noop in OpenHPC
 - name: Ensure the Munge service is enabled
   service:
     name: munge
@@ -40,7 +38,6 @@
   notify:
     - Restart Munge service
 
-# in OpenHPC this is a noop because installer will generate a random key during install
 - block:
     - name: Generate a Munge key for the platform
       command: "dd if=/dev/urandom of=/etc/munge/munge.key bs=1 count=1024"

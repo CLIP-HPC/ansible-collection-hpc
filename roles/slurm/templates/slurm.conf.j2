@@ -53,7 +53,7 @@ ScronParameters=enable
 #TaskProlog=
 #TaskEpilog=
 # best to combine affinity and cgroup plugin according to https://slurm.schedmd.com/slurm.conf.html
-TaskPlugin=task/affinity,task/cgroup
+TaskPlugin=task/cgroup,task/affinity
 #TrackWCKey=no
 #TreeWidth=50
 #TmpFS=
@@ -63,6 +63,9 @@ UsePAM=1
 {% if role_slurm_healthcheck_program != "" %}
 HealthCheckInterval={{ role_slurm_healthcheck_interval }}
 HealthCheckProgram={{ role_slurm_healthcheck_program }}
+{% endif %}
+{% if role_slurm_mail_prog is defined %}
+MailProg={{ role_slurm_mail_prog }}
 {% endif %}
 GresTypes=gpu
 #
@@ -130,6 +133,9 @@ AccountingStorageEnforce=qos,limits
 {% if role_slurm_accounting_storage_tres | length > 0 %}
 AccountingStorageTRES={{ role_slurm_accounting_storage_tres | unique | join (',') }}
 {% endif %}
+{% if role_slurm_accounting_storage_flags | length > 0 %}
+AccountingStoreFlags={{ role_slurm_accounting_storage_flags | unique | join (',') }}
+{% endif %}
 AcctGatherEnergyType=acct_gather_energy/none
 AcctGatherInfinibandType=acct_gather_infiniband/none
 AcctGatherFilesystemType=acct_gather_filesystem/none
@@ -139,8 +145,6 @@ AcctGatherProfileType=acct_gather_profile/none
 {% if role_slurm_job_submit_plugin %}
 JobSubmitPlugins=lua
 {% endif %}
-# CHECKPOINTING
-CheckpointType=checkpoint/none
 
 #JOB CONTAINER PLUGIN
 {% if role_slurm_job_container_base_path %}

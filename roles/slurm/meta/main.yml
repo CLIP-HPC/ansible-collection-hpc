@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   author: Uemit Seren
-  description: Role to install a SLURM cluster using OpenHPC
+  description: Role to install a SLURM cluster
   company: VBC
   namespace: clip
 

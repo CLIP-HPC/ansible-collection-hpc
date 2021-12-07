@@ -153,6 +153,13 @@
 - name: add slurm etc dir
   file: path="/etc/slurm" state=directory owner=root group=root mode=0755
 
+- name: Create archive folder for purged DB objects
+  file:
+    state: directory
+    path: "{{ role_slurm_dbd_archive_dir }}"
+    owner: slurm
+  when: role_slurm_dbd_archive_dir is defined
+
 - name: template in slurmdbd.conf
   template:
     src: slurmdbd.conf.j2

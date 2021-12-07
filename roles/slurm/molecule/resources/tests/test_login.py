@@ -60,6 +60,44 @@ def test_srun(host):
     assert srun_output.strip() == "cluster-compute1-0"
 
 
+def test_sbatch(host):
+    sbatch_cmd = "sbatch --parsable --comment=test --wrap hostname"
+    cmd = f"bash -lc 'TEST_ENV=test {sbatch_cmd}'"
+    job_id = host.check_output(cmd)
+    # check submitline
+    submit_line_cmd = f"bash -lc 'sacct -P -j {job_id} -o submitline%50'"
+
+    # required because it takes a bit until it shows up
+    for i in range(100):
+        job_state = host.check_output(submit_line_cmd)
+        if sbatch_cmd in job_state:
+            break
+    submit_line = host.check_output(submit_line_cmd)
+    assert sbatch_cmd in submit_line
+
+    # check comment
+    comment_cmd = f"bash -lc 'sacct -P -j {job_id} -o comment'"
+    comment = host.check_output(comment_cmd)
+    assert 'test' in comment
+
+    # check job envs
+    job_env_cmd = f"bash -lc 'sacct -j {job_id} --env-vars | grep TEST_ENV'"
+    assert host.run_expect([0], job_env_cmd)
+
+    # check batch script
+    script = f"""Batch Script for {job_id}
+--------------------------------------------------------------------------------
+#!/bin/sh
+# This script was created by sbatch --wrap.
+
+hostname
+
+    """
+    batch_cmd = f"bash -lc 'sacct -j {job_id} --batch'"
+    batch_script = host.check_output(batch_cmd)
+    assert batch_script.strip() == script.strip()
+
+
 def test_sacct(host):
     sacct_output = host.check_output("bash -lc 'sacct'")
     assert len(sacct_output.split('\n')) >= 3

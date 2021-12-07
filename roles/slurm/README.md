@@ -22,7 +22,7 @@ Role Variables
 * `db`: whether to enable db host
 * `control`: whether to enable control host
 * `batch`: whether to enable compute nodes
-* `runtime`: whether to enable OpenHPC runtime
+* `runtime`: whether to enable SLURM runtime
 
 Example Playbook
 ----------------
@@ -49,9 +49,7 @@ To deploy, create a playbook which looks like this:
           role_slurm_partitions:
             - name: "compute"
               flavor: "compute-A"
-              image: "CentOS7.5-OpenHPC"
               num_nodes: 8
-              user: "centos"
           role_slurm_cluster_name: cluster
           role_slurm_db_root_password: "test"
     ...

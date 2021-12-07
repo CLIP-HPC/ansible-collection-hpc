@@ -58,3 +58,19 @@
         role_slurm_db_upstream: "{{ ansible_distribution_major_version == '7' }}"
         role_slurm_job_container_base_path: /mnt
         role_slurm_job_container_shared_storage: true
+        role_slurm_accounting_storage_flags: ["job_comment", "job_env", "job_script"]
+        role_slurm_dbd_archive_dir: /tmp/archive
+        role_slurm_dbd_archive_events: yes
+        role_slurm_dbd_archive_jobs: yes
+        role_slurm_dbd_archive_resvs: yes
+        role_slurm_dbd_archive_steps: no
+        role_slurm_dbd_archive_suspend: no
+        role_slurm_dbd_archive_txn: no
+        role_slurm_dbd_archive_usage: no
+        role_slurm_dbd_purge_events: 1month
+        role_slurm_dbd_purge_jobs: 12month
+        role_slurm_dbd_purge_resvs: 1month
+        role_slurm_dbd_purge_steps: 1month
+        role_slurm_dbd_purge_suspend: 1month
+        role_slurm_dbd_purge_txn: 12month
+        role_slurm_dbd_purge_usage: 24month

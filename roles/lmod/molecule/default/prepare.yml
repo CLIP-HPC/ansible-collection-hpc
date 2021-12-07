@@ -1,4 +1,3 @@
-# Make sure that OpenHPC repo is available
 ---
 - name: Install epel-release package
   hosts: all

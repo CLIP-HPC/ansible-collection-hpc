@@ -1,9 +1,9 @@
-# Make sure that OpenHPC repo is available
+# Make sure that SLURM repo is available
 ---
-- name: Install OpenHPC package
+- name: Install SLURM package
   hosts: all
   vars:
-    role_slurm_version: 20.11.5-1.el{{ansible_distribution_major_version}}
+    role_slurm_version: 21.08.5-1.el{{ansible_distribution_major_version}}
   tasks:
     - name: Install epel-release and versionlock
       yum:

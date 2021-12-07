@@ -1,5 +1,5 @@
 ---
-- name: Install OpenHPC compute image packages
+- name: Install SLURM compute image packages
   yum:
     name:
       - "libicu"

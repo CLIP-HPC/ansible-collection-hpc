@@ -36,6 +36,7 @@ role_slurm_prio_weight_tres:
 role_slurm_prio_max_age: "7-0"
 role_slurm_prio_favor_small: "no"
 role_slurm_accounting_storage_tres: ['gres/gpu']
+role_slurm_accounting_storage_flags: []
 role_slurm_run_validate: true
 role_slurm_max_array_size: 3001
 role_slurm_max_job_count: 90000

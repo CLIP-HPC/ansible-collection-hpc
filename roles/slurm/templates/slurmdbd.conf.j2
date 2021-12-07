@@ -1,77 +1,78 @@
 # {{ ansible_managed }}
 # See the slurmdbd.conf man page for more information.
-#
 
-{% if slurmdbd_ArchiveDir is defined %}
-ArchiveDir={{ slurmdbd_ArchiveDir }}
+
+# Purging & Archival
+{% if role_slurm_dbd_archive_dir is defined %}
+ArchiveDir={{ role_slurm_dbd_archive_dir }}
 {% endif %}
-{% if slurmdbd_ArchiveEvents is defined %}
-ArchiveEvents={{ slurmdbd_ArchiveEvents }}
+{% if role_slurm_dbd_archive_script is defined %}
+ArchiveScript={{ role_slurm_dbd_archive_script }}
 {% endif %}
-{% if slurmdbd_ArchiveJobs is defined %}
-ArchiveJobs={{ slurmdbd_ArchiveJobs }}
+{% if role_slurm_dbd_archive_events is defined %}
+ArchiveEvents={{ role_slurm_dbd_archive_events }}
 {% endif %}
-{% if slurmdbd_ArchiveResvs is defined %}
-ArchiveResvs={{ slurmdbd_ArchiveResvs }}
+{% if role_slurm_dbd_archive_jobs is defined %}
+ArchiveJobs={{ role_slurm_dbd_archive_jobs }}
 {% endif %}
-{% if slurmdbd_ArchiveScript is defined %}
-ArchiveScript={{ slurmdbd_ArchiveScript }}
+{% if role_slurm_dbd_archive_resvs is defined %}
+ArchiveResvs={{ role_slurm_dbd_archive_resvs }}
 {% endif %}
-{% if slurmdbd_ArchiveSteps is defined %}
-ArchiveSteps={{ slurmdbd_ArchiveSteps }}
+{% if role_slurm_dbd_archive_steps is defined %}
+ArchiveSteps={{ role_slurm_dbd_archive_steps }}
 {% endif %}
-{% if slurmdbd_ArchiveSuspend is defined %}
-ArchiveSuspend={{ slurmdbd_ArchiveSuspend }}
+{% if role_slurm_dbd_archive_suspend is defined %}
+ArchiveSuspend={{ role_slurm_dbd_archive_suspend }}
 {% endif %}
-{% if slurmdbd_ArchiveTXN is defined %}
-ArchiveTXN={{ slurmdbd_ArchiveTXN }}
+{% if role_slurm_dbd_archive_txn is defined %}
+ArchiveTXN={{ role_slurm_dbd_archive_txn }}
 {% endif %}
-{% if slurmdbd_ArchiveUsage is defined %}
-ArchiveUsage={{ slurmdbd_ArchiveUsage }}
+{% if role_slurm_dbd_archive_usage is defined %}
+ArchiveUsage={{ role_slurm_dbd_archive_usage }}
 {% endif %}
 
-{% if slurmdbd_PurgeEventAfter is defined %}
-PurgeEventAfter={{ slurmdbd_PurgeEventAfter }}
+{% if role_slurm_dbd_purge_events is defined %}
+PurgeEventAfter={{ role_slurm_dbd_purge_events }}
 {% endif %}
-{% if slurmdbd_PurgeJobAfter is defined %}
-PurgeJobAfter={{ slurmdbd_PurgeJobAfter }}
+{% if role_slurm_dbd_purge_jobs is defined %}
+PurgeJobAfter={{ role_slurm_dbd_purge_jobs }}
 {% endif %}
-{% if slurmdbd_PurgeResvAfter is defined %}
-PurgeResvAfter={{ slurmdbd_PurgeResvAfter }}
+{% if role_slurm_dbd_purge_resvs is defined %}
+PurgeResvAfter={{ role_slurm_dbd_purge_resvs }}
 {% endif %}
-{% if slurmdbd_PurgeStepAfter is defined %}
-PurgeStepAfter={{ slurmdbd_PurgeStepAfter }}
+{% if role_slurm_dbd_purge_steps is defined %}
+PurgeStepAfter={{ role_slurm_dbd_purge_steps }}
 {% endif %}
-{% if slurmdbd_PurgeSuspendAfter is defined %}
-PurgeSuspendAfter={{ slurmdbd_PurgeSuspendAfter }}
+{% if role_slurm_dbd_purge_suspend is defined %}
+PurgeSuspendAfter={{ role_slurm_dbd_purge_suspend }}
 {% endif %}
-{% if slurmdbd_PurgeTXNAfter is defined %}
-PurgeTXNAfter={{ slurmdbd_PurgeTXNAfter }}
+{% if role_slurm_dbd_purge_txn is defined %}
+PurgeTXNAfter={{ role_slurm_dbd_purge_txn }}
 {% endif %}
-{% if slurmdbd_PurgeUsageAfter is defined %}
-PurgeUsageAfter={{ slurmdbd_PurgeUsageAfter }}
+{% if role_slurm_dbd_purge_usage is defined %}
+PurgeUsageAfter={{ role_slurm_dbd_purge_usage }}
 {% endif %}
 
 
 # Authentication info
 AuthType=auth/munge
 #AuthInfo=/var/run/munge/munge.socket.2
-#
-# slurmDBD info
+
+
+# SlurmDBD info
 DbdHost={{ role_slurm_db_host }}
 #DbdPort=7031
 SlurmUser=slurm
 #MessageTimeout=300
-DebugLevel=4
+DebugLevel=info
 #DefaultQOS=normal,standby
 PidFile=/var/run/slurmdbd.pid
 #PluginDir=/usr/lib/slurm
 #PrivateData=accounts,users,usage,jobs
 #TrackWCKey=yes
-#LogFile=/var/log/slurm/slurmdbd.log
-DebugLevelSyslog=info
+LogFile=/var/log/slurm/slurmdbd.log
 
-#
+
 # Database info
 StorageType=accounting_storage/mysql
 StorageHost=localhost
@@ -79,10 +80,3 @@ StoragePort=1234
 StoragePass={{ role_slurm_db_password }}
 StorageUser=slurm
 StorageLoc=slurm_acct_db
-
-{% if slurm_slurmdbd_conf_version_specific_params_list is defined %}
-# Slurm Version Specific Parameters
-{% for slurm_v_param in slurm_slurmdbd_conf_version_specific_params_list %}
-{{ slurm_v_param }}
-{% endfor %}
-{% endif %}

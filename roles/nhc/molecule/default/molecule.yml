@@ -21,18 +21,6 @@ platforms:
       - /run
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
-  - name: instance-centos8-${INSTANCE_ID:-local}
-    image: quay.io/centos/centos:centos8
-    hostname: cluster-centos8-login-0
-    command: /sbin/init
-    pre_build_image: true
-    capabilities:
-      - SYS_ADMIN
-    tmpfs:
-      - /tmp
-      - /run
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
   - name: instance-stream8-${INSTANCE_ID:-local}
     image: quay.io/centos/centos:stream8
     hostname: cluster-stream8-login-0

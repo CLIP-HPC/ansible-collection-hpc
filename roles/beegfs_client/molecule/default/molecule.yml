@@ -13,10 +13,6 @@ platforms:
     image: centos:7
     pre_build_image: true
     privileged: true
-  - name: instance-centos8-${INSTANCE_ID:-local}
-    image: quay.io/centos/centos:centos8
-    pre_build_image: true
-    privileged: true
   - name: instance-stream8-${INSTANCE_ID:-local}
     image: quay.io/centos/centos:stream8
     pre_build_image: true

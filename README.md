@@ -6,15 +6,15 @@ The collection includes the roles to deploy the CBE HPC cluster.
 
 ## Installation and Usage
 
-Before using the `clip.hpx` collection, you need to install the collection with the `ansible-galaxy` CLI:
+Before using the `clip.hpc` collection, you need to install the collection with the `ansible-galaxy` CLI:
 
-`ansible-galaxy collection install clip.hpx`
+`ansible-galaxy collection install clip.hpc`
 
 You can also include it in a `requirements.yml` file and install it through `ansible-galaxy collection install -r requirements.yml` using the format:
 
 ```yaml
 collections:
-- name: clip.hpx
+- name: clip.hpc
 ```
 
 ## Roles

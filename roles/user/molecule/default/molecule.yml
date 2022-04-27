@@ -13,10 +13,6 @@ platforms:
     image: docker.artifactory.imp.ac.at/it/molecule/centos7:latest
     command: /usr/sbin/init
     privileged: True
-  - name: "instance-centos8-${INSTANCE_ID:-local}"
-    image: docker.artifactory.imp.ac.at/it/molecule/centos8:latest
-    command: /sbin/init
-    privileged: True
   - name: instance-ubi8.4-1-${INSTANCE_ID:-local}
     image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.4-1
     privileged: True

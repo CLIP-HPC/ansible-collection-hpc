@@ -2,35 +2,36 @@
 // testing ansible collection
 testAnsibleCollection([
   roleConfigs: [
+    // Sectigo API is too ****** to have tests 
     certificate: [
-      moleculeScenarios: ["create"]
+      // moleculeScenarios: ["create"]
     ],
     container: [
-      moleculeScenarios: ["certificates", "files", "systemd","systemd_caps","ulimits","update_image"]
+      // moleculeScenarios: ["certificates", "files", "systemd","systemd_caps","ulimits","update_image"]
     ],
     dns: [
-      moleculeScenarios: ["default"]
+      // moleculeScenarios: ["default"]
     ],
     firewalld: [
-      moleculeScenarios: ["default"]
+      // moleculeScenarios: ["default"]
     ],
     ntp: [
-      moleculeScenarios: ["default"]
+      // moleculeScenarios: ["default"]
     ],
     promtail: [
-      moleculeScenarios: ["default"]
+      // moleculeScenarios: ["default"]
     ],
     sssd: [
-      moleculeScenarios: ["default-centos7","default-centos8","default-ubi","remove-centos7", "remove-centos8","remove-ubi"]
+      // moleculeScenarios: ["default-centos7","default-centos8","default-ubi","remove-centos7", "remove-centos8","remove-ubi"]
     ],
     sudoers: [
-      moleculeScenarios: ["default", "remove"]
+      // moleculeScenarios: ["default", "remove"]
     ],
     syslog: [
-      moleculeScenarios: ["default"]
+      // moleculeScenarios: ["default"]
     ],
     user: [
-      moleculeScenarios: ["default"]
+      // moleculeScenarios: ["default"]
     ]
   ]
 ])

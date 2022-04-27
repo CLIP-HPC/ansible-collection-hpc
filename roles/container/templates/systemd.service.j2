@@ -116,5 +116,10 @@ RestartSec=20
 # set syslog process tag, otherwise just 'podman'
 SyslogIdentifier={{ role_container_service.name }}
 
+{% if role_container_service.log_path is defined %}
+StandardOutput=append:{{ role_container_service.log_path }}/{{ role_container_service.name }}.stdout.txt
+StandardError=append:{{ role_container_service.log_path }}/{{ role_container_service.name }}.stderr.txt
+{% endif %}
+
 [Install]
 WantedBy=multi-user.target

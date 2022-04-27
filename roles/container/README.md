@@ -57,6 +57,8 @@ role_container_service:
       - host: <int>
         container: <int>
         protocol: <string> [tcp/udp] [optional in this hash]
+    # Log to file (via systemd)
+    log_path: <string> [optional, eg. "/srv/sone_host_directory"]
 ```
 
 Host Preperation

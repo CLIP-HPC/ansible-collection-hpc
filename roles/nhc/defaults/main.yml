@@ -24,3 +24,6 @@ nhc_group_random_user: "role.cbe.users"
 ## this variable is no longer used and ignored.
 ## add checks directly to nhc.conf
 # nhc_checks: []
+
+# overwrite default timeout
+nhc_timeout:

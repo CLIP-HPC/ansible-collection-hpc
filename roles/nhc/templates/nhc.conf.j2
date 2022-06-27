@@ -22,6 +22,9 @@
 
 # Set watchdog timer to 15 seconds
 #   * || export TIMEOUT=15
+{% if nhc_timeout %}
+    * || export TIMEOUT={{ nhc_timeout }}
+{% endif %}
 
 # In out-of-band contexts, enable all checks
 #   * || export NHC_CHECK_ALL=1

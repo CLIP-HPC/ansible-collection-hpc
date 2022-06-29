@@ -12,3 +12,21 @@
   with_items: "{{ nhc_scripts }}"
   when: nhc_scripts.0 | length > 0
   tags: nhc_reconfigure
+
+- name: Overwrite watchdog timeout
+  copy:
+    content: |
+      TIMEOUT={{ nhc_watchdog_timeout }}
+    dest: /etc/sysconfig/nhc
+    mode: 0644
+    owner: root
+    group: root
+  when: nhc_watchdog_timeout
+  tags: nhc_reconfigure
+
+- name: Remove watchdog timeout
+  file:
+    dest: /etc/sysconfig/nhc
+    state: absent
+  when: not nhc_watchdog_timeout
+  tags: nhc_reconfigure

@@ -27,3 +27,5 @@ nhc_group_random_user: "role.cbe.users"
 
 # overwrite default timeout
 nhc_timeout:
+
+nhc_watchdog_timeout:

@@ -28,10 +28,10 @@ testAnsibleCollection([
       moleculeScenarios: ["default", "remove"]
     ],
     syslog: [
-      moleculeScenarios:  ["default"]
+      moleculeScenarios: ["default"]
     ],
     user: [
-      moleculeScenarios:  ["default"]
+      moleculeScenarios: ["default"]
     ]
   ]
 ])

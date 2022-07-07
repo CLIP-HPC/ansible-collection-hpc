@@ -64,6 +64,7 @@
       when: ('podman_' + role_container_service.name + '.service') in services
     - name: Remove container from host
       command: "/bin/podman rm -f {{ role_container_service.name }}"
+      changed_when: false
     - name: Delete container CNI IP reservation
       file:
         path: "/var/lib/cni/networks/podman/{{ role_container_service.ip }}"

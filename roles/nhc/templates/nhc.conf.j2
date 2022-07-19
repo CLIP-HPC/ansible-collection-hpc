@@ -219,8 +219,12 @@
 ### More CLIP specific checks
 ###
 
+{% if (nhc_goss_execute | bool) == true %}
 # run Goss tests
     * || check_goss
+{% elif nhc_goss_outputfile %}
+    * || check_goss_output {{ nhc_goss_outputfile }}
+{% endif %}
 
 # check if sssd is properly resolving user ids
     * || check_id_from_group role.cbe.users

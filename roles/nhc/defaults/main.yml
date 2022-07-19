@@ -29,3 +29,6 @@ nhc_group_random_user: "role.cbe.users"
 nhc_timeout:
 
 nhc_watchdog_timeout:
+
+nhc_goss_execute: true
+nhc_goss_outputfile:

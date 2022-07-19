@@ -11,3 +11,12 @@ function check_goss() {
 
   return ${GOSS_RESULT}
 }
+
+function check_goss_output() {
+
+  GOSS_FILE=$1
+  grep -Fxq 'goss_test_failed_count 0' ${GOSS_FILE}
+  GOSS_RESULT=$?
+
+  return ${GOSS_RESULT}
+}

@@ -6,6 +6,6 @@ goss_test_file: "dummy.yml"
 goss_template_vars: ""
 goss_template_vars_file: "goss_vars.yml"
 goss_node_exporter_textfile_dir: "/tmp"
-
+goss_cron_schedule: "*/1 * * * *"
 
 # defaults file for role-goss

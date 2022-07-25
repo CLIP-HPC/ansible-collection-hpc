@@ -31,6 +31,9 @@
     state: installed
 
 - name: deploy /etc/cron.d/prometheus_goss file
+  tags:
+    - always
+    - goss_reconfigure
   template:
     src: "templates/prometheus_goss.cron.j2"
     dest: "/etc/cron.d/prometheus_goss"

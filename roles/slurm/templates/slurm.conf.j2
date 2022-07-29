@@ -18,7 +18,7 @@ SlurmUser=slurm
 #SlurmdUser=root
 SlurmctldPort=6817
 SlurmdPort=6818
-SlurmctldParameters=enable_configless
+SlurmctldParameters=enable_configless,idle_on_node_suspend
 AuthType=auth/munge
 #JobCredentialPrivateKey=
 #JobCredentialPublicCertificate=
@@ -149,6 +149,29 @@ JobSubmitPlugins=lua
 #JOB CONTAINER PLUGIN
 {% if role_slurm_job_container_base_path %}
 JobContainerType=job_container/tmpfs
+{% endif %}
+
+# POWER SAVING
+
+{% if role_slurm_power_save %}
+{% if role_slurm_power_save_resume_program %}
+ResumeProgram=/etc/slurm/{{ role_slurm_power_save_resume_program | basename }}
+{% endif %}
+{% if role_slurm_power_save_suspend_program %}
+SuspendProgram=/etc/slurm/{{ role_slurm_power_save_suspend_program | basename }}
+{% endif %}
+ResumeRate={{ role_slurm_power_save_resume_rate }}  #number of nodes per minute that can be created; 0 means no limit
+ResumeTimeout={{ role_slurm_power_save_resume_timeout }}  #max time in seconds between ResumeProgram running and when the node is ready for use
+SuspendRate={{ role_slurm_power_save_suspend_rate }}  #number of nodes per minute that can be suspended/destroyed
+SuspendTime={{ role_slurm_power_save_suspend_time }} #time in seconds before an idle node is suspended
+SuspendTimeout={{ role_slurm_power_save_suspend_timeout }}  #time between running SuspendProgram and the node being completely down
+{% if role_slurm_power_save_exc_partitons %}
+SuspendExcParts={{ role_slurm_power_save_exc_partitons }}  # nodes in these partition won't be suspended
+{% endif %}
+{% if role_slurm_power_save_exc_nodes %}
+SuspendExcNodes={{ role_slurm_power_save_exc_nodes }}  # nodes that won't be suspended
+{% endif %}
+BatchStartTimeout={{ role_slurm_power_save_batch_start_timeout }}
 {% endif %}
 
 #

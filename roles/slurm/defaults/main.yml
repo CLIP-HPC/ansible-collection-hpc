@@ -49,3 +49,14 @@ role_slurm_reboot_program: /usr/sbin/reboot
 role_slurm_maria_upstream: false
 role_slurm_job_container_base_path:
 role_slurm_job_container_shared_storage: false
+role_slurm_power_save: false
+role_slurm_power_save_suspend_time: 600
+role_slurm_power_save_suspend_timeout: 180
+role_slurm_power_save_suspend_rate: 60
+role_slurm_power_save_resume_rate: 300
+role_slurm_power_save_resume_timeout: 300
+role_slurm_power_save_batch_start_timeout: 10
+role_slurm_power_save_exc_partitons:
+role_slurm_power_save_exc_nodes:
+role_slurm_power_save_resume_program:
+role_slurm_power_save_suspend_program:

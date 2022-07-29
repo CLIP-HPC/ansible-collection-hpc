@@ -12,3 +12,8 @@
 - name: Select the SLURM service to control
   set_fact:
     role_slurm_service: slurmctld
+
+
+- name: Configure powersaving
+  import_tasks: powersave.yml
+  when: role_slurm_power_save | bool

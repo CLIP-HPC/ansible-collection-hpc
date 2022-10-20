@@ -3,7 +3,7 @@
 - name: Install SLURM package
   hosts: all
   vars:
-    role_slurm_version: 21.08.5-1.el{{ansible_distribution_major_version}}
+    role_slurm_version: 22.05.8-1.el{{ansible_distribution_major_version}}
   tasks:
     - name: Install epel-release and versionlock
       yum:

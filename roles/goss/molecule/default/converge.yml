@@ -5,3 +5,5 @@
     - name: Include goss role
       include_role:
         name: "goss"
+      vars:
+        goss_run_as_service: True

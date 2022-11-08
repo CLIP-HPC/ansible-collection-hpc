@@ -22,7 +22,7 @@ Role Variables
 _defaults/main.yml_
 
 ```
-goss_version: "0.3.11"
+goss_version: "0.3.20"
 goss_install_dir: "/usr/local/bin"
 goss_test_file: "dummy.yml"
 # if this is empty, no variable file will be created
@@ -54,7 +54,7 @@ An example playbook might look something like this:
   become: false
   gather_facts: true
   vars:
-    - goss_version: "0.3.11"
+    - goss_version: "0.3.20"
     - goss_install_dir: "/usr/local/bin"
     - goss_test_file: "compute.yml"
     - goss_template_vars:

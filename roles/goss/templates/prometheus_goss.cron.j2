@@ -1,1 +1,1 @@
-{{ goss_cron_schedule }} root {{ goss_install_dir }}/prometheus_goss.sh
+{% if goss_cron_schedule %}{{ goss_cron_schedule }} root {{ goss_install_dir }}/prometheus_goss.sh{%endif%}

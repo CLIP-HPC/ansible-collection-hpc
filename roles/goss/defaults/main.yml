@@ -1,5 +1,5 @@
 ---
-goss_version: "0.3.11"
+goss_version: "0.3.20"
 goss_install_dir: "/usr/local/bin"
 goss_test_file: "dummy.yml"
 # if this is empty, no variable file will be created
@@ -7,5 +7,5 @@ goss_template_vars: ""
 goss_template_vars_file: "goss_vars.yml"
 goss_node_exporter_textfile_dir: "/tmp"
 goss_cron_schedule: "*/1 * * * *"
-
+goss_run_as_service: false
 # defaults file for role-goss

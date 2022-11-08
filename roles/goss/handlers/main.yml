@@ -1,2 +1,11 @@
 ---
 # handlers file for role-goss
+- name: restart goss
+  systemd:
+    daemon_reload: true
+    name: goss
+    state: restarted
+  when: goss_run_as_service
+  tags:
+    - always
+    - goss_reconfigure

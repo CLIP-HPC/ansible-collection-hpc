@@ -13,11 +13,6 @@ def test_pkg_installed(host):
     assert host.package('bash-completion').is_installed
 
 
-def test_user_scripts(host):
-    for f in ['slurm', 'jobinfo']:
-        assert host.file(f"/software/system/utils/{f}").exists
-
-
 def test_skel_files(host):
     for f in ['bash_completion', 'ssh', 'vim']:
         assert host.file(f"/etc/profile.d/{f}.sh").exists

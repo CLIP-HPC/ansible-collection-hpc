@@ -1,25 +1,8 @@
 #!/usr/bin/env bash
 
-GOSS_TMP_FILE={{ goss_node_exporter_textfile_dir }}/goss.out.$$
 PROM_TMP_FILE={{ goss_node_exporter_textfile_dir }}/goss.prom.$$
 PROM_OUT_FILE={{ goss_node_exporter_textfile_dir }}/goss.prom
 
-{{ goss_install_dir }}/goss-linux-amd64 --gossfile {{ goss_install_dir }}/{{ goss_test_file }} {% if goss_template_vars | default(False) %} --vars {{ goss_install_dir }}/{{ goss_template_vars_file }}{% endif %} validate --format nagios --no-color > $GOSS_TMP_FILE
+{{ goss_install_dir }}/goss-linux-amd64 --gossfile {{ goss_install_dir }}/{{ goss_test_file }} {% if goss_template_vars | default(False) %} --vars {{ goss_install_dir }}/{{ goss_template_vars_file }}{% endif %} validate --format prometheus --no-color > $PROM_TMP_FILE
 
-COUNT=$(sed -e 's/.*Count: \([0-9]\+\).*/\1/' $GOSS_TMP_FILE)
-printf "# HELP goss_test_count Number of tests that ran.\n" >> $PROM_TMP_FILE
-printf "# TYPE goss_test_count gauge\n" >> $PROM_TMP_FILE
-printf "goss_test_count %d\n" $COUNT >> $PROM_TMP_FILE
-
-FAILED=$(sed -e 's/.*Failed: \([0-9]\+\).*/\1/' $GOSS_TMP_FILE)
-printf "# HELP goss_test_failed_count Number of FAILED tests in the last run.\n" >> $PROM_TMP_FILE
-printf "# TYPE goss_test_failed_count gauge\n" >> $PROM_TMP_FILE
-printf "goss_test_failed_count %d\n" $FAILED >> $PROM_TMP_FILE
-
-SKIPPED=$(sed -e 's/.*Skipped: \([0-9]\+\).*/\1/' $GOSS_TMP_FILE)
-printf "# HELP goss_test_skipped_count Number of SKIPPED tests in the last run.\n" >> $PROM_TMP_FILE
-printf "# TYPE goss_test_skipped_count gauge\n" >> $PROM_TMP_FILE
-printf "goss_test_skipped_count %d\n" $SKIPPED >> $PROM_TMP_FILE
-
-rm $GOSS_TMP_FILE
 mv $PROM_TMP_FILE $PROM_OUT_FILE

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+{{ ansible_managed | comment }}
+
+{{ goss_install_dir }}/goss-linux-amd64 --gossfile {{ goss_install_dir }}/{{ goss_test_file }} {% if goss_template_vars | default(False) %} --vars {{ goss_install_dir }}/{{ goss_template_vars_file }}{% endif %} validate --format tap

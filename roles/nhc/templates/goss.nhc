@@ -12,12 +12,21 @@ function check_goss() {
   return ${GOSS_RESULT}
 }
 
-function check_goss_output() {
+function check_goss_prom() {
+  GOSS_FILE=$1
+  PROM_TMP_FILE=${GOSS_FILE}.$$
+  /usr/local/bin/goss-linux-amd64 --gossfile /usr/local/bin/goss_compute.yml  --vars /usr/local/bin/goss_vars.yml validate --format prometheus > ${PROM_TMP_FILE}
+  mv $PROM_TMP_FILE $GOSS_FILE
+  check_goss_prom_output ${GOSS_FILE}
+  return $?
+}
+
+function check_goss_prom_output() {
 
   GOSS_FILE=$1
   if [ -s ${GOSS_FILE} ]
   then
-    grep -Fxq 'goss_test_failed_count 0' ${GOSS_FILE}
+    grep -Fxq 'goss_tests_run_outcomes_total{outcome="fail"} 0' ${GOSS_FILE}
     GOSS_RESULT=$?
   else
     GOSS_RESULT=0

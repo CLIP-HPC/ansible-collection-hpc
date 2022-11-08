@@ -1,0 +1,28 @@
+{{ ansible_managed | comment }}
+
+[Unit]
+Description=GOSS Node Exporter
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart={{ goss_install_dir }}/goss-linux-amd64 \
+    --gossfile {{ goss_install_dir }}/{{ goss_test_file }} \
+{% if goss_template_vars | default(False) %}
+    --vars {{ goss_install_dir }}/{{ goss_template_vars_file }} \
+{% endif %}
+    serve --format prometheus
+
+SyslogIdentifier=goss
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+ProtectHome=yes
+# cannot use because otherwise chronyc activity will fail due to selinux
+#NoNewPrivileges=yes
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

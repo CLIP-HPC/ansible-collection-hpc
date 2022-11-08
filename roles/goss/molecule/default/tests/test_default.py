@@ -15,3 +15,9 @@ def test_hosts_file(host):
     assert f.exists
     assert f.user == 'root'
     assert f.group == 'root'
+
+
+def test_munge_service_running(host):
+    munge_service = host.service("goss")
+    assert munge_service.is_enabled
+    assert munge_service.is_running

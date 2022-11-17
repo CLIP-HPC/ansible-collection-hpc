@@ -1,11 +1,13 @@
 //Note: the dict keys are literals, not strings
 // testing ansible collection
-testAnsibleCollection([
-  roleConfigs: [
+
     // Sectigo API is too ****** to have tests 
     // certificate: [
     //   moleculeScenarios: [] // ["create"]
     // ],
+
+testAnsibleCollection([
+  roleConfigs: [
     container: [
       moleculeScenarios: ["certificates", "files", "systemd","systemd_caps","ulimits","update_image"]
     ],

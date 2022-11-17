@@ -50,9 +50,9 @@ platforms:
     groups:
       - syslog-client
   # UBI
-  - name: "syslog-server-ubi8.4-1-${INSTANCE_ID:-local}"
+  - name: "syslog-server-ubi8.7-1-${INSTANCE_ID:-local}"
     hostname: "syslog-server.logtest"
-    image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.4-1
+    image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.7-1
     command: /usr/sbin/init
     privileged: true
     volume_mounts:
@@ -68,12 +68,12 @@ platforms:
     networks:
       - name: "syslog-net-${INSTANCE_ID:-local}"
         links:
-          - "syslog-client-ubi8.4-1-${INSTANCE_ID:-local}:syslog-client"
+          - "syslog-client-ubi8.7-1-${INSTANCE_ID:-local}:syslog-client"
     groups:
       - syslog-server
-  - name: "syslog-client-ubi8.4-1-${INSTANCE_ID:-local}"
+  - name: "syslog-client-ubi8.7-1-${INSTANCE_ID:-local}"
     hostname: "syslog-client.logtest"
-    image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.4-1
+    image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.7-1
     command: /usr/sbin/init
     privileged: true
     volume_mounts:
@@ -85,7 +85,7 @@ platforms:
     networks:
       - name: "syslog-net-${INSTANCE_ID:-local}"
         links:
-          - "syslog-server-ubi8.4-1-${INSTANCE_ID:-local}:syslog-server"
+          - "syslog-server-ubi8.7-1-${INSTANCE_ID:-local}:syslog-server"
     groups:
       - syslog-client
 provisioner:

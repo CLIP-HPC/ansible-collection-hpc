@@ -2,6 +2,9 @@
 [Unit]
 Description=This service manages the container "{{ role_container_service.name }}"
 After=network.target
+{% if role_container_service.shares is defined %}
+RequiresMountsFor={% for element in role_container_service.shares %}/srv/shares/{{ element.name }} {% endfor %}
+{% endif %}
 
 [Service]
 Type=simple

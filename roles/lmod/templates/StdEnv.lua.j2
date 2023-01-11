@@ -48,5 +48,5 @@ setenv("LMOD_SHORT_TIME", "86400")
 prepend_path("PATH","{{ role_lmod_system_folder }}/utils")
 
 if home ~= "" then
-   setenv("SINGULARITY_TMPDIR", home)
+   setenv("APPTAINER_TMPDIR", home)
 end

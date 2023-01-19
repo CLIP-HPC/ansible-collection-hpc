@@ -4,6 +4,7 @@
   become: false
   acme_certificate:
     acme_version: 2
+    request_timeout: '{{ role_certificate_acme_timeout }}'
     account_uri: '{{ role_certificate_provider.account_uri }}'
     acme_directory: '{{ role_certificate_provider.directory }}'
     challenge: "dns-01"
@@ -34,6 +35,7 @@
   become: false
   acme_certificate:
     acme_version: 2
+    request_timeout: '{{ role_certificate_acme_timeout }}'
     account_uri: '{{ role_certificate_provider.account_uri }}'
     acme_directory: '{{ role_certificate_provider.directory }}'
     modify_account: false

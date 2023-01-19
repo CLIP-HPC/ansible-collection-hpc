@@ -13,3 +13,5 @@ role_certificate_nios_provider:
   host:
   username:
   password:
+# Sectigo might take a little longer (default is 10 sec)
+role_certificate_acme_timeout: 60

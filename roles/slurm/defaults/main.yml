@@ -60,3 +60,4 @@ role_slurm_power_save_exc_partitons:
 role_slurm_power_save_exc_nodes:
 role_slurm_power_save_resume_program:
 role_slurm_power_save_suspend_program:
+role_slurm_dbd_conf_debug_flags: ''

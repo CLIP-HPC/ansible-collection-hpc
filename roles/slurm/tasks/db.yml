@@ -161,6 +161,7 @@
   when: role_slurm_dbd_archive_dir is defined
 
 - name: template in slurmdbd.conf
+  tags: reconfigure
   template:
     src: slurmdbd.conf.j2
     dest: /etc/slurm/slurmdbd.conf

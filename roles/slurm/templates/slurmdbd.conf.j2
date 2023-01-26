@@ -65,6 +65,9 @@ DbdHost={{ role_slurm_db_host }}
 SlurmUser=slurm
 #MessageTimeout=300
 DebugLevel=info
+{% if role_slurm_dbd_conf_debug_flags %}
+DebugFlags={{ role_slurm_dbd_conf_debug_flags }}
+{% endif %}
 #DefaultQOS=normal,standby
 PidFile=/var/run/slurmdbd.pid
 #PluginDir=/usr/lib/slurm

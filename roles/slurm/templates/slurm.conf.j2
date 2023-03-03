@@ -20,6 +20,10 @@ SlurmctldPort=6817
 SlurmdPort=6818
 SlurmctldParameters=enable_configless,idle_on_node_suspend
 AuthType=auth/munge
+{% if role_slurm_enable_rest %}
+AuthAltTypes=auth/jwt
+AuthAltParameters={{ role_slurm_auth_alt_parameters }}
+{% endif %}
 #JobCredentialPrivateKey=
 #JobCredentialPublicCertificate=
 StateSaveLocation=/var/spool/slurm

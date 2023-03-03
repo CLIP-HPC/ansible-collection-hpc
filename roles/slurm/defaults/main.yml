@@ -61,3 +61,5 @@ role_slurm_power_save_exc_nodes:
 role_slurm_power_save_resume_program:
 role_slurm_power_save_suspend_program:
 role_slurm_dbd_conf_debug_flags: ''
+role_slurm_enable_rest: false
+role_slurm_auth_alt_parameters: "jwt_key=/etc/slurm/jwt.key"

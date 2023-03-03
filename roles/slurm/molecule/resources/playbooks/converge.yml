@@ -74,3 +74,5 @@
         role_slurm_dbd_purge_suspend: 1month
         role_slurm_dbd_purge_txn: 12month
         role_slurm_dbd_purge_usage: 24month
+        role_slurm_enable_rest: true
+        role_slurm_disable_token_creation: true

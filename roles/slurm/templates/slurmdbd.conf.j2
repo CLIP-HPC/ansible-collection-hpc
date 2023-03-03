@@ -57,7 +57,10 @@ PurgeUsageAfter={{ role_slurm_dbd_purge_usage }}
 # Authentication info
 AuthType=auth/munge
 #AuthInfo=/var/run/munge/munge.socket.2
-
+{% if role_slurm_enable_rest %}
+AuthAltTypes=auth/jwt
+AuthAltParameters={{ role_slurm_auth_alt_parameters }}
+{% endif %}
 
 # SlurmDBD info
 DbdHost={{ role_slurm_db_host }}

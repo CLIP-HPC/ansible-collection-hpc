@@ -20,6 +20,12 @@
   delegate_to: "{{ role_slurm_control_host }}"
   run_once: true
 
+- include: rest.yml
+  when: role_slurm_enable_rest | bool
+  delegate_facts: true
+  delegate_to: "{{ role_slurm_control_host }}"
+  run_once: true
+
 - include: compute.yml
   when: role_slurm_enable.batch | bool
 

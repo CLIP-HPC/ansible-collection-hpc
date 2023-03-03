@@ -56,6 +56,26 @@
   run_once: true
   when: role_slurm_munge_key is not defined
 
+- block:
+    - name: Generate a JWT key if not provided externally
+      command: "dd if=/dev/urandom of=/etc/slurm/jwt.key bs=32 count=1"
+      args:
+        creates: "/etc/slurm/jwt.key"
+      notify:
+        - Restart slurmctld
+        - Restart slurmrestd
+
+    - name: Fix JWT key permissions
+      file:
+        path: "/etc/slurm/jwt.key"
+        owner: slurm
+        group: slurm
+        mode: "0600"
+  delegate_to: "{{ role_slurm_control_host }}"
+  run_once: true
+  tags: rest
+  when: role_slurm_jwt_key is not defined and role_slurm_enable_rest
+
 
 - name: Copy external munge key if provided
   copy:
@@ -69,6 +89,22 @@
   when: role_slurm_munge_key is defined
   notify:
     - Restart Munge service
+
+- name: Copy external JWT key if provided
+  copy:
+    content: "{{ role_slurm_jwt_key | b64decode }}"
+    dest: "/etc/slurm/jwt.key"
+    owner: slurm
+    group: slurm
+    mode: "0600"
+  when: role_slurm_jwt_key is defined and role_slurm_enable_rest
+  delegate_to: "{{ role_slurm_control_host }}"
+  run_once: true
+  tags: rest
+  notify:
+    - Restart slurmctld
+    - Restart slurmrestd
+    - Restart slurmdbd
 
 - name: Make sure that Munge is running on control host
   service:
@@ -95,6 +131,32 @@
   notify:
     - Restart Munge service
 
+- name: Retrieve JWT key from Slurm control host
+  slurp:
+    src: "/etc/slurm/jwt.key"
+  register: slurm_jwt_key
+  delegate_to: "{{ role_slurm_control_host }}"
+  run_once: true
+  when: role_slurm_enable_rest
+  tags: rest
+
+
+- name: Write JWT key
+  copy:
+    content: "{{ slurm_jwt_key['content'] | b64decode }}"
+    dest: "/etc/slurm/jwt.key"
+    owner: slurm
+    group: slurm
+    mode: "0400"
+  delegate_to: "{{ role_slurm_db_host }}"
+  run_once: true
+  notify:
+    - Restart slurmctld
+    - Restart slurmrestd
+    - Restart slurmdbd
+  when: role_slurm_enable_rest
+  tags: rest
+
 - name: add slurm log dir
   file:
     path: /var/log/slurm
@@ -111,7 +173,7 @@
   delegate_to: "{{ role_slurm_db_host }}"
   run_once: true
   notify:
-    - restart slurmdbd
+    - Restart slurmdbd
 
 - name: Ensure Slurm services are enabled
   service:

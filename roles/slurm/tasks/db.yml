@@ -69,7 +69,7 @@
     path: /etc/my.cnf
     mode: 0644
     section: mariadb
-    allow_no_value: true
+    allow_no_value: "{{ (item.option == 'log-bin') | ternary(true, false) }}"
     option: "{{ item.option }}"
     value: "{{ item.value | default(omit) }}"
   loop:
@@ -158,6 +158,8 @@
     state: directory
     path: "{{ role_slurm_dbd_archive_dir }}"
     owner: slurm
+    group: root
+    mode: 0750
   when: role_slurm_dbd_archive_dir is defined
 
 - name: template in slurmdbd.conf
@@ -169,4 +171,4 @@
     mode: 0600
     backup: true
   notify:
-    - restart slurmdbd
+    - Restart slurmdbd

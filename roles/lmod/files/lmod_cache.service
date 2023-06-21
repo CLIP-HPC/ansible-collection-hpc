@@ -1,0 +1,11 @@
+[Unit]
+Description=lmod cache service
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/bin/bash -l -c "/usr/share/lmod/lmod/libexec/update_lmod_system_cache_files $MODULEPATH"
+
+[Install]
+WantedBy=multi-user.target

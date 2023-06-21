@@ -1,0 +1,14 @@
+---
+- name: "restart lmod_cache.timer unit"
+  systemd:
+    name: "lmod_cache.timer"
+    enabled: yes
+    state: restarted
+    daemon_reload: yes
+
+- name: "restart easyconfig_sync timer"
+  systemd:
+    name: "easyconfig_sync.timer"
+    enabled: yes
+    state: restarted
+    daemon_reload: yes

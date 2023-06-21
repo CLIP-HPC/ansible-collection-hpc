@@ -98,3 +98,18 @@
     line: '  setenv MODULEPATH "{{ role_lmod_core_folder }}"'
     regexp: '^  setenv MODULEPATH'
     path: /etc/profile.d/00-modulepath.csh
+
+
+- name: "Deploy lmod_cache.service template"
+  copy:
+    src: "lmod_cache.service"
+    dest: "/etc/systemd/system/lmod_cache.service"
+    mode: 0644
+  notify: "restart lmod_cache.timer unit"
+
+- name: "Deploy lmod_cache.timer template"
+  copy:
+    src: "lmod_cache.timer"
+    dest: "/etc/systemd/system/lmod_cache.timer"
+    mode: 0644
+  notify: "restart lmod_cache.timer unit"

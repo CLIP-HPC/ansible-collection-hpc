@@ -18,3 +18,4 @@ role_lmod_intel_pmi_lib: "/usr/lib64/libpmi.so"
 # if not set use latest version
 role_lmod_easybuild_bootstrap_version:
 role_lmod_nf_opts: "-Xms1g -Xmx6g"
+role_lmod_easybuild_additional_robot_paths:

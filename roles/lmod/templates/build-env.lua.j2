@@ -18,6 +18,9 @@ setenv("EASYBUILD_INCLUDE_MODULE_NAMING_SCHEMES","{{ role_lmod_easybuild_nms_fol
 setenv("EASYBUILD_MODULE_NAMING_SCHEME","{{ role_lmod_easybuild_nms }}")
 setenv("EASYBUILD_GIT_WORKING_DIRS_PATH","{{ role_lmod_easybuild_git_work_folder }}")
 setenv("EASYBUILD_SOURCEPATH","{{ role_lmod_easybuild_source_folder }}")
+{% if role_lmod_easybuild_additional_robot_paths %}
+prepend_path("EASYBUILD_ROBOT_PATHS","{{ role_lmod_easybuild_additional_robot_paths }}")
+{% endif %}
 prepend_path("EASYBUILD_ROBOT_PATHS","{{ role_lmod_easybuild_easyconfig_folder }}/easybuild/easyconfigs")
 prepend_path("EASYBUILD_ROBOT_PATHS","{{ role_lmod_easybuild_install_folder }}/ebfiles_repo")
 setenv("EASYBUILD_HIDE_DEPS","{{ role_lmod_easybuild_hide_deps }}")

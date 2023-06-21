@@ -1,0 +1,12 @@
+[Unit]
+Description=easyconfig sync service
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory={{ role_lmod_easybuild_easyconfig_folder }}
+ExecStart=/usr/bin/git pull
+
+[Install]
+WantedBy=multi-user.target

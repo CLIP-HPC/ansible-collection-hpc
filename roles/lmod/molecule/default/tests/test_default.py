@@ -50,7 +50,6 @@ def test_lmod_config(host):
     assert active['siteName'] == "VBC"
     assert active['colorize'] == "yes"
     assert active['redirect'] == "no"
-    assert active['dot_files'] == "no"
     assert active['pin_v'] == "yes"
     assert active['spdr_loads'] == "yes"
 
@@ -94,3 +93,32 @@ def test_eb_search(host):
     with host.sudo("easybuild"):
         search_cmd = host.check_output('bash -lc "eb -S singularity"')
         assert search_cmd != ''
+
+
+def test_lmod_cache_timer(host):
+    timer_cmd = host.run('systemctl status lmod_cache.timer')
+    assert timer_cmd.rc == 0
+    assert 'Loaded: loaded' in timer_cmd.stdout
+    assert 'Active: active' in timer_cmd.stdout
+
+
+def test_easybuild_sync_timer(host):
+    timer_cmd = host.run('systemctl status easyconfig_sync.timer')
+    assert timer_cmd.rc == 0
+    assert 'Loaded: loaded' in timer_cmd.stdout
+    assert 'Active: active' in timer_cmd.stdout
+
+
+def test_easyconfig_readonly(host):
+    folder = host.file("/software/system/easyconfigs")
+    assert folder.is_directory
+    assert folder.user == "root"
+    assert folder.group == "root"
+    assert folder.mode == 0o755
+
+
+def test_easyconfig_robot_path(host):
+    cmd = 'source ~/.bash_profile && echo "$EASYBUILD_ROBOT_PATHS"'
+    call = 'bash -lc \'' + cmd + '\''
+    env = host.check_output(call)
+    assert '/software/easyconfig1:/software/easyconfig2' in env

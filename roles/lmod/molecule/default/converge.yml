@@ -26,3 +26,4 @@
         role_lmod_ompi_mca_btl: "self,vader,tcp"
         role_lmod_intel_pmi_lib: "/usr/lib64/libpmi.so"
         role_lmod_nf_opts: "-Xms1g -Xmx6g"
+        role_lmod_easybuild_additional_robot_paths: /software/easyconfig1:/software/easyconfig2

@@ -8,7 +8,6 @@ Role Variables
 
 - `role_lmod_base_folder` (/software): ROOT path for LMOD build environment and other easybuild related files
 - `role_lmod_build_env` (2019): The build environment.
-- `role_lmod_easyblock_repo` (optional): Link to gitrepo with custom easyblocks
 - `role_additional_modules` ([]): List of additional modules to load when the user logs in
 
 There are some additional variables in default/main.yml for LMOD which can be overwritten.

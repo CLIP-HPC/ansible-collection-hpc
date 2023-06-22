@@ -28,19 +28,10 @@
     - "{{ role_lmod_rc_folder }}"
     - "{{ role_lmod_build_env_install_folder }}"
     - "{{ role_lmod_easybuild_install_folder }}"
-    - "{{ role_lmod_easybuild_build_folder }}"
-    - "{{ role_lmod_easybuild_source_folder }}"
     - "{{ role_lmod_easybuild_install_folder }}/ebfiles_repo"
-    - "{{ role_lmod_easybuild_nms_folder }}"
     - "{{ role_lmod_easybuild_cache_folder }}"
   run_once: "{{ role_lmod_shared_module_fs }}"
 
-- name: Easybuild naming schema python file
-  copy:
-    mode: 0644
-    src: "lowercase_mns.py"
-    dest: "{{ role_lmod_easybuild_nms_folder }}"
-  run_once: "{{ role_lmod_shared_module_fs }}"
 
 - name: Temlate lmod.rc file
   template:

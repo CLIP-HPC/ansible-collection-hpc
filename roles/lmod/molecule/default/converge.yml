@@ -13,7 +13,6 @@
         role_lmod_syshost: system1
         role_lmod_base_folder: "/software"
         role_lmod_build_env: "2019"
-        role_lmod_easyblock_repo:
         role_lmod_autoswap: "no"
         role_lmod_cached_loads: "yes"
         role_lmod_exact_match: "yes"

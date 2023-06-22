@@ -65,8 +65,7 @@ def test_eb_config(host):
             config_dict[config_key.strip()] = config_value.strip()
         base_folder = "/software"
         install_dir = f"{base_folder}/2019"
-        assert config_dict['buildpath'] == f"{base_folder}/build-tmp"
-        assert config_dict['group-writable-installdir'] == 'True'
+        assert config_dict['buildpath'] == f"{install_dir}/build"
         assert config_dict['installpath'] == install_dir
         assert config_dict['prefix'] == install_dir
         assert config_dict['repositorypath'] == f"{install_dir}/ebfiles_repo"

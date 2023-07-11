@@ -13,8 +13,8 @@ platforms:
     image: docker.artifactory.imp.ac.at/it/molecule/centos7:latest
     command: /usr/sbin/init
     privileged: true
-  - name: instance-ubi8.7-1-${INSTANCE_ID:-local}
-    image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.7-1
+  - name: instance-ubi8.8-1-${INSTANCE_ID:-local}
+    image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.8-1
     privileged: true
     command: /sbin/init
 provisioner:

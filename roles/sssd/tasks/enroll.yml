@@ -26,7 +26,8 @@
   changed_when: true
   when: realmd_bound is failed
 
-- block:
+- when: role_sssd_allowed_groups | length > 0
+  block:
     - name: Change access_provider to simple
       community.general.ini_file:
         path: /etc/sssd/sssd.conf
@@ -44,7 +45,6 @@
         value: "{{ role_sssd_allowed_groups | default([]) | join(',') }}"
         mode: "0600"
       notify: restart sssd
-  when: role_sssd_allowed_groups | length > 0
 
 - name: Enable password authentication in ssh config
   ansible.builtin.lineinfile:
@@ -64,7 +64,8 @@
   notify: restart sssd
   when: role_sssd_override_homedir is defined
 
-- block:
+- when: role_sssd_use_ssh_key
+  block:
     - name: Set LDAP extra attributes for ssh key
       community.general.ini_file:
         path: /etc/sssd/sssd.conf
@@ -111,5 +112,3 @@
         state: present
         mode: "0600"
       notify: restart sshd
-
-  when: role_sssd_use_ssh_key

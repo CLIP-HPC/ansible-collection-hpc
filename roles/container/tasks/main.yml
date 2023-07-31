@@ -53,6 +53,7 @@
 # Stop and remove container on version change
 - name: Manage container removal on image:tag update
   become: true
+  when: status is defined and (status | count > 0) and (status[0].ImageName != (role_container_service.image + ':' + role_container_service.tag) )
   block:
     - name: Stop and disable service
       ansible.builtin.service:
@@ -68,7 +69,6 @@
         path: /var/lib/cni/networks/podman/{{ role_container_service.ip }}
         state: absent
       when: role_container_service.ip is defined and role_container_service.ip
-  when: status is defined and (status | count > 0) and (status[0].ImageName != (role_container_service.image + ':' + role_container_service.tag) )
 
 # Ensure latest image
 - name: Pull latest tag/branch version of an image
@@ -134,6 +134,7 @@
 # Create the default directories, and volume directorys
 - name: Create Data Volumes
   become: true
+  when: role_container_service.shares is defined and role_container_service.shares | length > 0
   block:
     - name: Create persistent share directory
       ansible.builtin.file:
@@ -156,11 +157,11 @@
         state: mounted
       with_items: "{{ role_container_service.shares }}"
       notify: Restart container service {{ role_container_service.name }}
-  when: role_container_service.shares is defined and role_container_service.shares | length > 0
 
 # Certificates
 - name: Certificates
   become: true
+  when: role_container_service.certificate is defined and role_container_service.certificate
   block:
     - name: Create a certificate volume if certificates are requested
       ansible.builtin.file:
@@ -181,7 +182,6 @@
         - crt
         - key
       notify: Restart container service {{ role_container_service.name }}
-  when: role_container_service.certificate is defined and role_container_service.certificate
 
 # Environment Variables
 - name: Render environment-file.txt.j2 template for the environment-file

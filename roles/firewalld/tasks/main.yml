@@ -1,6 +1,7 @@
 ---
 # tasks file for role-firewalld
 - name: Assure firewalld is installed, enabled and running
+  when: role_firewalld_present
   block:
     - name: " Package"
       ansible.builtin.yum:
@@ -14,7 +15,6 @@
         name: firewalld
         enabled: true
         state: started
-  when: role_firewalld_present
 
 # clean up old services
 - name: fetch current zone services

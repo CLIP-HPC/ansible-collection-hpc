@@ -4,4 +4,4 @@
   ansible.builtin.shell: realm list | grep {{ domain_to_join.name }}
   register: realmd_bound
   changed_when: false
-  ignore_errors: true
+  failed_when: false

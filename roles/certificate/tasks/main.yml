@@ -39,7 +39,7 @@
 - name: Copy current certificate
   become: true
   changed_when: false
-  ignore_errors: true
+  failed_when: false
   ansible.builtin.fetch:
     src: "{{ host_tls_dir }}.crt"
     dest: "{{ cert_basepath }}.crt"
@@ -49,7 +49,7 @@
 - name: Copy current csr from remote host
   become: true
   changed_when: false
-  ignore_errors: true
+  failed_when: false
   ansible.builtin.fetch:
     src: "{{ host_tls_dir }}.csr"
     dest: "{{ cert_basepath }}.csr"
@@ -58,7 +58,7 @@
 - name: Copy current key from remote host
   become: true
   changed_when: false
-  ignore_errors: true
+  failed_when: false
   ansible.builtin.fetch:
     src: "{{ host_tls_dir }}.key"
     dest: "{{ cert_basepath }}.key"
@@ -67,7 +67,7 @@
 - name: Set key permissions to default
   become: false
   changed_when: false
-  ignore_errors: true
+  failed_when: false
   delegate_to: localhost
   ansible.builtin.file:
     path: "{{ cert_basepath }}.key"

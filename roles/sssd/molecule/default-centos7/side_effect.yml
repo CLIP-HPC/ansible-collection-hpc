@@ -11,4 +11,4 @@
     - name: Un-enroll machines
       changed_when: false
       ansible.builtin.shell: echo {{ ad_password }} | realm leave --unattended --verbose -U {{ role_sssd_domains.TESTING.ad_username }} {{ role_sssd_domains.TESTING.name }}
-      ignore_errors: true
+      failed_when: false

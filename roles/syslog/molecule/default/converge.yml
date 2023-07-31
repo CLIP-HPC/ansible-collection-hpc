@@ -18,4 +18,4 @@
       include_role:
         name: syslog
       vars:
-        role_syslog_server: "syslog-server"
+        role_syslog_server: syslog-server

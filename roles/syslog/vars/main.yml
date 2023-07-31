@@ -2,7 +2,7 @@
 # vars file for role-syslog
 syslog_confdir: /etc/rsyslog.conf.d/
 syslog_service: rsyslog.service
-syslog_reload: "/bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true"
+syslog_reload: /bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true
 syslog_target_dirs:
   - dir: /var/log/host
     glob: "*/*.log"

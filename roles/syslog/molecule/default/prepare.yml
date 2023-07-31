@@ -4,11 +4,11 @@
   gather_facts: false
   tasks:
   # add pgrep, iproute for ss tool, to run testinfra.
-  - name: install iproute and pgrep for testing
-    become: true
-    yum:
-      name: "iproute,net-tools,tcpdump,procps-ng"
-      state: present
+    - name: install iproute and pgrep for testing
+      become: true
+      yum:
+        name: iproute,net-tools,tcpdump,procps-ng
+        state: present
 
 # we assume rsyslog will be present everywhere, for testing we have to prepare it
 - name: prepare client

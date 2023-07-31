@@ -14,7 +14,7 @@ platforms:
     command: /usr/sbin/init
     privileged: true
     volumes:
-      - "/tmp/instance-ubi8.8-1-${INSTANCE_ID:-local}:/var/lib/containers"
+      - /tmp/instance-ubi8.8-1-${INSTANCE_ID:-local}:/var/lib/containers
 provisioner:
   name: ansible
 scenario:

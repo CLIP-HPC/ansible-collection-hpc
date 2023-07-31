@@ -3,7 +3,7 @@
   hosts: all
   gather_facts: false
   tasks:
-  - name: install iproute
-    yum:
-      name: iproute
-      state: present
+    - name: install iproute
+      yum:
+        name: iproute
+        state: present

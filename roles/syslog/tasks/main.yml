@@ -3,14 +3,14 @@
 - name: check syslog mode validity
   assert:
     that:
-      - "role_syslog_mode in ['server', 'client']"
-    success_msg: "running syslog deployment for {{ role_syslog_mode }}"
+      - role_syslog_mode in ['server', 'client']
+    success_msg: running syslog deployment for {{ role_syslog_mode }}
     fail_msg: "var 'role_syslog_mode' must be one of: 'client', 'server'"
 
 - name: install additional packages (logrotate, xz, rsyslog modules)
   become: true
   yum:
-    name: "logrotate,xz,rsyslog"
+    name: logrotate,xz,rsyslog
     state: present
 
 - name: setting up syslog

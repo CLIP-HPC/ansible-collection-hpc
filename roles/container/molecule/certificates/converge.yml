@@ -5,12 +5,12 @@
 
   vars:
     role_container_service:
-      name: 'webservice'
-      image: "docker.artifactory.imp.ac.at/it/molecule/tests/httpd"
-      tag: "2.4.39-alpine"
+      name: webservice
+      image: docker.artifactory.imp.ac.at/it/molecule/tests/httpd
+      tag: 2.4.39-alpine
       uid: 222
       gid: 333
-      hostname: 'it-webserver-1.vbc.ac.at'
+      hostname: it-webserver-1.vbc.ac.at
       certificate: true
       selinux: true
     role_container_hostname: it-webserver-1.vbc.ac.at
@@ -29,25 +29,25 @@
         state: directory
         owner: root
         group: root
-        mode: 0550
+        mode: "0550"
     - name: Generate an OpenSSL private key with the default values (4096 bits, RSA)
       become: true
       openssl_privatekey:
-        path: "/srv/certificates/it-webserver-1.vbc.ac.at.key"
+        path: /srv/certificates/it-webserver-1.vbc.ac.at.key
     - name: Generate an OpenSSL Certificate Signing Request
       become: true
       openssl_csr:
-        path: "/srv/certificates/it-webserver-1.vbc.ac.at.csr"
-        privatekey_path: "/srv/certificates/it-webserver-1.vbc.ac.at.key"
-        common_name: "it-webserver-1.vbc.ac.at"
+        path: /srv/certificates/it-webserver-1.vbc.ac.at.csr
+        privatekey_path: /srv/certificates/it-webserver-1.vbc.ac.at.key
+        common_name: it-webserver-1.vbc.ac.at
     - name: Generate a Self Signed OpenSSL certificate
       become: true
       openssl_certificate:
-        path: "/srv/certificates/it-webserver-1.vbc.ac.at.crt"
-        privatekey_path: "/srv/certificates/it-webserver-1.vbc.ac.at.key"
-        csr_path: "/srv/certificates/it-webserver-1.vbc.ac.at.csr"
+        path: /srv/certificates/it-webserver-1.vbc.ac.at.crt
+        privatekey_path: /srv/certificates/it-webserver-1.vbc.ac.at.key
+        csr_path: /srv/certificates/it-webserver-1.vbc.ac.at.csr
         provider: selfsigned
   tasks:
-    - name: "Include container role"
+    - name: Include container role
       include_role:
         name: container

@@ -17,11 +17,11 @@ provisioner:
   options:
     extra-vars: "@${ONEPASS_VARS:-/missing/1password/credentials.file}"
   env:
-    ONEPASS_VARS: "${ONEPASS_VARS}"
-    INSTANCE_ID: "${INSTANCE_ID:-local}"
+    ONEPASS_VARS: ${ONEPASS_VARS}
+    INSTANCE_ID: ${INSTANCE_ID:-local}
 scenario:
   name: default
 verifier:
   name: testinfra
   env:
-    INSTANCE_ID: "${INSTANCE_ID:-local}"
+    INSTANCE_ID: ${INSTANCE_ID:-local}

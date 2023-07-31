@@ -7,7 +7,7 @@ role_promtail_basedir: /opt/promtail
 role_promtail_bin_path: "{{ role_promtail_basedir }}/promtail-linux-amd64"
 role_promtail_confdir: /etc/promtail
 role_promtail_version: 2.0.0
-role_promtail_source_uri: "https://github.com/grafana/loki/releases/download/v{{ role_promtail_version }}/promtail-linux-amd64.zip"
+role_promtail_source_uri: https://github.com/grafana/loki/releases/download/v{{ role_promtail_version }}/promtail-linux-amd64.zip
 role_promtail_config_file: "{{ role_promtail_confdir }}/promtail.yml"
 role_promtail_log_level: info
 

@@ -2,9 +2,9 @@
 # vars file for role-dns
 #
 nios_provider:
-  host: "ns.imp.ac.at"
-  username: "svc_infoblox_ansible"
-  password: "{{ lookup('onepassword', 'linux_baseline', section='dns-nios', field='password', vault='hosts', master_password=onepass_password, secret_key=onepass_secret_key, subdomain=onepass_domain, username=onepass_email) }}"
-
+  host: ns.imp.ac.at
+  username: svc_infoblox_ansible
+  password: "{{ lookup('onepassword', 'linux_baseline', section='dns-nios', field='password', vault='hosts', master_password=onepass_password, secret_key=onepass_secret_key,\
+    \ subdomain=onepass_domain, username=onepass_email) }}"
 
 # vim: sts=2:ai:list

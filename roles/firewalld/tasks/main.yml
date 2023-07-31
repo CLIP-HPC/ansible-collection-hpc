@@ -18,7 +18,7 @@
 
 # clean up old services
 - name: fetch current zone services
-  command: "firewall-cmd --list-services --zone {{ item.zone | default(role_firewalld_default_zone, true) }}"
+  command: firewall-cmd --list-services --zone {{ item.zone | default(role_firewalld_default_zone, true) }}
   loop: "{{ role_firewalld_interfaces }}"
   register: current_services
   changed_when: false
@@ -45,7 +45,7 @@
 
 # clean up oldports
 - name: fetch current zone ports
-  command: "firewall-cmd --list-ports --zone {{ item.zone | default(role_firewalld_default_zone, true) }}"
+  command: firewall-cmd --list-ports --zone {{ item.zone | default(role_firewalld_default_zone, true) }}
   loop: "{{ role_firewalld_interfaces }}"
   register: current_ports
   changed_when: false
@@ -78,7 +78,7 @@
     immediate: true
     permanent: true
   loop: "{{ role_firewalld_interfaces }}"
-  notify: "restart firewalld"
+  notify: restart firewalld
 
 - name: Deploy services to zone
   firewalld:
@@ -88,7 +88,7 @@
     immediate: true
     permanent: true
   loop: "{{ role_firewalld_interfaces | subelements('services') }}"
-  notify: "restart firewalld"
+  notify: restart firewalld
 
 - name: Deploy ports to zone
   firewalld:
@@ -98,6 +98,6 @@
     immediate: true
     permanent: true
   loop: "{{ role_firewalld_interfaces | subelements('ports') }}"
-  notify: "restart firewalld"
+  notify: restart firewalld
 
 # vim: sts=2:ai:

@@ -2,5 +2,5 @@
 # defaults file for role-container
 role_container_service:
 role_container_hostname: "{{ inventory_hostname }}"
-role_container_tls_dir: "/srv/certificates/"
+role_container_tls_dir: /srv/certificates/
 role_container_certname: "{{ role_container_hostname }}"

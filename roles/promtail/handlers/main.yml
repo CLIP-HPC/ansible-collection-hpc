@@ -1,6 +1,6 @@
 ---
 # handlers file for role-promtail
-- name: "Restart promtail service"
+- name: Restart promtail service
   become: true
   systemd:
     name: promtail

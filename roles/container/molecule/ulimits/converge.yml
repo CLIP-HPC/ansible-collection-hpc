@@ -5,9 +5,9 @@
 
   vars:
     all_services:
-      - name: 'ulimits_dict'
-        image: "docker.artifactory.imp.ac.at/it/molecule/tests/httpd"
-        tag: "2.4.39-alpine"
+      - name: ulimits_dict
+        image: docker.artifactory.imp.ac.at/it/molecule/tests/httpd
+        tag: 2.4.39-alpine
         uid: 222
         gid: 333
         ulimits:
@@ -16,14 +16,13 @@
             soft: 10000
             hard: 15000
         selinux: true
-      - name: 'ulimits_string'
-        image: "docker.artifactory.imp.ac.at/it/molecule/tests/httpd"
-        tag: "2.4.39-alpine"
+      - name: ulimits_string
+        image: docker.artifactory.imp.ac.at/it/molecule/tests/httpd
+        tag: 2.4.39-alpine
         uid: 222
         gid: 333
         ulimits: host
         selinux: true
-
 
   tasks:
     - name: bring up container services

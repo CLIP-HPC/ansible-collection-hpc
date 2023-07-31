@@ -6,7 +6,7 @@
     # add iproute for ss tool, to run testinfra
     - name: send example log messages
       changed_when: false
-      command: "/bin/logger -p {{ item.prio }} -t {{ item.tag | default('testlog') }} '{{ item.msg }} with {{ item.prio }}'"
+      command: /bin/logger -p {{ item.prio }} -t {{ item.tag | default('testlog') }} '{{ item.msg }} with {{ item.prio }}'
       loop:
         - prio: info
           msg: hello world
@@ -27,4 +27,4 @@
   tasks:
     - name: HUP rsyslogd
       changed_when: false
-      shell: "kill -HUP $(pgrep rsyslogd)"
+      shell: kill -HUP $(pgrep rsyslogd)

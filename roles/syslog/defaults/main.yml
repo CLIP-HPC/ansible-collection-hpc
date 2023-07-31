@@ -1,4 +1,4 @@
 ---
 # defaults file for role-syslog
-role_syslog_mode: "client"
+role_syslog_mode: client
 role_syslog_server: syslog.vbc.ac.at

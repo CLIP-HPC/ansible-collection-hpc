@@ -12,7 +12,7 @@
     path: /etc/sudoers.d
     owner: root
     group: root
-    mode: 0750
+    mode: "0750"
     state: directory
 
 - name: Set includedir in sudoers
@@ -21,22 +21,22 @@
     dest: /etc/sudoers
     line: "#includedir /etc/sudoers.d"
     state: present
-    validate: "/usr/sbin/visudo -cf %s"
+    validate: /usr/sbin/visudo -cf %s
 
 - name: Create sudoers
   become: true
   template:
     src: sudoers.d.j2
-    dest: "/etc/sudoers.d/{{ role_sudoers_filename }}"
-    mode: 0440
+    dest: /etc/sudoers.d/{{ role_sudoers_filename }}
+    mode: "0440"
     owner: root
     group: root
-    validate: "/usr/sbin/visudo -cf %s"
+    validate: /usr/sbin/visudo -cf %s
   when: role_sudoers_present|bool
 
 - name: Remove sudoers
   become: true
   file:
-    path: "/etc/sudoers.d/{{ role_sudoers_filename }}"
+    path: /etc/sudoers.d/{{ role_sudoers_filename }}
     state: absent
   when: not role_sudoers_present|bool

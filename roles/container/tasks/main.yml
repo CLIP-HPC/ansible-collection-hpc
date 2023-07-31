@@ -7,7 +7,6 @@
     state: present
     update_cache: true
 
-
 # Variable checks
 - name: Check required variables
   assert:
@@ -39,7 +38,7 @@
       service_facts:
     - name: Check if container already exist
       become: true
-      command: "/bin/podman inspect {{ role_container_service.name }} --format=json"
+      command: /bin/podman inspect {{ role_container_service.name }} --format=json
       register: raw_status
       failed_when: false
       changed_when: false
@@ -51,27 +50,25 @@
         status: "{{ raw_status.stdout | from_json }}"
       when: raw_status.stdout | length > 0
 
-
 # Stop and remove container on version change
 - name: Manage container removal on image:tag update
   become: true
   block:
     - name: Stop and disable service
       service:
-        name: "podman_{{ role_container_service.name }}"
+        name: podman_{{ role_container_service.name }}
         state: stopped
         enabled: false
       when: ('podman_' + role_container_service.name + '.service') in services
     - name: Remove container from host
-      command: "/bin/podman rm -f {{ role_container_service.name }}"
+      command: /bin/podman rm -f {{ role_container_service.name }}
       changed_when: false
     - name: Delete container CNI IP reservation
       file:
-        path: "/var/lib/cni/networks/podman/{{ role_container_service.ip }}"
+        path: /var/lib/cni/networks/podman/{{ role_container_service.ip }}
         state: absent
       when: role_container_service.ip is defined and role_container_service.ip
   when: status is defined and (status | count > 0) and (status[0].ImageName != (role_container_service.image + ':' + role_container_service.tag) )
-
 
 # Ensure latest image
 - name: Pull latest tag/branch version of an image
@@ -83,7 +80,7 @@
         force: true
       changed_when: false
     - name: Inspect the pulled image
-      command: "/bin/podman inspect {{ role_container_service.image }}:{{ role_container_service.tag }} --format=json"
+      command: /bin/podman inspect {{ role_container_service.image }}:{{ role_container_service.tag }} --format=json
       register: raw_image_status
       failed_when: false
       changed_when: false
@@ -99,10 +96,9 @@
         msg: "Reloading image for service {{ role_container_service.name }} : {{ status[0].Image }} -> {{ image_status[0].Id }}"
       changed_when: true
       notify:
-        - "Restart container service {{ role_container_service.name }}"
-        - "Prune podman images"
+        - Restart container service {{ role_container_service.name }}
+        - Prune podman images
       when: status is defined and image_status is defined and (status | count > 0) and (image_status | count > 0) and (status[0].Image != image_status[0].Id)
-
 
 # Create the default directories, and volume directorys
 - name: Create Data Volumes
@@ -110,31 +106,30 @@
   block:
     - name: Create persistent service directory
       file:
-        path: "/srv/containers/{{ role_container_service.name }}"
+        path: /srv/containers/{{ role_container_service.name }}
         state: directory
         owner: root
         group: root
-        mode: 0775
+        mode: "0775"
     - name: Create a directory for single files
       file:
-        path: "/srv/containers/{{ role_container_service.name }}/files"
+        path: /srv/containers/{{ role_container_service.name }}/files
         state: directory
         owner: "{{ role_container_service.uid }}"
         group: "{{ role_container_service.gid }}"
         mode: "0770"
       when: role_container_service.files is defined and role_container_service.files | length > 0
-      notify: "Restart container service {{ role_container_service.name }}"
+      notify: Restart container service {{ role_container_service.name }}
     - name: Create a directory for each volume
       file:
-        path: "/srv/containers/{{ role_container_service.name }}/volume_{{ item.name }}"
+        path: /srv/containers/{{ role_container_service.name }}/volume_{{ item.name }}
         state: directory
         owner: "{{ role_container_service.uid }}"
         group: "{{ role_container_service.gid }}"
         mode: "{{ item.mode | default('0770') }}"
       with_items: "{{ role_container_service.volumes }}"
       when: role_container_service.volumes is defined and role_container_service.volumes | length > 0
-      notify: "Restart container service {{ role_container_service.name }}"
-
+      notify: Restart container service {{ role_container_service.name }}
 
 # Create the default directories, and volume directorys
 - name: Create Data Volumes
@@ -142,11 +137,11 @@
   block:
     - name: Create persistent share directory
       file:
-        path: "/srv/shares/"
+        path: /srv/shares/
         state: directory
         owner: root
         group: root
-        mode: 0775
+        mode: "0775"
     - name: Install NFS-utils
       yum:
         name: nfs-utils
@@ -154,15 +149,14 @@
         state: present
     - name: Mount shares
       mount:
-        path: "/srv/shares/{{ item.name }}"
+        path: /srv/shares/{{ item.name }}
         src: "{{ item.src }}"
         fstype: "{{ item.fstype | default('nfs') }}"
         opts: "{{ item.opts | default('hard,rsize=8192,wsize=8192,nfsvers=3') }}"
         state: mounted
       with_items: "{{ role_container_service.shares }}"
-      notify: "Restart container service {{ role_container_service.name }}"
+      notify: Restart container service {{ role_container_service.name }}
   when: role_container_service.shares is defined and role_container_service.shares | length > 0
-
 
 # Certificates
 - name: Certificates
@@ -170,49 +164,48 @@
   block:
     - name: Create a certificate volume if certificates are requested
       file:
-        path: "/srv/containers/{{ role_container_service.name }}/certificates"
+        path: /srv/containers/{{ role_container_service.name }}/certificates
         state: directory
         owner: "{{ role_container_service.uid }}"
         group: "{{ role_container_service.gid }}"
-        mode: 0770
+        mode: "0770"
     - name: Copy certificates
       copy:
         remote_src: true
         src: "{{ role_container_tls_dir }}/{{ role_container_certname }}.{{ item }}"
-        dest: "/srv/containers/{{ role_container_service.name }}/certificates/{{ role_container_certname }}.{{ item }}"
+        dest: /srv/containers/{{ role_container_service.name }}/certificates/{{ role_container_certname }}.{{ item }}
         owner: "{{ role_container_service.uid }}"
         group: "{{ role_container_service.gid }}"
-        mode: 0500
+        mode: "0500"
       with_items:
-        - "crt"
-        - "key"
-      notify: "Restart container service {{ role_container_service.name }}"
+        - crt
+        - key
+      notify: Restart container service {{ role_container_service.name }}
   when: role_container_service.certificate is defined and role_container_service.certificate
-
 
 # Environment Variables
 - name: Render environment-file.txt.j2 template for the environment-file
   become: true
   template:
     src: templates/environment-file.txt.j2
-    dest: "/srv/containers/{{ role_container_service.name }}/environment-file.txt"
+    dest: /srv/containers/{{ role_container_service.name }}/environment-file.txt
     owner: root
     group: root
-    mode: 0700
+    mode: "0700"
   notify:
-    - "Restart container service {{ role_container_service.name }}"
+    - Restart container service {{ role_container_service.name }}
   when: role_container_service.environment_variables is defined and role_container_service.environment_variables | length > 0
 
 - name: Render systemd.service template for the container
   become: true
   template:
     src: templates/systemd.service.j2
-    dest: "/etc/systemd/system/podman_{{ role_container_service.name }}.service"
+    dest: /etc/systemd/system/podman_{{ role_container_service.name }}.service
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   notify:
-    - "Restart container service {{ role_container_service.name }}"
+    - Restart container service {{ role_container_service.name }}
 
 - name: Force Handlers to start services
   meta: flush_handlers

@@ -2,7 +2,7 @@
 # defaults file for role-firewalld
 ################################################################################
 role_firewalld_present: true
-role_firewalld_default_zone: "public"
+role_firewalld_default_zone: public
 ################################################################################
 # list of interface based zones,
 #   if 'ifname' is not explicitly specified, role will use the ansible_default_ipv4.interface
@@ -12,7 +12,7 @@ role_firewalld_interfaces:
   - ifname:
     zone:
     services:
-      - "ssh"
+      - ssh
     ports: []
 ################################################################################
 # source based zones, all three parameters MUST be specified explicitly

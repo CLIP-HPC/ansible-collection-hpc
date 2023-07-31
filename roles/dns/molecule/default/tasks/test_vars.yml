@@ -2,17 +2,17 @@
 - name: Test if role variables are set
   assert:
     that:
-      - "role_dns_hostname is defined"
-      - "role_dns_aliases is defined"
-    fail_msg: "ROLE VARS NOT DEFINED"
-    success_msg: 'OK'
+      - role_dns_hostname is defined
+      - role_dns_aliases is defined
+    fail_msg: ROLE VARS NOT DEFINED
+    success_msg: OK
 
 - name: Test if nios_provider is set
   assert:
     that:
-      - "nios_provider is defined"
-      - "nios_provider.host is defined"
-      - "nios_provider.username is defined"
-      - "nios_provider.password is defined"
-    fail_msg: "NIOS_PROVIDER NOT DEFINED"
-    success_msg: 'OK'
+      - nios_provider is defined
+      - nios_provider.host is defined
+      - nios_provider.username is defined
+      - nios_provider.password is defined
+    fail_msg: NIOS_PROVIDER NOT DEFINED
+    success_msg: OK

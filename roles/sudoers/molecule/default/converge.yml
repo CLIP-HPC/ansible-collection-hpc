@@ -3,10 +3,10 @@
   hosts: all
   vars:
     role_sudoers_privileges:
-      - name: '%group1'
-      - name: 'bar'
+      - name: "%group1"
+      - name: bar
         nopasswd: true
-      - name: '%group3'
+      - name: "%group3"
         runas: user1,user2
 
   tasks:

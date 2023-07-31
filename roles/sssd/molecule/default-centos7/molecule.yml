@@ -9,7 +9,7 @@ lint: |
   ansible-lint
   flake8
 platforms:
-  - name: "instance-centos7-${INSTANCE_ID:-local}"
+  - name: instance-centos7-${INSTANCE_ID:-local}
     hostname: inst-cent7.imp.ac.at
     image: docker.artifactory.imp.ac.at/it/molecule/centos7:latest
     command: /usr/sbin/init
@@ -19,7 +19,7 @@ provisioner:
   options:
     extra-vars: "@${ONEPASS_VARS:-/missing/1password/credentials.file}"
   env:
-    ONEPASS_VARS: "${ONEPASS_VARS}"
+    ONEPASS_VARS: ${ONEPASS_VARS}
 scenario:
   name: default-centos7
   create_sequence:

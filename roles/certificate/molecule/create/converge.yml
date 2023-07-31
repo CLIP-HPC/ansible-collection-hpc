@@ -13,7 +13,7 @@
     - name: get sectigo credentials
       # FIME(ebirn): this will not work in ansible 2.9
       vars:
-        item_name: "sectigo_molecule"
+        item_name: sectigo_molecule
       onepassword_info:
         auto_login:
           master_password: "{{ onepass_password }}"
@@ -37,10 +37,10 @@
     - name: Setup host certificate
       vars:
         base_domain: vbc.ac.at
-        role_certificate_hostname: "cert-sectigo-test-1.{{ base_domain }}"
+        role_certificate_hostname: cert-sectigo-test-1.{{ base_domain }}
         role_certificate_aliases:
           - "*.wildcard.cert-sectigo-test-1.{{ base_domain }}"
-          - "san1-sectigo-test.{{ base_domain }}"
+          - san1-sectigo-test.{{ base_domain }}
         role_certificate_tls_dir: /srv/certificates/
         role_certificate_provider:
           type: acme
@@ -51,7 +51,8 @@
         role_certificate_renew_days: 31
         role_certificate_nios_provider:
           host: ns.imp.ac.at
-          username: "svc_infoblox_ansible"
-          password: "{{ lookup('onepassword', 'linux_baseline', section='dns-nios', field='password', vault='hosts', master_password=onepass_password, secret_key=onepass_secret_key, subdomain=onepass_domain, username=onepass_email) }}"  # noqa 204
+          username: svc_infoblox_ansible
+          password: "{{ lookup('onepassword', 'linux_baseline', section='dns-nios', field='password', vault='hosts', master_password=onepass_password, secret_key=onepass_secret_key,\
+            \ subdomain=onepass_domain, username=onepass_email) }}" # noqa 204
       include_role:
         name: certificate

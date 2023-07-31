@@ -30,7 +30,7 @@
     state: directory
     owner: "{{ role_promtail_user }}"
     group: "{{ role_promtail_group }}"
-    mode: 0755
+    mode: "0755"
 
 - name: Create config directory
   become: true
@@ -39,7 +39,7 @@
     state: directory
     owner: root
     group: "{{ role_promtail_group }}"
-    mode: 0755
+    mode: "0755"
 
 - name: Download and unpack binary
   become: true
@@ -49,7 +49,7 @@
     remote_src: true
     owner: root
     group: "{{ role_promtail_group }}"
-    mode: 0755
+    mode: "0755"
 
 - name: Render configuration template
   become: true
@@ -58,9 +58,9 @@
     dest: "{{ role_promtail_config_file }}"
     owner: root
     group: "{{ role_promtail_group }}"
-    mode: 0644
+    mode: "0644"
   notify:
-    - "Restart promtail service"
+    - Restart promtail service
 
 - name: Render systemd service unit template
   become: true
@@ -69,6 +69,6 @@
     dest: /etc/systemd/system/promtail.service
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   notify:
-    - "Restart promtail service"
+    - Restart promtail service

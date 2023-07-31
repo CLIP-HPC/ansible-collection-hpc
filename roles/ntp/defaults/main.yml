@@ -1,4 +1,4 @@
 ---
 role_ntp_servers:
-  - "time.imp.ac.at"
-role_ntp_timezone: "Europe/Vienna"
+  - time.imp.ac.at
+role_ntp_timezone: Europe/Vienna

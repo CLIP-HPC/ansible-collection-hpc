@@ -21,13 +21,13 @@
     state: directory
     owner: root
     group: root
-    mode: '0750'
+    mode: "0750"
 
 - name: Make sure proper chrony.conf is in place
   template:
     src: chrony.conf.j2
     dest: /etc/chrony.conf
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     backup: true
@@ -36,6 +36,6 @@
 
 - name: Make sure timezone is set
   timezone:
-    name: '{{ role_ntp_timezone }}'
+    name: "{{ role_ntp_timezone }}"
 
 # vim: sts=2:ai

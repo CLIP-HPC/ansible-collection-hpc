@@ -5,9 +5,9 @@ role_certificate_tls_dir: /srv/certificates/
 role_certificate_renew_days: 31
 role_certificate_provider:
   type: acme
-  directory: "https://acme.sectigo.com/v2/OV"
-  account_id: "sectigo account_id"
-  account_uri: "https://acme.sectigo.com/v2/OV/account/< sectigo account_id>"
+  directory: https://acme.sectigo.com/v2/OV
+  account_id: sectigo account_id
+  account_uri: https://acme.sectigo.com/v2/OV/account/< sectigo account_id>
   account_key: " account_key from 1Password | replace('\\n', '\n') "
 role_certificate_nios_provider:
   host:

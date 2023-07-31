@@ -10,7 +10,7 @@
       tag: 2.4.39-alpine
       uid: 222
       gid: 333
-      ip: '10.88.0.10'
+      ip: 10.88.0.10
       selinux: true
       cmd: httpd-foreground
       ports:
@@ -32,10 +32,10 @@
         key_a: value_a
         key_b: value_b
       volumes:
-        - name: "data"
-          path: "/opt/test_1"
-        - name: "config"
-          path: "/opt/test_2"
+        - name: data
+          path: /opt/test_1
+        - name: config
+          path: /opt/test_2
       hostdirs:
         - src: /tmp
           container: /mnt

@@ -4,10 +4,10 @@
   become: false
   acme_certificate:
     acme_version: 2
-    request_timeout: '{{ role_certificate_acme_timeout }}'
-    account_uri: '{{ role_certificate_provider.account_uri }}'
-    acme_directory: '{{ role_certificate_provider.directory }}'
-    challenge: "dns-01"
+    request_timeout: "{{ role_certificate_acme_timeout }}"
+    account_uri: "{{ role_certificate_provider.account_uri }}"
+    acme_directory: "{{ role_certificate_provider.directory }}"
+    challenge: dns-01
     modify_account: false
     remaining_days: "{{ role_certificate_renew_days }}"
     account_key_content: "{{ role_certificate_provider.account_key }}"
@@ -35,11 +35,11 @@
   become: false
   acme_certificate:
     acme_version: 2
-    request_timeout: '{{ role_certificate_acme_timeout }}'
-    account_uri: '{{ role_certificate_provider.account_uri }}'
-    acme_directory: '{{ role_certificate_provider.directory }}'
+    request_timeout: "{{ role_certificate_acme_timeout }}"
+    account_uri: "{{ role_certificate_provider.account_uri }}"
+    acme_directory: "{{ role_certificate_provider.directory }}"
     modify_account: false
-    challenge: "dns-01"
+    challenge: dns-01
     data: "{{ sectigo_acme_challenge }}"
     remaining_days: "{{ role_certificate_renew_days }}"
     account_key_content: "{{ role_certificate_provider.account_key }}"
@@ -62,4 +62,3 @@
   when: sectigo_acme_challenge is changed
   connection: local
   delegate_to: localhost
-...

@@ -23,9 +23,9 @@
     group: "{{ role_base_user_publickey_username }}"
     shell: /bin/bash
     state: present
-    create_home: yes
+    create_home: true
     home: /home/{{ role_base_user_publickey_username }}
-    append: yes
+    append: true
 
 - name: Create group for the fallback user
   become: true
@@ -43,10 +43,10 @@
     group: "{{ role_base_user_linux_username }}"
     shell: /bin/bash
     state: present
-    create_home: yes
+    create_home: true
     home: /home/{{ role_base_user_linux_username }}
     groups: wheel
-    append: yes
+    append: true
     password: "{{ role_base_user_linux_password | password_hash('sha512', role_base_user_linux_salt) }}"
 
 - name: Set up authorized keys for the ansible user (role_base_user_publickey_username)
@@ -79,7 +79,7 @@
   lineinfile:
     dest: /etc/ssh/sshd_config
     regexp: "^#?PermitRootLogin "
-    line: "PermitRootLogin no"
+    line: PermitRootLogin no
   notify: restart-sshd
 
 - name: Disable ssh login for fallback user (role_base_user_linux_username)

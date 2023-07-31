@@ -8,7 +8,9 @@
     - "{{ lookup('env', 'ONEPASS_VARS') }}"
 
   tasks:
-    - ansible.builtin.import_tasks: tasks/test_vars.yml
+    - name: Import variable checks
+      ansible.builtin.import_tasks: tasks/test_vars.yml
+
     - name: install bind-utils
       ansible.builtin.yum:
         name: bind-utils

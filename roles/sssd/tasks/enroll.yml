@@ -15,7 +15,10 @@
 
 - name: Flush handlers
   ansible.builtin.meta: flush_handlers
-- ansible.builtin.include_tasks: check.yml
+
+- name: Include check.yml
+  ansible.builtin.include_tasks: check.yml
+
 - name: Enroll machine in AD
   ansible.builtin.shell: >
     set -o pipefail;
@@ -26,7 +29,8 @@
   changed_when: true
   when: realmd_bound is failed
 
-- when: role_sssd_allowed_groups | length > 0
+- name: Allow certain groups to login
+  when: role_sssd_allowed_groups | length > 0
   block:
     - name: Change access_provider to simple
       community.general.ini_file:
@@ -64,7 +68,8 @@
   notify: restart sssd
   when: role_sssd_override_homedir is defined
 
-- when: role_sssd_use_ssh_key
+- name: Enable SSH key integration into SSSD
+  when: role_sssd_use_ssh_key
   block:
     - name: Set LDAP extra attributes for ssh key
       community.general.ini_file:

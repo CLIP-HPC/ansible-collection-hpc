@@ -1,7 +1,9 @@
 ---
 # tasks for un-enrolling a node
 
-- ansible.builtin.include_tasks: check.yml
+- name: Include check.yml
+  ansible.builtin.include_tasks: check.yml
+
 - name: Un-enroll machine from AD
   ansible.builtin.shell: >
     set -o pipefail;

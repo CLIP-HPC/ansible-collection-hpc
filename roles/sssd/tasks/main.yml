@@ -1,19 +1,19 @@
 ---
 # main tasks for role-sssd
 - name: Check that password for realm_join user is specified
-  assert:
+  ansible.builtin.assert:
     that:
       - role_sssd_ad_password is defined
   when: role_sssd_present
 
 - name: Retrieve domain to join
-  set_fact:
+  ansible.builtin.set_fact:
     domain_to_join: "{{ role_sssd_domains[role_sssd_domain] }}"
 
 - name: Enroll machine
-  include_tasks: enroll.yml
+  ansible.builtin.include_tasks: enroll.yml
   when: role_sssd_present
 
 - name: Un-enroll machine
-  include_tasks: leave.yml
+  ansible.builtin.include_tasks: leave.yml
   when: not role_sssd_present

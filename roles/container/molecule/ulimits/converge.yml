@@ -28,7 +28,7 @@
     - name: bring up container services
       vars:
         role_container_hostname: "{{ role_container_service.name }}"
-      include_role:
+      ansible.builtin.include_role:
         name: container
       loop_control:
         loop_var: role_container_service

@@ -1,25 +1,23 @@
 ---
 # tasks for enrolling a node
 - name: Install realmd package
-  package:
+  ansible.builtin.package:
     name: "{{ role_sssd_packages }}"
     state: present
 
 - name: Copy realmd.conf
   become: true
-  template:
+  ansible.builtin.template:
     src: templates/realmd.conf.j2
     dest: /etc/realmd.conf
     mode: "0644"
   notify: restart realmd
 
 - name: Flush handlers
-  meta: flush_handlers
-
-- include_tasks: check.yml
-
+  ansible.builtin.meta: flush_handlers
+- ansible.builtin.include_tasks: check.yml
 - name: Enroll machine in AD
-  shell: >
+  ansible.builtin.shell: >
     set -o pipefail;
     echo '{{ role_sssd_ad_password  }}' |
     realm join --membership-software adcli --unattended --verbose -U {{ domain_to_join.ad_username }} {{ domain_to_join.name }}
@@ -30,7 +28,7 @@
 
 - block:
     - name: Change access_provider to simple
-      ini_file:
+      community.general.ini_file:
         path: /etc/sssd/sssd.conf
         section: domain/{{ domain_to_join.name }}
         option: access_provider
@@ -39,7 +37,7 @@
       notify: restart sssd
 
     - name: Add groups to simple_allow_groups
-      ini_file:
+      community.general.ini_file:
         path: /etc/sssd/sssd.conf
         section: domain/{{ domain_to_join.name }}
         option: simple_allow_groups
@@ -49,7 +47,7 @@
   when: role_sssd_allowed_groups | length > 0
 
 - name: Enable password authentication in ssh config
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/ssh/sshd_config
     regexp: ^PasswordAuthentication
     line: PasswordAuthentication yes
@@ -57,7 +55,7 @@
   notify: restart sshd
 
 - name: Set override homedir in sssd.conf
-  ini_file:
+  community.general.ini_file:
     path: /etc/sssd/sssd.conf
     section: domain/{{ domain_to_join.name }}
     option: override_homedir
@@ -68,7 +66,7 @@
 
 - block:
     - name: Set LDAP extra attributes for ssh key
-      ini_file:
+      community.general.ini_file:
         path: /etc/sssd/sssd.conf
         section: domain/{{ domain_to_join.name }}
         option: ldap_user_extra_attrs
@@ -77,7 +75,7 @@
       notify: restart sssd
 
     - name: Set LDAP user public key field
-      ini_file:
+      community.general.ini_file:
         path: /etc/sssd/sssd.conf
         section: domain/{{ domain_to_join.name }}
         option: ldap_user_ssh_public_key
@@ -86,7 +84,7 @@
       notify: restart sssd
 
     - name: Add ssh to sssd services
-      ini_file:
+      community.general.ini_file:
         path: /etc/sssd/sssd.conf
         section: sssd
         option: services
@@ -95,7 +93,7 @@
       notify: restart sssd
 
     - name: Set AuthorizedKeysCommand to sss command
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: ^AuthorizedKeysCommand
         insertafter: ^#AuthorizedKeysCommand
@@ -105,7 +103,7 @@
       notify: restart sshd
 
     - name: Set AuthorizedUsername to nobody
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         insertafter: ^#AuthorizedKeysCommandUser
         regexp: ^AuthorizedKeysCommandUser

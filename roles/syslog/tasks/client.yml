@@ -3,7 +3,7 @@
 
 - name: put rsyslog templates into place
   become: true
-  template:
+  ansible.builtin.template:
     src: rsyslog_client/{{ item }}.j2
     dest: /etc/rsyslog.d/{{ item }}
     mode: "0644"
@@ -14,4 +14,4 @@
     - restart syslog
 
 - name: flush handlers to activate syslog forwarding
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

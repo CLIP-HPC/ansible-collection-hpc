@@ -4,6 +4,6 @@
   gather_facts: false
   tasks:
     - name: install sshd
-      yum:
+      ansible.builtin.yum:
         name: openssh-server
         state: present

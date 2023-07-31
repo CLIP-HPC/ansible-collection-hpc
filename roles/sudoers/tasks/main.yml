@@ -2,13 +2,13 @@
 # tasks file for role-sudoers
 - name: Ensure that the sudo package is installed
   become: true
-  package:
+  ansible.builtin.package:
     name: sudo
     state: present
 
 - name: Create sudoers.d directory
   become: true
-  file:
+  ansible.builtin.file:
     path: /etc/sudoers.d
     owner: root
     group: root
@@ -17,7 +17,7 @@
 
 - name: Set includedir in sudoers
   become: true
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sudoers
     line: "#includedir /etc/sudoers.d"
     state: present
@@ -25,7 +25,7 @@
 
 - name: Create sudoers
   become: true
-  template:
+  ansible.builtin.template:
     src: sudoers.d.j2
     dest: /etc/sudoers.d/{{ role_sudoers_filename }}
     mode: "0440"
@@ -36,7 +36,7 @@
 
 - name: Remove sudoers
   become: true
-  file:
+  ansible.builtin.file:
     path: /etc/sudoers.d/{{ role_sudoers_filename }}
     state: absent
   when: not role_sudoers_present|bool

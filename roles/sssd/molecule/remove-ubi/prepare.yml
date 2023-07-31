@@ -7,11 +7,11 @@
       \ username=onepass_email) }}"
   tasks:
     - name: install sshd
-      yum:
+      ansible.builtin.yum:
         name: openssh-server
         state: present
     - name: Include sssd role
-      include_role:
+      ansible.builtin.include_role:
         name: sssd
       vars:
         role_sssd_domain: TESTING

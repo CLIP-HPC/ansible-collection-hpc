@@ -1,7 +1,7 @@
 ---
 # tasks file for role-dns
 - name: Test if role variables are set
-  assert:
+  ansible.builtin.assert:
     that:
       - role_dns_hostname is defined
       - role_dns_aliases is defined
@@ -9,7 +9,7 @@
     success_msg: OK
 
 - name: Test if nios_provider is set
-  assert:
+  ansible.builtin.assert:
     that:
       - nios_provider is defined
       - nios_provider.host is defined
@@ -19,17 +19,17 @@
     success_msg: OK
 
 - name: Fetch host record
-  set_fact:
+  ansible.builtin.set_fact:
     host: "{{ lookup('nios', 'record:host', filter={'name': role_dns_hostname}, provider=nios_provider) }}"
 
 - name: Dump the host record return variable
-  debug:
+  ansible.builtin.debug:
     var: host
 
 - name: InfoBlox add aliases
   delegate_to: localhost
   become: false
-  nios_host_record:
+  community.general.nios_host_record:
     name: "{{ role_dns_hostname }}"
     aliases: "{{ role_dns_aliases }}"
     provider: "{{ nios_provider }}"

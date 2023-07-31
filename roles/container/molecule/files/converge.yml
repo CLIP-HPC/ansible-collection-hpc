@@ -19,13 +19,13 @@
 
   pre_tasks:
     - name: Prepare directory
-      file:
+      ansible.builtin.file:
         path: /srv/containers/webservice/files
         state: directory
         mode: "0770"
     - name: Create fake files
       become: true
-      copy:
+      ansible.builtin.copy:
         content: ""
         dest: /srv/containers/webservice/files/test-{{ item }}.txt
         force: false
@@ -35,5 +35,5 @@
       with_items: ["1", "2"]
   tasks:
     - name: Include container role
-      include_role:
+      ansible.builtin.include_role:
         name: container

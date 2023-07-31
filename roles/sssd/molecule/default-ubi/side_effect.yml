@@ -9,6 +9,6 @@
       \ username=onepass_email) }}"
   tasks:
     - name: Un-enroll machines
-      shell: echo {{ ad_password }} | realm leave --unattended --verbose -U {{ role_sssd_domains.TESTING.ad_username }} {{ role_sssd_domains.TESTING.name }}
+      ansible.builtin.shell: echo {{ ad_password }} | realm leave --unattended --verbose -U {{ role_sssd_domains.TESTING.ad_username }} {{ role_sssd_domains.TESTING.name }}
       ignore_errors: true
       changed_when: false

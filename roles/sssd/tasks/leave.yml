@@ -1,10 +1,9 @@
 ---
 # tasks for un-enrolling a node
 
-- include_tasks: check.yml
-
+- ansible.builtin.include_tasks: check.yml
 - name: Un-enroll machine from AD
-  shell: >
+  ansible.builtin.shell: >
     set -o pipefail;
     echo '{{ role_sssd_ad_password  }}' | realm leave --unattended --verbose -U {{ domain_to_join.ad_username }} {{ domain_to_join.name }}
   register: unenroll_result

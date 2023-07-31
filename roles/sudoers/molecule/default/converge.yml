@@ -11,5 +11,5 @@
 
   tasks:
     - name: Include sudoers role
-      include_role:
+      ansible.builtin.include_role:
         name: sudoers

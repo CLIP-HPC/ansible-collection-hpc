@@ -1,7 +1,7 @@
 ---
 # tasks for checking is a node is enrolled
 - name: Check if machine is enrolled
-  shell: realm list | grep {{ domain_to_join.name }}
+  ansible.builtin.shell: realm list | grep {{ domain_to_join.name }}
   register: realmd_bound
   changed_when: false
   ignore_errors: true

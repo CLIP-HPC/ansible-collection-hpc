@@ -1,6 +1,6 @@
 ---
 - name: debug loop
-  debug:
+  ansible.builtin.debug:
     msg: Remove from {{ zone.zone | default(role_firewalld_default_zone, true) }} - {{ port }}
   loop: "{{ removal.results[i].ansible_facts.port_list }}"
   loop_control:
@@ -8,7 +8,7 @@
   when: removal.results[i].ansible_facts.port_list
 
 - name: Remove ports from zone
-  firewalld:
+  ansible.posix.firewalld:
     zone: "{{ zone.zone | default(role_firewalld_default_zone, true) }}"
     state: disabled
     port: "{{ port }}"

@@ -18,13 +18,13 @@
   pre_tasks:
     - name: Install SSL libraries for RHEL8
       become: true
-      yum:
+      ansible.builtin.yum:
         name: python3-cryptography
         state: present
         update_cache: true
     - name: Create fake certificate directory
       become: true
-      file:
+      ansible.builtin.file:
         path: /srv/certificates
         state: directory
         owner: root
@@ -32,22 +32,22 @@
         mode: "0550"
     - name: Generate an OpenSSL private key with the default values (4096 bits, RSA)
       become: true
-      openssl_privatekey:
+      community.crypto.openssl_privatekey:
         path: /srv/certificates/it-webserver-1.vbc.ac.at.key
     - name: Generate an OpenSSL Certificate Signing Request
       become: true
-      openssl_csr:
+      community.crypto.openssl_csr:
         path: /srv/certificates/it-webserver-1.vbc.ac.at.csr
         privatekey_path: /srv/certificates/it-webserver-1.vbc.ac.at.key
         common_name: it-webserver-1.vbc.ac.at
     - name: Generate a Self Signed OpenSSL certificate
       become: true
-      openssl_certificate:
+      community.crypto.x509_certificate:
         path: /srv/certificates/it-webserver-1.vbc.ac.at.crt
         privatekey_path: /srv/certificates/it-webserver-1.vbc.ac.at.key
         csr_path: /srv/certificates/it-webserver-1.vbc.ac.at.csr
         provider: selfsigned
   tasks:
     - name: Include container role
-      include_role:
+      ansible.builtin.include_role:
         name: container

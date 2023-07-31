@@ -6,7 +6,7 @@
   # add pgrep, iproute for ss tool, to run testinfra.
     - name: install iproute and pgrep for testing
       become: true
-      yum:
+      ansible.builtin.yum:
         name: iproute,net-tools,tcpdump,procps-ng
         state: present
 
@@ -17,11 +17,11 @@
   become: true
   tasks:
     - name: install rsyslog
-      yum:
+      ansible.builtin.yum:
         name: rsyslog
         state: present
     - name: start rsyslog
-      systemd:
+      ansible.builtin.systemd:
         name: rsyslog.service
         enabled: true
         daemon_reload: true

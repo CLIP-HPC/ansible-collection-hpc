@@ -4,7 +4,7 @@
   gather_facts: false
   tasks:
     - name: Include syslog role
-      include_role:
+      ansible.builtin.include_role:
         name: syslog
       vars:
         role_syslog_mode: server
@@ -15,7 +15,7 @@
   gather_facts: false
   tasks:
     - name: Include syslog role
-      include_role:
+      ansible.builtin.include_role:
         name: syslog
       vars:
         role_syslog_server: syslog-server

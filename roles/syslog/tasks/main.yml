@@ -1,7 +1,7 @@
 ---
 # depending on the var setting, it will run server or client
 - name: check syslog mode validity
-  assert:
+  ansible.builtin.assert:
     that:
       - role_syslog_mode in ['server', 'client']
     success_msg: running syslog deployment for {{ role_syslog_mode }}
@@ -9,9 +9,9 @@
 
 - name: install additional packages (logrotate, xz, rsyslog modules)
   become: true
-  yum:
+  ansible.builtin.yum:
     name: logrotate,xz,rsyslog
     state: present
 
 - name: setting up syslog
-  include_tasks: "{{ role_syslog_mode }}.yml"
+  ansible.builtin.include_tasks: "{{ role_syslog_mode }}.yml"

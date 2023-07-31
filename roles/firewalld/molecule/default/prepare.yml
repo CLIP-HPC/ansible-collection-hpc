@@ -4,6 +4,6 @@
   gather_facts: false
   tasks:
     - name: install iproute
-      yum:
+      ansible.builtin.yum:
         name: iproute
         state: present

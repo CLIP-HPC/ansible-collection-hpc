@@ -6,5 +6,5 @@
     - ../../vars/main.yml
   tasks:
     - name: Include dns role
-      include_role:
+      ansible.builtin.include_role:
         name: dns

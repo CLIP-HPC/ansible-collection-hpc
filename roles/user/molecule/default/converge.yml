@@ -13,5 +13,5 @@
         satellite@test
   tasks:
     - name: Include user role
-      include_role:
+      ansible.builtin.include_role:
         name: user

@@ -3,7 +3,7 @@
 # order is important: execution by order of definition, not order of notify
 - name: Restart container service {{ role_container_service.name }}
   become: true
-  systemd:
+  ansible.builtin.systemd:
     name: podman_{{ role_container_service.name }}
     state: restarted
     daemon_reload: true
@@ -11,6 +11,6 @@
 - name: Prune podman images # i.e. dangling (untagged), unused
   become: true
   # prune -f --all is required, to ged rid of older version tagged images
-  shell: /usr/bin/podman image prune -f --all # noqa 305
+  ansible.builtin.shell: /usr/bin/podman image prune -f --all
   register: prune_result
   changed_when: prune_result.stdout_lines | length > 0

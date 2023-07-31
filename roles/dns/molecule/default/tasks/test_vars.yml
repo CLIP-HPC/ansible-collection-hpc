@@ -1,6 +1,6 @@
 ---
 - name: Test if role variables are set
-  assert:
+  ansible.builtin.assert:
     that:
       - role_dns_hostname is defined
       - role_dns_aliases is defined
@@ -8,7 +8,7 @@
     success_msg: OK
 
 - name: Test if nios_provider is set
-  assert:
+  ansible.builtin.assert:
     that:
       - nios_provider is defined
       - nios_provider.host is defined

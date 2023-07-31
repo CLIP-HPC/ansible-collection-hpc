@@ -2,7 +2,7 @@
 ---
 - name: Sectigo ACME call for challenge
   become: false
-  acme_certificate:
+  community.crypto.acme_certificate:
     acme_version: 2
     request_timeout: "{{ role_certificate_acme_timeout }}"
     account_uri: "{{ role_certificate_provider.account_uri }}"
@@ -19,7 +19,7 @@
 
 - name: create TXT DNS records with challenge
   become: false
-  nios_txt_record:
+  infoblox.nios_modules.nios_txt_record:
     name: "{{ item.key }}"
     text: "{{ item.value | first }}"
     ttl: 60
@@ -33,7 +33,7 @@
 
 - name: Sectigo ACME renew certificate with challenge
   become: false
-  acme_certificate:
+  community.crypto.acme_certificate:
     acme_version: 2
     request_timeout: "{{ role_certificate_acme_timeout }}"
     account_uri: "{{ role_certificate_provider.account_uri }}"
@@ -52,7 +52,7 @@
 
 - name: cleanup TXT DNS records
   become: false
-  nios_txt_record:
+  infoblox.nios_modules.nios_txt_record:
     name: "{{ item.key }}"
     text: "{{ item.value | first }}"
     state: absent

@@ -1,6 +1,6 @@
 ---
 - name: Check variables
-  assert:
+  ansible.builtin.assert:
     that:
       - role_base_user_publickey_username | length > 0
       - role_base_user_publickey_key | length > 0
@@ -9,14 +9,14 @@
 
 - name: Create group for the ansible tower user
   become: true
-  group:
+  ansible.builtin.group:
     name: "{{ role_base_user_publickey_username }}"
     state: present
     gid: 100000
 
 - name: Create ansible tower automation user (role_base_user_publickey_username / role_base_user_publickey_key)
   become: true
-  user:
+  ansible.builtin.user:
     name: "{{ role_base_user_publickey_username }}"
     comment: Managed by tower
     uid: 100000
@@ -29,14 +29,14 @@
 
 - name: Create group for the fallback user
   become: true
-  group:
+  ansible.builtin.group:
     name: "{{ role_base_user_linux_username }}"
     state: present
     gid: 100001
 
 - name: Create fallback user (role_base_user_linux_username / role_base_user_linux_password)
   become: true
-  user:
+  ansible.builtin.user:
     name: "{{ role_base_user_linux_username }}"
     comment: Managed by tower
     uid: 100001
@@ -51,14 +51,14 @@
 
 - name: Set up authorized keys for the ansible user (role_base_user_publickey_username)
   become: true
-  authorized_key:
+  ansible.posix.authorized_key:
     user: "{{ role_base_user_publickey_username }}"
     key: "{{ item }}"
   with_items: "{{ role_base_user_publickey_key }}"
 
 - name: Set passwordless root for ansible user (role_base_user_linux_username)
   become: true
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sudoers.d/system_deployment_{{ role_base_user_linux_username }}
     state: present
     create: true
@@ -67,7 +67,7 @@
 
 - name: Set passwordless root for ansible user (role_base_user_publickey_username)
   become: true
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sudoers.d/system_deployment_{{ role_base_user_publickey_username }}
     state: present
     create: true
@@ -76,7 +76,7 @@
 
 - name: Disable ssh root login (just in case)
   become: true
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/ssh/sshd_config
     regexp: "^#?PermitRootLogin "
     line: PermitRootLogin no
@@ -84,7 +84,7 @@
 
 - name: Disable ssh login for fallback user (role_base_user_linux_username)
   become: true
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/ssh/sshd_config
     state: present
     line: DenyUsers {{ role_base_user_linux_username }}

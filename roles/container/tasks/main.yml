@@ -2,14 +2,14 @@
 # Install podman
 - name: Install podman
   become: true
-  yum:
+  ansible.builtin.yum:
     name: podman
     state: present
     update_cache: true
 
 # Variable checks
 - name: Check required variables
-  assert:
+  ansible.builtin.assert:
     that:
       - "{{ item }} is defined"
   with_items:
@@ -24,7 +24,7 @@
 
 - name: Ensure podman logs are limited in size (default 100m)
   become: true
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /usr/share/containers/containers.conf
     regexp: "^(.*)log_size_max = "
     line: log_size_max = {{ role_container_log_size | default('104857600') }}
@@ -35,18 +35,18 @@
   become: true
   block:
     - name: Populate service facts
-      service_facts:
+      ansible.builtin.service_facts:
     - name: Check if container already exist
       become: true
-      command: /bin/podman inspect {{ role_container_service.name }} --format=json
+      ansible.builtin.command: /bin/podman inspect {{ role_container_service.name }} --format=json
       register: raw_status
       failed_when: false
       changed_when: false
     - name: Clear status dictionary
-      set_fact:
+      ansible.builtin.set_fact:
         status: []
     - name: Format status as dictionary
-      set_fact:
+      ansible.builtin.set_fact:
         status: "{{ raw_status.stdout | from_json }}"
       when: raw_status.stdout | length > 0
 
@@ -55,16 +55,16 @@
   become: true
   block:
     - name: Stop and disable service
-      service:
+      ansible.builtin.service:
         name: podman_{{ role_container_service.name }}
         state: stopped
         enabled: false
       when: ('podman_' + role_container_service.name + '.service') in services
     - name: Remove container from host
-      command: /bin/podman rm -f {{ role_container_service.name }}
+      ansible.builtin.command: /bin/podman rm -f {{ role_container_service.name }}
       changed_when: false
     - name: Delete container CNI IP reservation
-      file:
+      ansible.builtin.file:
         path: /var/lib/cni/networks/podman/{{ role_container_service.ip }}
         state: absent
       when: role_container_service.ip is defined and role_container_service.ip
@@ -75,24 +75,24 @@
   become: true
   block:
     - name: Always pull images
-      podman_image:
+      containers.podman.podman_image:
         name: "{{ role_container_service.image }}:{{ role_container_service.tag }}"
         force: true
       changed_when: false
     - name: Inspect the pulled image
-      command: /bin/podman inspect {{ role_container_service.image }}:{{ role_container_service.tag }} --format=json
+      ansible.builtin.command: /bin/podman inspect {{ role_container_service.image }}:{{ role_container_service.tag }} --format=json
       register: raw_image_status
       failed_when: false
       changed_when: false
     - name: Clear image status dictionary
-      set_fact:
+      ansible.builtin.set_fact:
         image_status: []
     - name: Format image status as dictionary
-      set_fact:
+      ansible.builtin.set_fact:
         image_status: "{{ raw_image_status.stdout | from_json }}"
       when: raw_image_status.stdout | length > 0
     - name: Trigger image reload
-      debug:
+      ansible.builtin.debug:
         msg: "Reloading image for service {{ role_container_service.name }} : {{ status[0].Image }} -> {{ image_status[0].Id }}"
       changed_when: true
       notify:
@@ -105,14 +105,14 @@
   become: true
   block:
     - name: Create persistent service directory
-      file:
+      ansible.builtin.file:
         path: /srv/containers/{{ role_container_service.name }}
         state: directory
         owner: root
         group: root
         mode: "0775"
     - name: Create a directory for single files
-      file:
+      ansible.builtin.file:
         path: /srv/containers/{{ role_container_service.name }}/files
         state: directory
         owner: "{{ role_container_service.uid }}"
@@ -121,7 +121,7 @@
       when: role_container_service.files is defined and role_container_service.files | length > 0
       notify: Restart container service {{ role_container_service.name }}
     - name: Create a directory for each volume
-      file:
+      ansible.builtin.file:
         path: /srv/containers/{{ role_container_service.name }}/volume_{{ item.name }}
         state: directory
         owner: "{{ role_container_service.uid }}"
@@ -136,19 +136,19 @@
   become: true
   block:
     - name: Create persistent share directory
-      file:
+      ansible.builtin.file:
         path: /srv/shares/
         state: directory
         owner: root
         group: root
         mode: "0775"
     - name: Install NFS-utils
-      yum:
+      ansible.builtin.yum:
         name: nfs-utils
         update_cache: true
         state: present
     - name: Mount shares
-      mount:
+      ansible.posix.mount:
         path: /srv/shares/{{ item.name }}
         src: "{{ item.src }}"
         fstype: "{{ item.fstype | default('nfs') }}"
@@ -163,14 +163,14 @@
   become: true
   block:
     - name: Create a certificate volume if certificates are requested
-      file:
+      ansible.builtin.file:
         path: /srv/containers/{{ role_container_service.name }}/certificates
         state: directory
         owner: "{{ role_container_service.uid }}"
         group: "{{ role_container_service.gid }}"
         mode: "0770"
     - name: Copy certificates
-      copy:
+      ansible.builtin.copy:
         remote_src: true
         src: "{{ role_container_tls_dir }}/{{ role_container_certname }}.{{ item }}"
         dest: /srv/containers/{{ role_container_service.name }}/certificates/{{ role_container_certname }}.{{ item }}
@@ -186,7 +186,7 @@
 # Environment Variables
 - name: Render environment-file.txt.j2 template for the environment-file
   become: true
-  template:
+  ansible.builtin.template:
     src: templates/environment-file.txt.j2
     dest: /srv/containers/{{ role_container_service.name }}/environment-file.txt
     owner: root
@@ -198,7 +198,7 @@
 
 - name: Render systemd.service template for the container
   become: true
-  template:
+  ansible.builtin.template:
     src: templates/systemd.service.j2
     dest: /etc/systemd/system/podman_{{ role_container_service.name }}.service
     owner: root
@@ -208,4 +208,4 @@
     - Restart container service {{ role_container_service.name }}
 
 - name: Force Handlers to start services
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

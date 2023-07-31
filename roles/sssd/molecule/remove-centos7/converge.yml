@@ -8,7 +8,7 @@
 
   tasks:
     - name: Include sssd role
-      include_role:
+      ansible.builtin.include_role:
         name: sssd
       vars:
         role_sssd_domain: TESTING

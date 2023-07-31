@@ -11,7 +11,7 @@ galaxy_info:
 
   license: MIT
 
-  min_ansible_version: 2.9
+  min_ansible_version: "2.9"
 
   # If this a Container Enabled role, provide the minimum Ansible Container version.
   # min_ansible_container_version:
@@ -28,9 +28,9 @@ galaxy_info:
   # platforms is a list of platforms, and each platform has a name and a list of versions.
   #
   platforms:
-    - name: RHEL
+    - name: EL
       versions:
-        - 8
+        - "8"
   # - name: SomePlatform
   #   versions:
   #   - all

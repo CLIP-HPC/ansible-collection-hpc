@@ -25,7 +25,7 @@
 
 - name: set fact current_services.results
   ansible.builtin.set_fact:
-    y: "{{ current_services.results |  map(attribute='stdout') | list }}"
+    y: "{{ current_services.results | map(attribute='stdout') | list }}"
 
 - name: set fact services to remove
   ansible.builtin.set_fact:
@@ -52,7 +52,7 @@
 
 - name: set fact current_ports.results
   ansible.builtin.set_fact:
-    y: "{{ current_ports.results |  map(attribute='stdout') | list }}"
+    y: "{{ current_ports.results | map(attribute='stdout') | list }}"
 
 - name: set fact ports to remove
   ansible.builtin.set_fact:

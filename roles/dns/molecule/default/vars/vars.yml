@@ -1,5 +1,5 @@
 ---
-role_dns_hostname: test-999-{{ lookup('env','INSTANCE_ID') | default('local') }}.vbc.ac.at
+role_dns_hostname: test-999-{{ lookup('env', 'INSTANCE_ID') | default('local') }}.vbc.ac.at
 role_dns_aliases:
-  - test-999-{{ lookup('env','INSTANCE_ID') | default('local') }}-1.vbc.ac.at
-  - test-999-{{ lookup('env','INSTANCE_ID') | default('local') }}-2.vbc.ac.at
+  - test-999-{{ lookup('env', 'INSTANCE_ID') | default('local') }}-1.vbc.ac.at
+  - test-999-{{ lookup('env', 'INSTANCE_ID') | default('local') }}-2.vbc.ac.at

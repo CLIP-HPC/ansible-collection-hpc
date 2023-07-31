@@ -52,7 +52,7 @@
         role_certificate_nios_provider:
           host: ns.imp.ac.at
           username: svc_infoblox_ansible
-          password: "{{ lookup('onepassword', 'linux_baseline', section='dns-nios', field='password', vault='hosts', master_password=onepass_password, secret_key=onepass_secret_key,\
-            \ subdomain=onepass_domain, username=onepass_email) }}" # noqa 204
+          password: "{{ lookup('onepassword', 'linux_baseline', section='dns-nios', field='password', vault='hosts', master_password=onepass_password, secret_key=onepass_secret_key, \
+            subdomain=onepass_domain, username=onepass_email) }}" # noqa 204
       ansible.builtin.include_role:
         name: certificate

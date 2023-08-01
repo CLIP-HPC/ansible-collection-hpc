@@ -11,6 +11,6 @@
 - name: Prune podman images # i.e. dangling (untagged), unused
   become: true
   # prune -f --all is required, to ged rid of older version tagged images
-  ansible.builtin.shell: /usr/bin/podman image prune -f --all
+  ansible.builtin.command: /usr/bin/podman image prune -f --all
   register: prune_result
   changed_when: prune_result.stdout_lines | length > 0

@@ -3,17 +3,29 @@
 - name: Iptables-save
   ansible.builtin.shell: /sbin/iptables-save -t nat > /etc/baseline-iptables-save-nat
   listen: Restart firewalld
+  register: iptables_save
+  changed_when: true
+  failed_when: iptables_save.rc != 0
 
 - name: Runtime-to-permanent
   ansible.builtin.command: /usr/bin/firewall-cmd --runtime-to-permanent
   listen: Restart firewalld
+  register: iptables_permanent
+  changed_when: true
+  failed_when: iptables_permanent.stdout != "success"
 
 - name: Reload
   ansible.builtin.command: /usr/bin/firewall-cmd --reload
   listen: Restart firewalld
+  register: iptables_reload
+  changed_when: true
+  failed_when: iptables_reload.stdout != "success"
 
 - name: Iptables-restore
   ansible.builtin.shell: /sbin/iptables-restore < /etc/baseline-iptables-save-nat
   listen: Restart firewalld
+  register: iptables_restore
+  changed_when: true
+  failed_when: iptables_restore.rc != 0
 
 # vim: sts=2:ai:list

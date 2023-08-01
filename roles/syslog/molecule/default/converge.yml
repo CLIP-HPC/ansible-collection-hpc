@@ -1,5 +1,5 @@
 ---
-- name: syslog server
+- name: Syslog server
   hosts: syslog-server
   gather_facts: false
   tasks:
@@ -10,7 +10,7 @@
         role_syslog_mode: server
 
 # setup client
-- name: syslog client
+- name: Syslog client
   hosts: syslog-client
   gather_facts: false
   tasks:

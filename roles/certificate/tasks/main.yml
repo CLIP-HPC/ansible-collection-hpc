@@ -102,7 +102,7 @@
   ansible.builtin.include_tasks: create.yml
   when: new_csr is changed or not current_cert_info.valid_at.custom
 
-- name: push certificate to remote host
+- name: Push certificate to remote host
   become: true
   ansible.builtin.copy:
     src: "{{ cert_basepath }}.{{ item }}"

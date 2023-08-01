@@ -1,19 +1,19 @@
 ---
 # handlers file for role-firewalld
-- name: iptables-save
+- name: Iptables-save
   ansible.builtin.shell: /sbin/iptables-save -t nat > /etc/baseline-iptables-save-nat
-  listen: restart firewalld
+  listen: Restart firewalld
 
-- name: runtime-to-permanent
+- name: Runtime-to-permanent
   ansible.builtin.command: /usr/bin/firewall-cmd --runtime-to-permanent
-  listen: restart firewalld
+  listen: Restart firewalld
 
-- name: reload
+- name: Reload
   ansible.builtin.command: /usr/bin/firewall-cmd --reload
-  listen: restart firewalld
+  listen: Restart firewalld
 
-- name: iptables-restore
+- name: Iptables-restore
   ansible.builtin.shell: /sbin/iptables-restore < /etc/baseline-iptables-save-nat
-  listen: restart firewalld
+  listen: Restart firewalld
 
 # vim: sts=2:ai:list

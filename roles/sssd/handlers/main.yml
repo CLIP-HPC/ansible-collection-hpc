@@ -1,16 +1,16 @@
 ---
 # handlers file for sssd_ldap
-- name: restart realmd
+- name: Restart realmd
   ansible.builtin.service:
     name: realmd
     state: restarted
 
-- name: restart sssd
+- name: Restart sssd
   ansible.builtin.service:
     name: sssd
     state: restarted
 
-- name: restart sshd
+- name: Restart sshd
   ansible.builtin.service:
     name: sshd
     state: restarted

@@ -1,5 +1,5 @@
 ---
-- name: debug loop
+- name: Debug loop
   ansible.builtin.debug:
     msg: Remove from {{ zone.zone | default(role_firewalld_default_zone, true) }} - {{ port }}
   loop: "{{ removal.results[i].ansible_facts.port_list }}"
@@ -18,4 +18,4 @@
   loop_control:
     loop_var: port
   when: removal.results[i].ansible_facts.port_list
-  notify: restart firewalld
+  notify: Restart firewalld

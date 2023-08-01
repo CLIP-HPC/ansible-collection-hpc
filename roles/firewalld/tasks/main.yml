@@ -17,17 +17,17 @@
         state: started
 
 # clean up old services
-- name: fetch current zone services
+- name: Fetch current zone services
   ansible.builtin.command: firewall-cmd --list-services --zone {{ item.zone | default(role_firewalld_default_zone, true) }}
   loop: "{{ role_firewalld_interfaces }}"
   register: current_services
   changed_when: false
 
-- name: set fact current_services.results
+- name: Set fact current_services.results
   ansible.builtin.set_fact:
     y: "{{ current_services.results | map(attribute='stdout') | list }}"
 
-- name: set fact services to remove
+- name: Set fact services to remove
   ansible.builtin.set_fact:
     service_list: "{{ y[i].split() | difference(zone.services) }}"
   loop: "{{ role_firewalld_interfaces }}"
@@ -36,7 +36,7 @@
     index_var: i
   register: removal
 
-- name: remove loop services
+- name: Remove loop services
   ansible.builtin.include_tasks: remove_loop.yml
   loop: "{{ role_firewalld_interfaces }}"
   loop_control:
@@ -44,17 +44,17 @@
     index_var: i
 
 # clean up oldports
-- name: fetch current zone ports
+- name: Fetch current zone ports
   ansible.builtin.command: firewall-cmd --list-ports --zone {{ item.zone | default(role_firewalld_default_zone, true) }}
   loop: "{{ role_firewalld_interfaces }}"
   register: current_ports
   changed_when: false
 
-- name: set fact current_ports.results
+- name: Set fact current_ports.results
   ansible.builtin.set_fact:
     y: "{{ current_ports.results | map(attribute='stdout') | list }}"
 
-- name: set fact ports to remove
+- name: Set fact ports to remove
   ansible.builtin.set_fact:
     port_list: "{{ y[i].split() | difference(zone.ports) }}"
   loop: "{{ role_firewalld_interfaces }}"
@@ -63,7 +63,7 @@
     index_var: i
   register: removal
 
-- name: remove loop ports
+- name: Remove loop ports
   ansible.builtin.include_tasks: remove_loop_ports.yml
   loop: "{{ role_firewalld_interfaces }}"
   loop_control:
@@ -78,7 +78,7 @@
     immediate: true
     permanent: true
   loop: "{{ role_firewalld_interfaces }}"
-  notify: restart firewalld
+  notify: Restart firewalld
 
 - name: Deploy services to zone
   ansible.posix.firewalld:
@@ -88,7 +88,7 @@
     immediate: true
     permanent: true
   loop: "{{ role_firewalld_interfaces | subelements('services') }}"
-  notify: restart firewalld
+  notify: Restart firewalld
 
 - name: Deploy ports to zone
   ansible.posix.firewalld:
@@ -98,6 +98,6 @@
     immediate: true
     permanent: true
   loop: "{{ role_firewalld_interfaces | subelements('ports') }}"
-  notify: restart firewalld
+  notify: Restart firewalld
 
 # vim: sts=2:ai:

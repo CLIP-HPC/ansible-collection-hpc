@@ -3,7 +3,7 @@
   hosts: all
   gather_facts: false
   tasks:
-    - name: install iproute
+    - name: Install iproute
       ansible.builtin.yum:
         name: iproute
         state: present

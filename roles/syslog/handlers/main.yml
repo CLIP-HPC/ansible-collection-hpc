@@ -1,6 +1,6 @@
 ---
 # handlers file for role-syslog
-- name: restart syslog
+- name: Restart syslog
   become: true
   ansible.builtin.systemd:
     name: "{{ syslog_service }}"

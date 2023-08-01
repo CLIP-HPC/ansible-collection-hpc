@@ -3,7 +3,7 @@
   hosts: all
   gather_facts: false
   tasks:
-    - name: install sshd
+    - name: Install sshd
       ansible.builtin.yum:
         name: openssh-server
         state: present

@@ -7,7 +7,7 @@
     ad_password: "{{ lookup('onepassword', 'svc_realmd_test_join', vault='accounts', master_password=onepass_password, secret_key=onepass_secret_key, subdomain=onepass_domain,\
       \ username=onepass_email) }}"
   tasks:
-    - name: install sshd
+    - name: Install sshd
       ansible.builtin.yum:
         name: openssh-server
         state: present

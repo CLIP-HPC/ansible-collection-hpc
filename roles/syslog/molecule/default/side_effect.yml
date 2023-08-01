@@ -1,10 +1,10 @@
 ---
-- name: send client messages
+- name: Send client messages
   hosts: syslog-client
   gather_facts: false
   tasks:
     # add iproute for ss tool, to run testinfra
-    - name: send example log messages
+    - name: Send example log messages
       changed_when: false
       ansible.builtin.command: /bin/logger -p {{ item.prio }} -t {{ item.tag | default('testlog') }} '{{ item.msg }} with {{ item.prio }}'
       loop:
@@ -20,7 +20,7 @@
           tag: nginx
           msg: http GET me this thing
 
-- name: flush server buffers
+- name: Flush server buffers
   hosts: syslog-server
   gather_facts: false
   become: true

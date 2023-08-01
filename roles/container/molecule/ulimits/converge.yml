@@ -25,7 +25,7 @@
         selinux: true
 
   tasks:
-    - name: bring up container services
+    - name: Bring up container services
       vars:
         role_container_hostname: "{{ role_container_service.name }}"
       ansible.builtin.include_role:

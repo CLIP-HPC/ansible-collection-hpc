@@ -32,7 +32,7 @@
     group: root
     backup: true
   notify:
-    - restart-chronyd
+    - Restart-chronyd
 
 - name: Make sure timezone is set
   community.general.timezone:

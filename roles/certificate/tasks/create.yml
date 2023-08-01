@@ -17,7 +17,7 @@
   connection: local
   delegate_to: localhost
 
-- name: create TXT DNS records with challenge
+- name: Create TXT DNS records with challenge
   become: false
   infoblox.nios_modules.nios_txt_record:
     name: "{{ item.key }}"
@@ -50,7 +50,7 @@
   delegate_to: localhost
   when: sectigo_acme_challenge is changed
 
-- name: cleanup TXT DNS records
+- name: Cleanup TXT DNS records
   become: false
   infoblox.nios_modules.nios_txt_record:
     name: "{{ item.key }}"

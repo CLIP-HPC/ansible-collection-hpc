@@ -80,7 +80,7 @@
     dest: /etc/ssh/sshd_config
     regexp: "^#?PermitRootLogin "
     line: PermitRootLogin no
-  notify: restart-sshd
+  notify: Restart-sshd
 
 - name: Disable ssh login for fallback user (role_base_user_linux_username)
   become: true
@@ -88,4 +88,4 @@
     path: /etc/ssh/sshd_config
     state: present
     line: DenyUsers {{ role_base_user_linux_username }}
-  notify: restart-sshd
+  notify: Restart-sshd

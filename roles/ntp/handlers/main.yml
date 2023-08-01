@@ -1,5 +1,5 @@
 ---
-- name: restart-chronyd
+- name: Restart-chronyd
   ansible.builtin.service:
     name: chronyd
     enabled: true

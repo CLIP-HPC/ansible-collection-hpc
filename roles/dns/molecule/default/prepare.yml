@@ -11,12 +11,12 @@
     - name: Import variable checks
       ansible.builtin.import_tasks: tasks/test_vars.yml
 
-    - name: install bind-utils
+    - name: Install bind-utils
       ansible.builtin.yum:
         name: bind-utils
         state: present
 
-    - name: install infoblox-client pip
+    - name: Install infoblox-client pip
       delegate_to: localhost
       ansible.builtin.pip:
         name: infoblox-client

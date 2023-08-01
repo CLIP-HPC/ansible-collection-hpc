@@ -11,7 +11,7 @@
     - name: Import variable checks
       ansible.builtin.import_tasks: tasks/test_vars.yml
 
-    - name: install infoblox-client pip
+    - name: Install infoblox-client pip
       delegate_to: localhost
       ansible.builtin.pip:
         name: infoblox-client

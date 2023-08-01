@@ -2,15 +2,15 @@
 - name: Converge
   hosts: all
   tasks:
-    - name: install pip libraries
+    - name: Install pip libraries
       ansible.builtin.command: pip3 install infoblox-client
       delegate_to: localhost
       changed_when: false
-    - name: lookup 1Password credentials
+    - name: Lookup 1Password credentials
       ansible.builtin.include_vars:
         file: "{{ lookup('env', 'ONEPASS_VARS') }}"
       failed_when: false
-    - name: get sectigo credentials
+    - name: Get sectigo credentials
       # FIME(ebirn): this will not work in ansible 2.9
       vars:
         item_name: sectigo_molecule

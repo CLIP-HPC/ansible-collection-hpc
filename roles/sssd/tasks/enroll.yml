@@ -11,7 +11,7 @@
     src: templates/realmd.conf.j2
     dest: /etc/realmd.conf
     mode: "0644"
-  notify: restart realmd
+  notify: Restart realmd
 
 - name: Flush handlers
   ansible.builtin.meta: flush_handlers
@@ -39,7 +39,7 @@
         option: access_provider
         value: simple
         mode: "0600"
-      notify: restart sssd
+      notify: Restart sssd
 
     - name: Add groups to simple_allow_groups
       community.general.ini_file:
@@ -48,7 +48,7 @@
         option: simple_allow_groups
         value: "{{ role_sssd_allowed_groups | default([]) | join(',') }}"
         mode: "0600"
-      notify: restart sssd
+      notify: Restart sssd
 
 - name: Enable password authentication in ssh config
   ansible.builtin.lineinfile:
@@ -56,7 +56,7 @@
     regexp: ^PasswordAuthentication
     line: PasswordAuthentication yes
     mode: "0600"
-  notify: restart sshd
+  notify: Restart sshd
 
 - name: Set override homedir in sssd.conf
   community.general.ini_file:
@@ -65,7 +65,7 @@
     option: override_homedir
     value: "{{ role_sssd_override_homedir }}"
     mode: "0600"
-  notify: restart sssd
+  notify: Restart sssd
   when: role_sssd_override_homedir is defined
 
 - name: Enable SSH key integration into SSSD
@@ -78,7 +78,7 @@
         option: ldap_user_extra_attrs
         value: altSecurityIdentities
         mode: "0600"
-      notify: restart sssd
+      notify: Restart sssd
 
     - name: Set LDAP user public key field
       community.general.ini_file:
@@ -87,7 +87,7 @@
         option: ldap_user_ssh_public_key
         value: altSecurityIdentities
         mode: "0600"
-      notify: restart sssd
+      notify: Restart sssd
 
     - name: Add ssh to sssd services
       community.general.ini_file:
@@ -96,7 +96,7 @@
         option: services
         value: nss, pam, ssh
         mode: "0600"
-      notify: restart sssd
+      notify: Restart sssd
 
     - name: Set AuthorizedKeysCommand to sss command
       ansible.builtin.lineinfile:
@@ -106,7 +106,7 @@
         line: AuthorizedKeysCommand /usr/bin/sss_ssh_authorizedkeys
         state: present
         mode: "0600"
-      notify: restart sshd
+      notify: Restart sshd
 
     - name: Set AuthorizedUsername to nobody
       ansible.builtin.lineinfile:
@@ -116,4 +116,4 @@
         line: AuthorizedKeysCommandUser nobody
         state: present
         mode: "0600"
-      notify: restart sshd
+      notify: Restart sshd

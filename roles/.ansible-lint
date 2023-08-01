@@ -2,3 +2,5 @@
 warn_list: # or 'skip_list' to silence them completely
   - experimental # all rules tagged as experimental
   - yaml # Violations reported by yamllint
+skip_list:
+  - var-naming[no-role-prefix]

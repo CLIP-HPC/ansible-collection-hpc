@@ -1,5 +1,3 @@
-@Library('vbc-cicd@RFC-2547-upgrade-to-ee-environment') _
-
 //Note: the dict keys are literals, not strings
 // testing ansible collection
 

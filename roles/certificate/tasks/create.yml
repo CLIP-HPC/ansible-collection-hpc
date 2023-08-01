@@ -17,7 +17,7 @@
   connection: local
   delegate_to: localhost
 
-- name: Create TXT DNS records with challenge
+- name: Create TXT DNS records with challenge # noqa no-handler
   become: false
   infoblox.nios_modules.nios_txt_record:
     name: "{{ item.key }}"
@@ -31,7 +31,7 @@
   loop: "{{ sectigo_acme_challenge.challenge_data_dns | default({}) | dict2items }}"
   when: sectigo_acme_challenge is changed
 
-- name: Sectigo ACME renew certificate with challenge
+- name: Sectigo ACME renew certificate with challenge # noqa no-handler
   become: false
   community.crypto.acme_certificate:
     acme_version: 2
@@ -50,7 +50,7 @@
   delegate_to: localhost
   when: sectigo_acme_challenge is changed
 
-- name: Cleanup TXT DNS records
+- name: Cleanup TXT DNS records # noqa no-handler
   become: false
   infoblox.nios_modules.nios_txt_record:
     name: "{{ item.key }}"

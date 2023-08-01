@@ -5,10 +5,13 @@
   vars_files:
     - ../../vars/main.yml
   vars:
-    ad_password: "{{ lookup('onepassword', 'svc_realmd_test_join', vault='accounts', master_password=onepass_password, secret_key=onepass_secret_key, subdomain=onepass_domain,\
-      \ username=onepass_email) }}"
+    ad_password: "{{ lookup('onepassword', 'svc_realmd_test_join', vault='accounts', \
+      master_password=onepass_password, secret_key=onepass_secret_key, subdomain=onepass_domain, \
+      username=onepass_email) }}"
   tasks:
     - name: Un-enroll machines
-      ansible.builtin.shell: set -o pipefail;; echo {{ ad_password }} | realm leave --unattended --verbose -U {{ role_sssd_domains.TESTING.ad_username }} {{ role_sssd_domains.TESTING.name }}
+      ansible.builtin.shell: >
+        set -o pipefail;
+        echo {{ ad_password }} | realm leave --unattended --verbose -U {{ role_sssd_domains.TESTING.ad_username }} {{ role_sssd_domains.TESTING.name }}
       failed_when: false
       changed_when: false

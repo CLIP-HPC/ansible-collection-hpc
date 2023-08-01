@@ -5,8 +5,6 @@
   vars_files:
     - vars/vars.yml
     - ../../vars/main.yml
-    - "{{ lookup('env', 'ONEPASS_VARS') }}"
-
   tasks:
     - name: Import variable checks
       ansible.builtin.import_tasks: tasks/test_vars.yml

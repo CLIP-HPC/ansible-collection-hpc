@@ -1,13 +1,5 @@
-from __future__ import absolute_import, division, print_function
-__metaclass__ = type
-
-import os
+"""Role testing files using testinfra."""
 import pytest
-
-import testinfra.utils.ansible_runner
-
-testinfra_hosts = testinfra.utils.ansible_runner.AnsibleRunner(
-    os.environ['MOLECULE_INVENTORY_FILE']).get_hosts('all')
 
 
 @pytest.mark.parametrize('pkg', [

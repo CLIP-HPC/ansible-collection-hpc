@@ -1,39 +1,14 @@
 ---
 - name: Converge
   hosts: all
+  vars:
+    op_service_account_token: "{{ lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') }}"
   tasks:
     - name: Install pip libraries
       ansible.builtin.command: pip3 install infoblox-client
       delegate_to: localhost
       changed_when: false
-    - name: Lookup 1Password credentials
-      ansible.builtin.include_vars:
-        file: "{{ lookup('env', 'ONEPASS_VARS') }}"
-      failed_when: false
-    - name: Get sectigo credentials # noqa: run-once[task]
-      # FIME(ebirn): this will not work in ansible 2.9
-      vars:
-        item_name: sectigo_molecule
-      community.general.onepassword_info:
-        auto_login:
-          master_password: "{{ onepass_password }}"
-          secret_key: "{{ onepass_secret_key }}"
-          subdomain: "{{ onepass_domain }}"
-          username: "{{ onepass_email }}"
-        search_terms:
-          - vault: accounts
-            name: "{{ item_name }}"
-            field: account_id
-          - vault: accounts
-            name: "{{ item_name }}"
-            field: key
-          - vault: accounts
-            name: "{{ item_name }}"
-            field: url
-      delegate_to: localhost
-      run_once: true
-      register: sectigo_1p
-      no_log: true
+
     - name: Setup host certificate
       vars:
         base_domain: vbc.ac.at
@@ -44,15 +19,20 @@
         role_certificate_tls_dir: /srv/certificates/
         role_certificate_provider:
           type: acme
-          directory: "{{ ansible_facts.onepassword.sectigo_molecule.url }}"
-          account_id: "{{ ansible_facts.onepassword.sectigo_molecule.account_id }}"
-          account_uri: "{{ ansible_facts.onepassword.sectigo_molecule.url }}/account/{{ ansible_facts.onepassword.sectigo_molecule.account_id }}"
-          account_key: "{{ ansible_facts.onepassword.sectigo_molecule.key | b64decode }}"
+          directory: "{{ lookup('onepassword', 'sectigo_molecule', field='url', vault='accounts', \
+            service_account_token=op_service_account_token) }}"
+          account_id: "{{ lookup('onepassword', 'sectigo_molecule', field='account_id', vault='accounts', \
+            service_account_token=op_service_account_token) }}"
+          account_uri: "{{  lookup('onepassword', 'sectigo_molecule', field='url', vault='accounts', \
+            service_account_token=op_service_account_token) }}/account/{{  lookup('onepassword', 'sectigo_molecule', field='account_id', vault='accounts', \
+            service_account_token=op_service_account_token) }}"
+          account_key: "{{  lookup('onepassword', 'sectigo_molecule', field='key', vault='accounts', \
+            service_account_token=op_service_account_token) | b64decode }}"
         role_certificate_renew_days: 31
         role_certificate_nios_provider:
           host: ns.imp.ac.at
           username: svc_infoblox_ansible
           password: "{{ lookup('onepassword', 'linux_baseline', section='dns-nios', field='password', vault='hosts', \
-            service_account_token=lookup('ansible.builtin.env', 'OP_SERVICE_ACCOUNT_TOKEN')) }}"
+            service_account_token=op_service_account_token) }}"
       ansible.builtin.include_role:
         name: certificate

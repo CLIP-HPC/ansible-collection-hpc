@@ -39,7 +39,7 @@
 - name: Copy current certificate
   become: true
   changed_when: false
-  failed_when: false
+  ignore_errors: true
   ansible.builtin.fetch:
     src: "{{ host_tls_dir }}.crt"
     dest: "{{ cert_basepath }}.crt"

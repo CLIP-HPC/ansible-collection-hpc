@@ -3,47 +3,45 @@ dependency:
   name: galaxy
 driver:
   name: docker
-lint: |
-  set -e
-  yamllint .
-  ansible-lint
-  flake8
 platforms:
   - name: instance-ubi8.8-1-${INSTANCE_ID:-local}
     image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.8-1
     privileged: true
     command: /sbin/init
     hostname: inst-ubi.imp.ac.at
+    pre_build_image: true
+  - name: instance-centos7-${INSTANCE_ID:-local}
+    hostname: inst-cent7.imp.ac.at
+    image: docker.artifactory.imp.ac.at/it/molecule/centos7:latest
+    command: /usr/sbin/init
+    privileged: true
+    pre_build_image: true
 provisioner:
   name: ansible
   env:
     OP_SERVICE_ACCOUNT_TOKEN: ${OP_SERVICE_ACCOUNT_TOKEN}
 scenario:
-  name: default-ubi
-  create_sequence:
-    - create
-    - prepare
+  name: default
   check_sequence:
-    - destroy
     - dependency
+    - cleanup
+    - destroy
     - create
     - prepare
     - converge
     - check
     - side_effect
+    - cleanup
     - destroy
-  converge_sequence:
-    - dependency
-    - create
-    - prepare
-    - converge
   destroy_sequence:
+    - dependency
     - side_effect
+    - cleanup
     - destroy
   test_sequence:
-    - lint
-    - destroy
     - dependency
+    - cleanup
+    - destroy
     - syntax
     - create
     - prepare
@@ -51,6 +49,7 @@ scenario:
     - idempotence
     - verify
     - side_effect
+    - cleanup
     - destroy
 verifier:
   name: testinfra

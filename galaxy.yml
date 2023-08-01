@@ -45,7 +45,12 @@ tags: []
 # collection label 'namespace.name'. The value is a version range
 # L(specifiers,https://python-semanticversion.readthedocs.io/en/latest/#requirement-specification). Multiple version
 # range specifiers can be set and are separated by ','
-dependencies: {}
+dependencies:
+  community.general: ">=7.2.0"
+  community.crypto: ">=2.14.1"
+  infoblox.nios_modules: ">=1.5.0"
+  containers.podman: ">=1.10.2"
+  ansible.posix: ">=1.5.4"
 
 # The URL of the originating SCM repository
 repository: http://example.com/repository

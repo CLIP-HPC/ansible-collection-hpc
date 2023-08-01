@@ -14,7 +14,7 @@
       # FIME(ebirn): this will not work in ansible 2.9
       vars:
         item_name: "sectigo_molecule"
-      onepassword_facts:
+      onepassword_info:
         auto_login:
           master_password: "{{ onepass_password }}"
           secret_key: "{{ onepass_secret_key }}"

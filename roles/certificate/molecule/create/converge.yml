@@ -10,7 +10,7 @@
       ansible.builtin.include_vars:
         file: "{{ lookup('env', 'ONEPASS_VARS') }}"
       failed_when: false
-    - name: Get sectigo credentials
+    - name: Get sectigo credentials # noqa: run-once[task]
       # FIME(ebirn): this will not work in ansible 2.9
       vars:
         item_name: sectigo_molecule

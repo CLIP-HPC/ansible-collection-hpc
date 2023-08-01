@@ -18,17 +18,10 @@ export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
 
 1Password
 ---------
-Add a 1password file as env variable, with your login information:
 
-```
----
-onepass_password: your password
-onepass_secret_key: your secret key
-onepass_domain: vbc01
-onepass_email: your email
-```
+1. Download one password cli and add it to your systempath
+2. export OP_SERVICE_ACCOUNT_TOKEN="SERVICE ACCOUNT TOLKEN FROM 1PASSWORD"
 
-export ONEPASS_VARS=/Users/username/.1password.yaml
 molecule test
 
 

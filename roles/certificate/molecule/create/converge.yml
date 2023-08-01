@@ -53,7 +53,6 @@
           host: ns.imp.ac.at
           username: svc_infoblox_ansible
           password: "{{ lookup('onepassword', 'linux_baseline', section='dns-nios', field='password', vault='hosts', \
-            master_password=onepass_password, secret_key=onepass_secret_key, \
-            subdomain=onepass_domain, username=onepass_email) }}"
+            service_account_token=lookup('ansible.builtin.env', 'OP_SERVICE_ACCOUNT_TOKEN')) }}"
       ansible.builtin.include_role:
         name: certificate

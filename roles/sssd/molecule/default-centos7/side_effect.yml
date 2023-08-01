@@ -6,8 +6,7 @@
     - ../../vars/main.yml
   vars:
     ad_password: "{{ lookup('onepassword', 'svc_realmd_test_join', vault='accounts', \
-      master_password=onepass_password, secret_key=onepass_secret_key, subdomain=onepass_domain, \
-      username=onepass_email) }}"
+      service_account_token=lookup('ansible.builtin.env', 'OP_SERVICE_ACCOUNT_TOKEN')) }}"
   tasks:
     - name: Un-enroll machines
       changed_when: false

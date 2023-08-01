@@ -15,7 +15,7 @@ Role Variables
 --------------
 
 This playbooks expects the following variables:
-    
+
     role_certificate_hostname: # common certificate name, defaults to inventory hostname
     # SAN - Subject alternativ names for certificate
     role_certificate_aliases:
@@ -78,7 +78,7 @@ Including an example of how to use your role (for instance, with variables passe
 Notes on Sectigo ACME
 ---------------------
 
-Before external account binding of ACME account becomes possible: 
+Before external account binding of ACME account becomes possible:
 You need to create an account binding using the HMAC key from the Sectigo portal (https://cert-manager.com/customer/ACOnet).
 
 More specifically, this is ACME external account binding see: https://tools.ietf.org/html/rfc8555#section-7.3.4
@@ -98,7 +98,7 @@ certbot --config-dir certbot/config \
 
 This will write the key in json JWK format to the config-dir in a file `private_key.json`.
 
-*Note:* the email address will show up in the Sectigo certificate manager portal as "external requester". 
+*Note:* the email address will show up in the Sectigo certificate manager portal as "external requester".
 Certificate expiration notifications etc. will also be sent to this email address.
 
 The Ansible ACME certificate client requires the account key in PEM format.
@@ -120,19 +120,14 @@ jwk_key.export_to_pem(private_key=True, password=None)
 b'-----BEGIN PRIVATE KEY-----\nMIIEvAIB.......==\n-----END PRIVATE KEY-----\n'
 ```
 
-Store the PEM encoded private key with raw line breaks (\n) in 1Password (item: Sectigo), 
+Store the PEM encoded private key with raw line breaks (\n) in 1Password (item: Sectigo),
 the role will properly unescape the linebreaks when reading the private key.
 
 ## Molecule setup
 
 1. Download one password cli and add it to your systempath
-2. Create a file holding following information, see 1password for the service account (eg ~/.op/molecule)
-onepass_password: passwort
-onepass_secret_key: seckey
-onepass_domain: vbc01
-onepass_email: 1password@imba.oeaw.ac.at
-3. export ONEPASS_VARS=/home/my.name/.op/molecule
- 
+2. export OP_SERVICE_ACCOUNT_TOKEN="SERVICE ACCOUNT TOLKEN FROM 1PASSWORD"
+
 ## Caveat
 For DCV pre-validated domains, sectigo will return a challenge of type "sectigo-dns-01" and state "valid". This breaks with the Ansible module in 2.8.7.
 However in upstream code, there is a patch (simply skipping already valid challenges), I've backported this to the copy in the module in library/acme_certificate.py

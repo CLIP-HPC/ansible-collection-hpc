@@ -16,10 +16,8 @@ platforms:
     hostname: inst-ubi.imp.ac.at
 provisioner:
   name: ansible
-  options:
-    extra-vars: "@${ONEPASS_VARS:-/missing/1password/credentials.file}"
   env:
-    ONEPASS_VARS: ${ONEPASS_VARS}
+    OP_SERVICE_ACCOUNT_TOKEN: ${OP_SERVICE_ACCOUNT_TOKEN}
 scenario:
   name: default-ubi
   create_sequence:

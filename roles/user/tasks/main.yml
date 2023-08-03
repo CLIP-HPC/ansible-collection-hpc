@@ -47,6 +47,7 @@
     home: /home/{{ role_base_user_linux_username }}
     groups: wheel
     append: true
+    update_password: "{{ role_base_user_update_password | default(omit) }}"
     password: "{{ role_base_user_linux_password | password_hash('sha512', role_base_user_linux_salt) }}"
 
 - name: Set up authorized keys for the ansible user (role_base_user_publickey_username)

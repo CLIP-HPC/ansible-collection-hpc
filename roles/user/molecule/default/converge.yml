@@ -2,7 +2,6 @@
 - name: Converge
   hosts: all
   vars:
-    role_base_user_linux_salt: abcdefghijklmnop
     role_base_user_linux_username: user_linux
     role_base_user_linux_password: "0123456789"
     role_base_user_publickey_username: user_key

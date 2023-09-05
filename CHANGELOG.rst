@@ -5,6 +5,10 @@ vbc.linux Release Notes
 .. contents:: Topics
 
 
+v2.0.2
+=====
+- Fix Jenkins pipeline
+
 v2.0.0
 ======
 

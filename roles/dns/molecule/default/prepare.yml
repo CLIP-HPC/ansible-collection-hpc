@@ -5,24 +5,23 @@
   vars_files:
     - vars/vars.yml
     - ../../vars/main.yml
-    - "{{ lookup('env', 'ONEPASS_VARS') }}"
-
   tasks:
-    - import_tasks: tasks/test_vars.yml
+    - name: Import variable checks
+      ansible.builtin.import_tasks: tasks/test_vars.yml
 
-    - name: install bind-utils
-      yum:
+    - name: Install bind-utils
+      ansible.builtin.yum:
         name: bind-utils
         state: present
 
-    - name: install infoblox-client pip
+    - name: Install infoblox-client pip
       delegate_to: localhost
-      pip:
+      ansible.builtin.pip:
         name: infoblox-client
 
     - name: InfoBlox create test host record
       delegate_to: localhost
-      nios_host_record:
+      community.general.nios_host_record:
         name: "{{ role_dns_hostname }}"
         provider: "{{ nios_provider }}"
         ipv4:

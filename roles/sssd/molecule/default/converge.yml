@@ -1,0 +1,16 @@
+---
+- name: Converge
+  hosts: all
+  vars:
+    role_sssd_allowed_groups: [is.grp]
+    ad_password: "{{ lookup('onepassword', 'svc_realmd_test_join', vault='accounts', \
+      service_account_token=lookup('ansible.builtin.env', 'OP_SERVICE_ACCOUNT_TOKEN')) }}"
+
+  tasks:
+    - name: Include sssd role
+      ansible.builtin.include_role:
+        name: sssd
+      vars:
+        role_sssd_domain: TESTING
+        role_sssd_override_homedir: /users/%u
+        role_sssd_ad_password: "{{ ad_password }}"

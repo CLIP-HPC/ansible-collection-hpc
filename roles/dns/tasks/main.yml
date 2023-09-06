@@ -1,35 +1,35 @@
 ---
 # tasks file for role-dns
 - name: Test if role variables are set
-  assert:
+  ansible.builtin.assert:
     that:
-      - "role_dns_hostname is defined"
-      - "role_dns_aliases is defined"
-    fail_msg: "ROLE VARS NOT DEFINED"
-    success_msg: 'OK'
+      - role_dns_hostname is defined
+      - role_dns_aliases is defined
+    fail_msg: ROLE VARS NOT DEFINED
+    success_msg: OK
 
 - name: Test if nios_provider is set
-  assert:
+  ansible.builtin.assert:
     that:
-      - "nios_provider is defined"
-      - "nios_provider.host is defined"
-      - "nios_provider.username is defined"
-      - "nios_provider.password is defined"
-    fail_msg: "NIOS_PROVIDER NOT DEFINED"
-    success_msg: 'OK'
+      - nios_provider is defined
+      - nios_provider.host is defined
+      - nios_provider.username is defined
+      - nios_provider.password is defined
+    fail_msg: NIOS_PROVIDER NOT DEFINED
+    success_msg: OK
 
 - name: Fetch host record
-  set_fact:
+  ansible.builtin.set_fact:
     host: "{{ lookup('nios', 'record:host', filter={'name': role_dns_hostname}, provider=nios_provider) }}"
 
 - name: Dump the host record return variable
-  debug:
+  ansible.builtin.debug:
     var: host
 
 - name: InfoBlox add aliases
   delegate_to: localhost
   become: false
-  nios_host_record:
+  community.general.nios_host_record:
     name: "{{ role_dns_hostname }}"
     aliases: "{{ role_dns_aliases }}"
     provider: "{{ nios_provider }}"

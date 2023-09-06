@@ -1,14 +1,14 @@
 ---
-- name: debug loop
-  debug:
-    msg: "Remove from {{ zone.zone | default(role_firewalld_default_zone, true) }} - {{ service }}"
+- name: Debug loop
+  ansible.builtin.debug:
+    msg: Remove from {{ zone.zone | default(role_firewalld_default_zone, true) }} - {{ service }}
   loop: "{{ removal.results[i].ansible_facts.service_list }}"
   loop_control:
     loop_var: service
   when: removal.results[i].ansible_facts.service_list
 
 - name: Remove services from zone
-  firewalld:
+  ansible.posix.firewalld:
     zone: "{{ zone.zone | default(role_firewalld_default_zone, true) }}"
     state: disabled
     service: "{{ service }}"
@@ -18,4 +18,4 @@
   loop_control:
     loop_var: service
   when: removal.results[i].ansible_facts.service_list
-  notify: "restart firewalld"
+  notify: Restart firewalld

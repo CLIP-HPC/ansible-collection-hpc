@@ -3,18 +3,14 @@ dependency:
   name: galaxy
 driver:
   name: docker
-lint: |
-  set -e
-  yamllint .
-  ansible-lint
-  flake8
 platforms:
   - name: instance-ubi8.8-1-${INSTANCE_ID:-local}
     image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.8-1
     command: /usr/sbin/init
     privileged: true
     volumes:
-      - "/tmp/instance-ubi8.8-1-${INSTANCE_ID:-local}:/var/lib/containers"
+      - /tmp/instance-ubi8.8-1-${INSTANCE_ID:-local}:/var/lib/containers
+    pre_build_image: true
 provisioner:
   name: ansible
 scenario:

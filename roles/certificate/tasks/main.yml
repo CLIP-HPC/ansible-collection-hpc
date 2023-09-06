@@ -3,7 +3,7 @@
 
 # Variable checks
 - name: Check required variables
-  assert:
+  ansible.builtin.assert:
     that:
       - "{{ item | mandatory }} is defined"
   with_items:
@@ -14,7 +14,7 @@
 # Local working directory
 - name: Create a temporary directory on the localhost
   become: false
-  tempfile:
+  ansible.builtin.tempfile:
     state: directory
     prefix: cert
     suffix: "{{ role_certificate_hostname }}"
@@ -23,24 +23,24 @@
   delegate_to: localhost
 
 - name: Define local basepath
-  set_fact:
+  ansible.builtin.set_fact:
     cert_basepath: "{{ tmp_dir.path }}/{{ role_certificate_hostname }}"
 
 # Remote certificate directory
 - name: Check that the remote tls dir exists
   become: true
-  file:
+  ansible.builtin.file:
     state: directory
     path: "{{ role_certificate_tls_dir }}"
     owner: root
     group: root
-    mode: 0700
+    mode: "0700"
 
 - name: Copy current certificate
   become: true
   changed_when: false
   ignore_errors: true
-  fetch:
+  ansible.builtin.fetch:
     src: "{{ host_tls_dir }}.crt"
     dest: "{{ cert_basepath }}.crt"
     flat: true
@@ -49,8 +49,8 @@
 - name: Copy current csr from remote host
   become: true
   changed_when: false
-  ignore_errors: true
-  fetch:
+  failed_when: false
+  ansible.builtin.fetch:
     src: "{{ host_tls_dir }}.csr"
     dest: "{{ cert_basepath }}.csr"
     flat: true
@@ -58,8 +58,8 @@
 - name: Copy current key from remote host
   become: true
   changed_when: false
-  ignore_errors: true
-  fetch:
+  failed_when: false
+  ansible.builtin.fetch:
     src: "{{ host_tls_dir }}.key"
     dest: "{{ cert_basepath }}.key"
     flat: true
@@ -67,21 +67,21 @@
 - name: Set key permissions to default
   become: false
   changed_when: false
-  ignore_errors: true
+  failed_when: false
   delegate_to: localhost
-  file:
+  ansible.builtin.file:
     path: "{{ cert_basepath }}.key"
-    mode: 0600
+    mode: "0600"
 
 - name: Generate private key
   delegate_to: localhost
-  openssl_privatekey:
+  community.crypto.openssl_privatekey:
     path: "{{ cert_basepath }}.key"
   register: new_key
 
 - name: Generate certificate signing request
   delegate_to: localhost
-  openssl_csr:
+  community.crypto.openssl_csr:
     path: "{{ cert_basepath }}.csr"
     privatekey_path: "{{ cert_basepath }}.key"
     common_name: "{{ role_certificate_hostname }}"
@@ -90,25 +90,25 @@
 
 - name: Check the current certificate
   delegate_to: localhost
-  openssl_certificate_info:
+  community.crypto.x509_certificate_info:
     path: "{{ cert_basepath }}.crt"
     valid_at:
-      custom: "+{{ role_certificate_renew_days | default('30') }}d"
+      custom: +{{ role_certificate_renew_days | default('30') }}d
       # fail: "-1d"
   register: current_cert_info
   when: current_cert is succeeded
 
 - name: Create certificate
-  include_tasks: create.yml
+  ansible.builtin.include_tasks: create.yml
   when: new_csr is changed or not current_cert_info.valid_at.custom
 
-- name: push certificate to remote host
+- name: Push certificate to remote host
   become: true
-  copy:
+  ansible.builtin.copy:
     src: "{{ cert_basepath }}.{{ item }}"
     dest: "{{ host_tls_dir }}.{{ item }}"
     owner: root
     group: root
-    mode: 0600
-  with_items: ["key", "crt", "csr"]
+    mode: "0600"
+  with_items: [key, crt, csr]
   when: new_csr is changed or not current_cert_info.valid_at.custom

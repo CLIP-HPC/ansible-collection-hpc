@@ -1,21 +1,21 @@
 ---
-- name: syslog server
+- name: Syslog server
   hosts: syslog-server
   gather_facts: false
   tasks:
     - name: Include syslog role
-      include_role:
+      ansible.builtin.include_role:
         name: syslog
       vars:
         role_syslog_mode: server
 
 # setup client
-- name: syslog client
+- name: Syslog client
   hosts: syslog-client
   gather_facts: false
   tasks:
     - name: Include syslog role
-      include_role:
+      ansible.builtin.include_role:
         name: syslog
       vars:
-        role_syslog_server: "syslog-server"
+        role_syslog_server: syslog-server

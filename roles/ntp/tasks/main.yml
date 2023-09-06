@@ -1,41 +1,41 @@
 ---
 - name: Make sure tzdata is installed
-  yum:
+  ansible.builtin.yum:
     name: tzdata
     state: present
 
 - name: Make sure ntp is absent
-  yum:
+  ansible.builtin.yum:
     name: ntp
     state: absent
 
 - name: Make sure chrony is installed
-  yum:
+  ansible.builtin.yum:
     name: chrony
     # i would not use 'latest' here because version mgmt should be done with satellite, not ansible
     state: present
 
 - name: Ensure proper permissions on /run/chrony
-  file:
+  ansible.builtin.file:
     path: /run/chrony
     state: directory
     owner: root
     group: root
-    mode: '0750'
+    mode: "0750"
 
 - name: Make sure proper chrony.conf is in place
-  template:
+  ansible.builtin.template:
     src: chrony.conf.j2
     dest: /etc/chrony.conf
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     backup: true
   notify:
-    - restart-chronyd
+    - Restart-chronyd
 
 - name: Make sure timezone is set
-  timezone:
-    name: '{{ role_ntp_timezone }}'
+  community.general.timezone:
+    name: "{{ role_ntp_timezone }}"
 
 # vim: sts=2:ai

@@ -1,14 +1,14 @@
 ---
 - name: Prepare
   hosts: all
-  gather_facts: False
+  gather_facts: false
   tasks:
     - name: Install sshd
-      yum:
+      ansible.builtin.yum:
         name: openssh-server
         state: present
 
     - name: Enable sshd
-      service:
+      ansible.builtin.service:
         name: sshd
         state: started

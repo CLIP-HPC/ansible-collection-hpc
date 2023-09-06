@@ -4,24 +4,24 @@
   gather_facts: false
   tasks:
   # add pgrep, iproute for ss tool, to run testinfra.
-  - name: install iproute and pgrep for testing
-    become: true
-    yum:
-      name: "iproute,net-tools,tcpdump,procps-ng"
-      state: present
+    - name: Install iproute and pgrep for testing
+      become: true
+      ansible.builtin.yum:
+        name: iproute,net-tools,tcpdump,procps-ng
+        state: present
 
 # we assume rsyslog will be present everywhere, for testing we have to prepare it
-- name: prepare client
+- name: Prepare client
   hosts: syslog-client
   gather_facts: false
   become: true
   tasks:
-    - name: install rsyslog
-      yum:
+    - name: Install rsyslog
+      ansible.builtin.yum:
         name: rsyslog
         state: present
-    - name: start rsyslog
-      systemd:
+    - name: Start rsyslog
+      ansible.builtin.systemd:
         name: rsyslog.service
         enabled: true
         daemon_reload: true

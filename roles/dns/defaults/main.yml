@@ -8,5 +8,5 @@
 #   - san1-cert-test.vbc.ac.at
 #   - san2-cert-test.vbc.ac.at
 #
-role_dns_hostname: ''
+role_dns_hostname: ""
 role_dns_aliases: []

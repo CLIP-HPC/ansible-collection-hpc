@@ -1,7 +1,7 @@
 //Note: the dict keys are literals, not strings
 // testing ansible collection
 
-    // Sectigo API is too ****** to have tests 
+    // Sectigo API is too ****** to have tests
     // certificate: [
     //   moleculeScenarios: [] // ["create"]
     // ],
@@ -24,7 +24,7 @@ testAnsibleCollection([
       moleculeScenarios: ["default"]
     ],
     sssd: [
-      moleculeScenarios: ["default-centos7","default-ubi","remove-centos7","remove-ubi"]
+      moleculeScenarios: ["default","remove"]
     ],
     sudoers: [
       moleculeScenarios: ["default", "remove"]

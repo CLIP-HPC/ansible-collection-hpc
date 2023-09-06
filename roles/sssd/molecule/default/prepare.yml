@@ -1,0 +1,9 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Install sshd
+      ansible.builtin.yum:
+        name: openssh-server
+        state: present

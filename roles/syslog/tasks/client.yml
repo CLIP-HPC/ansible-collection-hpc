@@ -1,17 +1,17 @@
 ---
 # setup forwarding client
 
-- name: put rsyslog templates into place
+- name: Put rsyslog templates into place
   become: true
-  template:
+  ansible.builtin.template:
     src: rsyslog_client/{{ item }}.j2
     dest: /etc/rsyslog.d/{{ item }}
-    mode: '0644'
+    mode: "0644"
   loop:
     - globals.conf
     - resilient.conf
   notify:
-    - restart syslog
+    - Restart syslog
 
-- name: flush handlers to activate syslog forwarding
-  meta: flush_handlers
+- name: Flush handlers to activate syslog forwarding
+  ansible.builtin.meta: flush_handlers

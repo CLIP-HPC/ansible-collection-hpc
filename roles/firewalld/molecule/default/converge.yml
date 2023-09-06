@@ -3,15 +3,15 @@
   hosts: all
   tasks:
     - name: Include firewalld role
-      include_role:
+      ansible.builtin.include_role:
         name: firewalld
       vars:
         role_firewalld_present: true
-        role_firewalld_default_zone: "public"
+        role_firewalld_default_zone: public
         role_firewalld_interfaces:
           - ifname:
             zone:
             services:
-              - "ssh"
+              - ssh
             ports:
-              - "9999/udp"
+              - 9999/udp

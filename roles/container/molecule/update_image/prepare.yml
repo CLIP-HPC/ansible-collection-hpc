@@ -4,13 +4,13 @@
   gather_facts: false
   tasks:
     - name: Start old image
-      include_role:
+      ansible.builtin.include_role:
         name: container
       vars:
         role_container_service:
-          name: 'webservice'
-          image: "docker.artifactory.imp.ac.at/it/molecule/tests/httpd"
-          tag: "2.4.37-alpine"
+          name: webservice
+          image: docker.artifactory.imp.ac.at/it/molecule/tests/httpd
+          tag: 2.4.37-alpine
           uid: 222
           gid: 333
           selinux: true

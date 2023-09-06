@@ -8,14 +8,13 @@ role_sssd_packages:
   - adcli
   - samba-common-tools
 
-
 role_sssd_domains:
   VBC:
     name: imp.univie.ac.at
     id_provider: ad
     auth_provider: ad
-    automatic_id_mapping: 'no'
-    fully_qualified_names: 'no'
+    automatic_id_mapping: "no"
+    fully_qualified_names: "no"
     computer_ou: OU=server,OU=linux,OU=managed,OU=vbc.computer,DC=imp,DC=univie,DC=ac,DC=at
     ad_username: svc_realmd_join@IMP.UNIVIE.AC.AT
 
@@ -23,7 +22,7 @@ role_sssd_domains:
     name: imp.univie.ac.at
     id_provider: ad
     auth_provider: ad
-    automatic_id_mapping: 'no'
-    fully_qualified_names: 'yes'
+    automatic_id_mapping: "no"
+    fully_qualified_names: "yes"
     computer_ou: OU=realmd_test,OU=server,OU=linux,OU=managed,OU=vbc.computer,DC=imp,DC=univie,DC=ac,DC=at
     ad_username: svc_realmd_test_join@IMP.UNIVIE.AC.AT

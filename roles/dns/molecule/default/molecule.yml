@@ -14,14 +14,12 @@ platforms:
     privileged: true
 provisioner:
   name: ansible
-  options:
-    extra-vars: "@${ONEPASS_VARS:-/missing/1password/credentials.file}"
   env:
-    ONEPASS_VARS: "${ONEPASS_VARS}"
-    INSTANCE_ID: "${INSTANCE_ID:-local}"
+    OP_SERVICE_ACCOUNT_TOKEN: ${OP_SERVICE_ACCOUNT_TOKEN}
+    INSTANCE_ID: ${INSTANCE_ID:-local}
 scenario:
   name: default
 verifier:
   name: testinfra
   env:
-    INSTANCE_ID: "${INSTANCE_ID:-local}"
+    INSTANCE_ID: ${INSTANCE_ID:-local}

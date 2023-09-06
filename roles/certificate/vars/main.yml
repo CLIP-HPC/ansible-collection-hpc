@@ -1,9 +1,4 @@
 ---
 # vars file for role-certificate
-openssl_alt_names: "{{ role_certificate_aliases \
-  | default([]) \
-  | union([ role_certificate_hostname ]) \
-  | map('regex_replace', '^(.*)$', 'DNS:\\1') \
-  | list }}"
-host_tls_dir: "{{ role_certificate_tls_dir | regex_replace('\\/$', '') }}/\
-{{ role_certificate_hostname }}"
+openssl_alt_names: "{{ role_certificate_aliases | default([]) | union([role_certificate_hostname]) | map('regex_replace', '^(.*)$', 'DNS:\\1') | list }}"
+host_tls_dir: "{{ role_certificate_tls_dir | regex_replace('\\/$', '') }}/{{ role_certificate_hostname }}"

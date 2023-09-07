@@ -13,11 +13,10 @@
     name: "{{ role_lmod_eb_pkgs }}"
     state: installed
 
-- name: Install python2-pip for centos7
+- name: Install python3-pip
   yum:
-    name: python2-pip
+    name: python3-pip
     state: installed
-  when: ansible_distribution_major_version =='7'
 
 - name: Install easybuild
   become_user: easybuild
@@ -27,11 +26,34 @@
     name: easybuild
     version: "{{ role_lmod_easybuild_bootstrap_version }}"
     extra_args: --user
+    executable: pip3
 
 - name: Checkout Easyconfig github repo
   run_once: "{{ role_lmod_shared_module_fs }}"
+  become_user: root
+  become: true
   git:
     repo: '{{ role_lmod_easybuild_github_repo }}'
     dest: '{{ role_lmod_easybuild_easyconfig_folder }}'
     version: develop
     update: false
+
+
+- name: Create easyconfig sync service
+  become: true
+  template:
+    src: easyconfig_sync.service.j2
+    dest: /etc/systemd/system/easyconfig_sync.service
+    mode: 0644
+  notify:
+    - restart easyconfig_sync timer
+
+# create a systemd timer to update the easyconfig repo
+- name: Create easyconfig sync timer
+  become: true
+  copy:
+    src: easyconfig_sync.timer
+    dest: /etc/systemd/system/easyconfig_sync.timer
+    mode: 0644
+  notify:
+    - restart easyconfig_sync timer

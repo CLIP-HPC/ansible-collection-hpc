@@ -1,0 +1,11 @@
+[Unit]
+Description=lmod cache service timer
+After=network.target time-sync.target
+
+[Timer]
+OnCalendar=*:0/10
+RandomizedDelaySec=180
+Persistent=true
+
+[Install]
+WantedBy=multi-user.target

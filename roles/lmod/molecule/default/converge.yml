@@ -13,7 +13,6 @@
         role_lmod_syshost: system1
         role_lmod_base_folder: "/software"
         role_lmod_build_env: "2019"
-        role_lmod_easyblock_repo:
         role_lmod_autoswap: "no"
         role_lmod_cached_loads: "yes"
         role_lmod_exact_match: "yes"
@@ -26,3 +25,4 @@
         role_lmod_ompi_mca_btl: "self,vader,tcp"
         role_lmod_intel_pmi_lib: "/usr/lib64/libpmi.so"
         role_lmod_nf_opts: "-Xms1g -Xmx6g"
+        role_lmod_easybuild_additional_robot_paths: /software/easyconfig1:/software/easyconfig2

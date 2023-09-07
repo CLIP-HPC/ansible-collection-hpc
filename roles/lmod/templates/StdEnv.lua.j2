@@ -23,7 +23,9 @@ end
 {% endfor %}
 
 local home=os.getenv("HOME") or ""
-
+{% if role_lmod_easybuild_config %}
+setenv("EASYBUILD_CONFIGFILES","{{ role_lmod_easybuild_config }})
+{% endif %}
 setenv("OMPI_MCA_btl", "{{ role_lmod_ompi_mca_btl }}")
 {% if role_lmod_ompi_mca_if_include is defined and role_lmod_ompi_mca_if_include | length > 0 %}
 setenv("OMPI_MCA_btl_tcp_if_include","{{ role_lmod_ompi_mca_if_include }}")

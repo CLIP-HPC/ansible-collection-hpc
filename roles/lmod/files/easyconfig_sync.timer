@@ -1,0 +1,11 @@
+[Unit]
+Description=easyconfig sync service timer
+After=network.target time-sync.target
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=multi-user.target

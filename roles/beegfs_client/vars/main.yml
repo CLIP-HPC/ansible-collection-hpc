@@ -1,4 +1,4 @@
 ---
 # vars file for role-beegfs-client
 role_beegfs_client_port: 8004
-role_beegfs_client_config_file: "beegfs-client{{ (role_beegfs_client_scope_config | bool) | ternary('-' + role_beegfs_client_mgmt_host,'') }}.conf"
+role_beegfs_client_config_file: beegfs-client{{ (role_beegfs_client_scope_config | bool) | ternary('-' + role_beegfs_client_mgmt_host, '') }}.conf

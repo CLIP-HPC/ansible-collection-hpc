@@ -1,13 +1,13 @@
 ---
 - name: Restart Munge service
-  service:
-    name: "munge"
+  ansible.builtin.service:
+    name: munge
     state: restarted
   when: role_slurm_service_enabled | bool
   tags: always
 
 - name: Restart slurmdbd
-  service:
+  ansible.builtin.service:
     name: slurmdbd
     state: restarted
   delegate_to: "{{ role_slurm_db_host }}"
@@ -16,8 +16,8 @@
   tags: always
 
 - name: Restart slurmctld
-  service:
-    name: "slurmctld"
+  ansible.builtin.service:
+    name: slurmctld
     state: restarted
   delegate_to: "{{ role_slurm_control_host }}"
   run_once: true
@@ -26,8 +26,8 @@
   tags: always
 
 - name: Restart slurmrestd
-  systemd:
-    name: "slurmrestd"
+  ansible.builtin.systemd:
+    name: slurmrestd
     daemon_reload: true
     state: restarted
   delegate_to: "{{ role_slurm_control_host }}"
@@ -37,7 +37,7 @@
   tags: always
 
 - name: Restart SLURM service
-  service:
+  ansible.builtin.service:
     name: "{{ role_slurm_service }}"
     state: restarted
   when:
@@ -47,7 +47,7 @@
   tags: always
 
 - name: Restart mariadb service
-  service:
+  ansible.builtin.service:
     name: mariadb
     state: restarted
   delegate_to: "{{ role_slurm_db_host }}"
@@ -55,8 +55,9 @@
   tags: always
 
 - name: Reconfigure
-  listen: "Restart SLURM service"
+  listen: Restart SLURM service
   run_once: true
   delegate_to: "{{ role_slurm_control_host }}"
-  command: "/bin/scontrol reconfigure"
+  ansible.builtin.command: /bin/scontrol reconfigure
   tags: always
+  changed_when: true

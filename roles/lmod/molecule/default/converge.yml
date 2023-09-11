@@ -6,12 +6,12 @@
     version: "{{ (ansible_distribution_major_version =='8') | ternary('4.4.1', '4.4.1') }}"
   tasks:
     - name: Include lmod role
-      include_role:
+      ansible.builtin.include_role:
         name: lmod
       vars:
         role_lmod_easybuild_bootstrap_version: "{{ version }}"
         role_lmod_syshost: system1
-        role_lmod_base_folder: "/software"
+        role_lmod_base_folder: /software
         role_lmod_build_env: "2019"
         role_lmod_autoswap: "no"
         role_lmod_cached_loads: "yes"
@@ -20,7 +20,7 @@
         role_lmod_pin_versions: "yes"
         role_lmod_use_dot_files: "no"
         role_lmod_colorize: "yes"
-        role_lmod_home_dir: "/home"
+        role_lmod_home_dir: /home
         role_lmod_write_group: easybuild
         role_lmod_ompi_mca_btl: "self,vader,tcp"
         role_lmod_intel_pmi_lib: "/usr/lib64/libpmi.so"

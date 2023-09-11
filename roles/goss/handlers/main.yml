@@ -1,7 +1,7 @@
 ---
 # handlers file for role-goss
-- name: restart goss
-  systemd:
+- name: Restart goss
+  ansible.builtin.systemd:
     daemon_reload: true
     name: goss
     state: restarted

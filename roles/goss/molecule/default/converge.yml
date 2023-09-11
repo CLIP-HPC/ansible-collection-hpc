@@ -3,7 +3,7 @@
   hosts: all
   tasks:
     - name: Include goss role
-      include_role:
-        name: "goss"
+      ansible.builtin.include_role:
+        name: goss
       vars:
-        goss_run_as_service: True
+        goss_run_as_service: true

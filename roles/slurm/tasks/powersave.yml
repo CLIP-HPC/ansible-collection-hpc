@@ -1,27 +1,25 @@
 ---
-
 - name: Deploy resume program
   ansible.builtin.template:
     src: "{{ role_slurm_power_save_resume_program }}"
-    dest: "/etc/slurm/{{ role_slurm_power_save_resume_program | basename }}"
-    owner: "slurm"
-    group: "slurm"
-    mode: 0755
-  notify:  Restart slurmctld
+    dest: /etc/slurm/{{ role_slurm_power_save_resume_program | basename }}
+    owner: slurm
+    group: slurm
+    mode: "0755"
+  notify: Restart slurmctld
   when: role_slurm_power_save_resume_program
   tags:
     - reconfigure
     - powersave
 
-
 - name: Deploy suspend program
   ansible.builtin.template:
     src: "{{ role_slurm_power_save_suspend_program }}"
-    dest: "/etc/slurm/{{ role_slurm_power_save_suspend_program | basename }}"
-    owner: "slurm"
-    group: "slurm"
-    mode: 0755
-  notify:  Restart slurmctld
+    dest: /etc/slurm/{{ role_slurm_power_save_suspend_program | basename }}
+    owner: slurm
+    group: slurm
+    mode: "0755"
+  notify: Restart slurmctld
   when: role_slurm_power_save_suspend_program
   tags:
     - reconfigure

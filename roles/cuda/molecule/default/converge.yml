@@ -3,7 +3,7 @@
   hosts: all
   tasks:
     - name: Include cuda role
-      include_role:
+      ansible.builtin.include_role:
         name: cuda
       vars:
         role_cuda_gpu: true

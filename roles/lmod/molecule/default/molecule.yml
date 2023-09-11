@@ -3,11 +3,6 @@ dependency:
   name: galaxy
 driver:
   name: docker
-lint: |
-  set -e
-  yamllint .
-  ansible-lint
-  flake8
 platforms:
   - name: instance-centos7-${INSTANCE_ID:-local}
     image: centos/systemd:latest
@@ -19,6 +14,7 @@ platforms:
       - SYS_ADMIN
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    pre_build_image: true
   - name: instance-stream8-${INSTANCE_ID:-local}
     image: quay.io/centos/centos:stream8
     command: /sbin/init
@@ -29,6 +25,7 @@ platforms:
       - SYS_ADMIN
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    pre_build_image: true
 provisioner:
   name: ansible
 scenario:

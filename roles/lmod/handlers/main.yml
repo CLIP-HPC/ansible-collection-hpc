@@ -1,13 +1,13 @@
 ---
-- name: "restart lmod_cache.timer unit"
-  systemd:
+- name: "Restart lmod_cache.timer unit"
+  ansible.builtin.systemd:
     name: "lmod_cache.timer"
     enabled: yes
     state: restarted
     daemon_reload: yes
 
-- name: "restart easyconfig_sync timer"
-  systemd:
+- name: "Restart easyconfig_sync timer"
+  ansible.builtin.systemd:
     name: "easyconfig_sync.timer"
     enabled: yes
     state: restarted

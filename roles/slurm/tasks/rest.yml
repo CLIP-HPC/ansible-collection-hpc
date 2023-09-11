@@ -1,8 +1,8 @@
 ---
 - name: Install SLURM Rest packages
-  yum:
+  ansible.builtin.yum:
     name:
-      - "slurm-slurmrestd"
+      - slurm-slurmrestd
     state: installed
   tags: rest
 
@@ -15,7 +15,7 @@
   tags: rest
 
 - name: Create socket folder
-  file:
+  ansible.builtin.file:
     state: directory
     path: /var/run/slurmrestd
     owner: slurmrest
@@ -24,17 +24,17 @@
   tags: rest
 
 - name: Remove unix and port config from systemd
-  ini_file:
+  community.general.ini_file:
     option: ExecStart
     section: Service
-    value: "/usr/sbin/slurmrestd $SLURMRESTD_OPTIONS"
+    value: /usr/sbin/slurmrestd $SLURMRESTD_OPTIONS
     path: /usr/lib/systemd/system/slurmrestd.service
     mode: "644"
   notify: Restart slurmrestd
   tags: rest
 
 - name: Copy /etc/default/slurmrestd
-  copy:
+  ansible.builtin.copy:
     content: |
       SLURMRESTD_OPTIONS="-u slurmrest -g slurmrest"
       SLURMRESTD_LISTEN="unix:/var/run/slurmrestd/slurmrestd.socket,0.0.0.0:6820"
@@ -44,7 +44,7 @@
   tags: rest
 
 - name: Ensure Slurmrest service is enabled
-  service:
-    name: "slurmrestd"
+  ansible.builtin.service:
+    name: slurmrestd
     enabled: "true"
   tags: rest

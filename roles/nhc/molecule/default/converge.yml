@@ -3,9 +3,9 @@
   hosts: all
   tasks:
     - name: Include nhc role
-      include_role:
+      ansible.builtin.include_role:
         name: nhc
       vars:
         nhc_fs_mount_rw_scratch: false
         nhc_fs_mount_rw_home: false
-        nhc_group_random_user: "nobody"
+        nhc_group_random_user: nobody

@@ -2,109 +2,107 @@
 # ================================================================================
 ## deploy goss binary
 # ================================================================================
-- name: download goss binary to local folder
+- name: Download goss binary to local folder
   become: false
-  get_url:
-    url: "https://github.com/aelsabbahy/goss/releases/download/v{{ goss_version }}/goss-linux-amd64"
-    dest: "/tmp/goss-linux-amd64"
+  ansible.builtin.get_url:
+    url: https://github.com/aelsabbahy/goss/releases/download/v{{ goss_version }}/goss-linux-amd64
+    dest: /tmp/goss-linux-amd64
+    mode: "0755"
   delegate_to: localhost
   run_once: true
 
-- name: make sure goss_install_dir exists
-  file:
-    mode: 0755
+- name: Make sure goss_install_dir exists
+  ansible.builtin.file:
+    mode: "0755"
     name: "{{ goss_install_dir }}"
     state: directory
 
-- name: propagate goss binary
-  copy:
-    src: "/tmp/goss-linux-amd64"
+- name: Propagate goss binary
+  ansible.builtin.copy:
+    src: /tmp/goss-linux-amd64
     dest: "{{ goss_install_dir }}"
-    mode: 0755
+    mode: "0755"
     owner: root
 
 # ================================================================================
 # deploy cron job, shell script and test file
 # ================================================================================
 - name: Make sure that cronie package is installed
-  package:
+  ansible.builtin.package:
     name: cronie
     state: installed
 
-- name: deploy /etc/cron.d/prometheus_goss file
+- name: Deploy /etc/cron.d/prometheus_goss file
   tags:
     - always
     - goss_reconfigure
-  template:
-    src: "templates/prometheus_goss.cron.j2"
-    dest: "/etc/cron.d/prometheus_goss"
-    mode: 0644
+  ansible.builtin.template:
+    src: templates/prometheus_goss.cron.j2
+    dest: /etc/cron.d/prometheus_goss
+    mode: "0644"
 
-- name: deploy prometheus_goss.sh file
+- name: Deploy prometheus_goss.sh file
   tags:
     - always
     - goss_reconfigure
-  template:
-    src: "templates/prometheus_goss.sh.j2"
+  ansible.builtin.template:
+    src: templates/prometheus_goss.sh.j2
     dest: "{{ goss_install_dir }}/prometheus_goss.sh"
     owner: root
     group: root
-    mode: 0750
+    mode: "0750"
 
-
-- name: deploy goss check script
+- name: Deploy goss check script
   tags:
     - always
     - goss_reconfigure
-  template:
-    src: "templates/goss.j2"
+  ansible.builtin.template:
+    src: templates/goss.j2
     dest: "{{ goss_install_dir }}/goss"
     owner: root
     group: root
-    mode: 0750
+    mode: "0750"
 
-- name: deploy goss test .yml file
+- name: Deploy goss test .yml file
   tags:
     - always
     - goss_reconfigure
-  copy:
-    src: "files/{{ goss_test_file }}"
+  ansible.builtin.copy:
+    src: files/{{ goss_test_file }}
     dest: "{{ goss_install_dir }}/{{ goss_test_file }}"
-    mode: 0644
+    mode: "0644"
 
-- name: deploy goss test variables .yml file
+- name: Deploy goss test variables .yml file
   tags:
     - always
     - goss_reconfigure
-  copy:
+  ansible.builtin.copy:
     content: "{{ goss_template_vars | to_nice_yaml }}"
     dest: "{{ goss_install_dir }}/{{ goss_template_vars_file }}"
-    mode: 0644
+    mode: "0644"
   when: goss_template_vars | default(False)
 
-
 - name: Deploy GOSS service file
-  template:
+  ansible.builtin.template:
     src: goss.service.j2
     dest: /etc/systemd/system/goss.service
     owner: root
     group: root
-    mode: 0644
-  notify: restart goss
+    mode: "0644"
+  notify: Restart goss
   tags:
     - always
     - goss_reconfigure
 
 - name: Ensure GOSS service is enabled on boot
-  systemd:
+  ansible.builtin.systemd:
     daemon_reload: true
     name: goss
     enabled: "{{ goss_run_as_service }}"
-    state: "{{ (goss_run_as_service ) | ternary('started', 'stopped') }}"
+    state: "{{ (goss_run_as_service) | ternary('started', 'stopped') }}"
   tags:
     - always
     - goss_reconfigure
-
 
 #
 # vim: sts=2:ai:list:cursorcolumn

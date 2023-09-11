@@ -3,20 +3,20 @@
 
 # Variables below are used inside the template for nhc.conf
 nhc_short_hostname: true
-nhc_hw_eth: "eth0"
+nhc_hw_eth: eth0
 nhc_hw_mcelog: true
 
 # By default allow 100 corrected errors/24h
 nhc_mcelog_max_corrected_rate: 100
 nhc_fs_mount_check: []
-nhc_fs_mount_default_opts: '/(^|,)vers=3(,|$)/'
+nhc_fs_mount_default_opts: /(^|,)vers=3(,|$)/
 
 # sssd check which group to pick random user from
-nhc_group_random_user: "role.cbe.users"
+nhc_group_random_user: role.cbe.users
 
 ## these hw checks are no longer run
-#nhc_hw_swap_free: 0
-#nhc_hw_mem_free: "1MB"
+# nhc_hw_swap_free: 0
+# nhc_hw_mem_free: "1MB"
 
 ## this option is no longer used and ignored
 # gpu: false
@@ -27,8 +27,6 @@ nhc_group_random_user: "role.cbe.users"
 
 # overwrite default timeout
 nhc_timeout:
-
 nhc_watchdog_timeout:
-
 nhc_goss_execute: true
 nhc_goss_outputfile:

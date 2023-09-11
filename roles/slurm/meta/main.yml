@@ -7,17 +7,13 @@ galaxy_info:
 
   license: MIT
 
-  min_ansible_version: 2.6
-
+  min_ansible_version: "2.8"
 
   platforms:
-    - name: Centos
+    - name: EL
       versions:
-        - 7
-    - name: RedHat
-      versions:
-        - 7
+        - "7"
+        - "8"
 
   galaxy_tags: []
-
 dependencies: []

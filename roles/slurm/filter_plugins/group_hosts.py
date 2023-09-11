@@ -19,7 +19,11 @@ __metaclass__ = type
 
 from ansible import errors
 from ansible.module_utils.six import iteritems
-import jinja2
+# NOTE: jinja2 3.1.0 dropped contextfilter in favour of pass_context.
+try:
+    from jinja2 import pass_context
+except ImportError:
+    from jinja2 import contextfilter as pass_context
 import re
 
 # Pattern to match a hostname with numerical ending
@@ -37,7 +41,7 @@ def _get_hostvar(context, var_name, inventory_hostname=None):
     return namespace.get(var_name)
 
 
-@jinja2.contextfilter
+@pass_context
 def group_hosts(context, group_names):
     return {g: _group_hosts(context["groups"].get(g, []))
             for g in sorted(group_names)}

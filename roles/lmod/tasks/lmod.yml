@@ -1,24 +1,27 @@
 # task related to installing LMOD
 ---
 - name: Install LMOD
-  package:
+  ansible.builtin.package:
     name: Lmod
     state: installed
 
 - name: Add group easybuild
-  group: name=easybuild state=present
+  ansible.builtin.group:
+    name: easybuild
+    state: present
 
 - name: Add user easybuild
-  user: name=easybuild
-        group=easybuild
-        shell=/bin/bash
-        state=present
-        home={{ role_lmod_home_dir }}/easybuild
-        uid=1001
+  ansible.builtin.user:
+    name: easybuild
+    group: easybuild
+    shell: /bin/bash
+    state: present
+    home: "{{ role_lmod_home_dir }}/easybuild"
+    uid: 1001
 
 - name: Ensure that system module path exists
-  file:
-    mode: 0755
+  ansible.builtin.file:
+    mode: "0755"
     state: directory
     path: "{{ item }}"
     owner: easybuild
@@ -34,73 +37,70 @@
 
 
 - name: Temlate lmod.rc file
-  template:
-    mode: 0644
-    src: "lmod.rc.j2"
+  ansible.builtin.template:
+    mode: "0644"
+    src: lmod.rc.j2
     dest: "{{ role_lmod_rc_folder }}/lmod.rc"
   run_once: "{{ role_lmod_shared_module_fs }}"
 
 - name: Template Default module files
-  template:
-    mode: 0644
-    src: "StdEnv.lua.j2"
+  ansible.builtin.template:
+    mode: "0644"
+    src: StdEnv.lua.j2
     dest: "{{ role_lmod_core_folder }}/{{ role_lmod_syshost }}.lua"
   run_once: "{{ role_lmod_shared_module_fs }}"
 
 - name: Template build-env module files
-  template:
-    mode: 0644
-    src: "build-env.lua.j2"
+  ansible.builtin.template:
+    mode: "0644"
+    src: build-env.lua.j2
     dest: "{{ role_lmod_build_env_install_folder }}/{{ role_lmod_build_env }}.lua"
   run_once: "{{ role_lmod_shared_module_fs }}"
 
 - name: Template profile files
-  template:
-    mode: 0644
+  ansible.builtin.template:
+    mode: "0644"
     src: "{{ item }}"
-    dest: "/etc/profile.d/"
+    dest: /etc/profile.d/
   with_items:
     - z01_default_modules.sh
     - z01_default_modules.csh
 
 - name: Update modulepath_root in /etc/profile.d/00-modulepathroot.sh
-  copy:
-    mode: 0644
-    content: "export MODULEPATH_ROOT={{ role_lmod_system_modules_folder }}"
+  ansible.builtin.copy:
+    mode: "0644"
+    content: export MODULEPATH_ROOT={{ role_lmod_system_modules_folder }}
     dest: /etc/profile.d/00-modulepathroot.sh
 
-
 - name: Update modulepath_root in /etc/profile.d/00-modulepathroot.csh
-  copy:
-    mode: 0644
-    content: 'setenv MODULEPATH_ROOT "{{ role_lmod_system_modules_folder }}"'
+  ansible.builtin.copy:
+    mode: "0644"
+    content: setenv MODULEPATH_ROOT "{{ role_lmod_system_modules_folder }}"
     dest: /etc/profile.d/00-modulepathroot.csh
 
-
 - name: Update modulepath in /etc/profile.d/00-modulepath.sh
-  lineinfile:
+  ansible.builtin.lineinfile:
     line: "  export MODULEPATH={{ role_lmod_core_folder }}  || :"
-    regexp: '^  export MODULEPATH='
+    regexp: ^  export MODULEPATH=
     path: /etc/profile.d/00-modulepath.sh
 
-
 - name: Update modulepath in /etc/profile.d/00-modulepath.csh
-  lineinfile:
+  ansible.builtin.lineinfile:
     line: '  setenv MODULEPATH "{{ role_lmod_core_folder }}"'
-    regexp: '^  setenv MODULEPATH'
+    regexp: ^  setenv MODULEPATH
     path: /etc/profile.d/00-modulepath.csh
 
 
 - name: "Deploy lmod_cache.service template"
-  copy:
+  ansible.builtin.copy:
     src: "lmod_cache.service"
     dest: "/etc/systemd/system/lmod_cache.service"
     mode: 0644
-  notify: "restart lmod_cache.timer unit"
+  notify: "Restart lmod_cache.timer unit"
 
 - name: "Deploy lmod_cache.timer template"
-  copy:
+  ansible.builtin.copy:
     src: "lmod_cache.timer"
     dest: "/etc/systemd/system/lmod_cache.timer"
     mode: 0644
-  notify: "restart lmod_cache.timer unit"
+  notify: "Restart lmod_cache.timer unit"

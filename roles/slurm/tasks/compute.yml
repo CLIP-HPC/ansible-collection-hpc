@@ -1,13 +1,13 @@
 ---
 - name: Install SLURM compute image packages
-  yum:
+  ansible.builtin.yum:
     name:
-      - "libicu"
-      - "numactl"
-      - "slurm-pam_slurm"
-      - "slurm-libpmi"
+      - libicu
+      - numactl
+      - slurm-pam_slurm
+      - slurm-libpmi
     state: installed
 
 - name: Select the SLURM service to control
-  set_fact:
+  ansible.builtin.set_fact:
     role_slurm_service: slurmd

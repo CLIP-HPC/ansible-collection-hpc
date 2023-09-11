@@ -5,27 +5,28 @@
   gather_facts: false
   tasks:
     - name: Install FGCI repo
-      package:
+      ansible.builtin.package:
         pkg: http://idris.fgi.csc.fi/fgci7/x86_64/fgci/rpms/fgci-release7-1-1.el7.noarch.rpm
         disable_gpg_check: true
 
-
     - name: Install packages (sshd, hostname)
-      package:
+      ansible.builtin.package:
         pkg:
           - openssh-server
-          - hostname  # missing in stream8
-          - procps-ng  # missing in stream8
+          - hostname # missing in stream8
+          - procps-ng # missing in stream8
         state: installed
 
     - name: Mock goss executable
-      copy:
+      ansible.builtin.copy:
         remote_src: true
         src: /usr/bin/true
         dest: /usr/local/bin/goss-linux-amd64
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
     - name: Ensure sshd is running
-      service: name=sshd state=started
+      ansible.builtin.service:
+        name: sshd
+        state: started

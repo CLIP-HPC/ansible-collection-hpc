@@ -1,20 +1,20 @@
 # Task related to easybuild
 ---
 - name: Make sure required packages are installed
-  yum:
+  ansible.builtin.yum:
     name:
       - "@Development tools"
-      - rdma-core-devel    # required for easybuild openmpi
+      - rdma-core-devel # required for easybuild openmpi
       - openssl-devel
     state: installed
 
 - name: Make sure that required packages are installed
-  package:
+  ansible.builtin.package:
     name: "{{ role_lmod_eb_pkgs }}"
     state: installed
 
 - name: Install python3-pip
-  yum:
+  ansible.builtin.yum:
     name: python3-pip
     state: installed
 
@@ -22,7 +22,7 @@
   become_user: easybuild
   become: true
   run_once: "{{ role_lmod_shared_module_fs }}"
-  pip:
+  ansible.builtin.pip:
     name: easybuild
     version: "{{ role_lmod_easybuild_bootstrap_version }}"
     extra_args: --user
@@ -32,7 +32,7 @@
   run_once: "{{ role_lmod_shared_module_fs }}"
   become_user: root
   become: true
-  git:
+  ansible.builtin.git:
     repo: '{{ role_lmod_easybuild_github_repo }}'
     dest: '{{ role_lmod_easybuild_easyconfig_folder }}'
     version: develop
@@ -41,7 +41,7 @@
 
 - name: Create easyconfig sync service
   become: true
-  template:
+  ansible.builtin.template:
     src: easyconfig_sync.service.j2
     dest: /etc/systemd/system/easyconfig_sync.service
     mode: 0644
@@ -51,7 +51,7 @@
 # create a systemd timer to update the easyconfig repo
 - name: Create easyconfig sync timer
   become: true
-  copy:
+  ansible.builtin.copy:
     src: easyconfig_sync.timer
     dest: /etc/systemd/system/easyconfig_sync.timer
     mode: 0644

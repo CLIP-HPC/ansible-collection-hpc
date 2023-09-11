@@ -1,6 +1,6 @@
 ---
 # defaults file for role-lmod
-role_lmod_base_folder: "/software"
+role_lmod_base_folder: /software
 role_lmod_build_env: "2019"
 role_additional_modules: []
 role_lmod_autoswap: "no"
@@ -10,10 +10,10 @@ role_lmod_redirect: "no"
 role_lmod_pin_versions: "yes"
 role_lmod_use_dot_files: "no"
 role_lmod_colorize: "yes"
-role_lmod_home_dir: "/home"
+role_lmod_home_dir: /home
 role_lmod_write_group: easybuild
-role_lmod_ompi_mca_btl: "self,vader,tcp"
-role_lmod_intel_pmi_lib: "/usr/lib64/libpmi.so"
+role_lmod_ompi_mca_btl: self,vader,tcp
+role_lmod_intel_pmi_lib: /usr/lib64/libpmi.so
 # if not set use latest version
 role_lmod_easybuild_bootstrap_version:
 role_lmod_nf_opts: "-Xms1g -Xmx6g"

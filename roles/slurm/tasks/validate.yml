@@ -1,8 +1,8 @@
 # Playbook to validate slurm setup
 ---
 # can only check availability (%a) but not state (%t) because state of node is unk (unknown) instead of idle
-- name: Run sinfo_cmd  # noqa 305
-  shell: bash -lc 'sinfo -o %P,%a,%t'
+- name: Run sinfo_cmd # noqa command-instead-of-shell
+  ansible.builtin.shell: bash -lc 'sinfo -o %P,%a,%t'
   register: sinfo_cmd
   changed_when: false
   until: sinfo_cmd.stdout.find("unk") == -1
@@ -11,46 +11,44 @@
 
 - name: Check number of partitions match
   vars:
-    expected_slurm_partitions: "{{ role_slurm_partitions | json_query('[?!(hidden)]')  }}"
-  assert:
+    expected_slurm_partitions: "{{ role_slurm_partitions | json_query('[?!(hidden)]') }}"
+  ansible.builtin.assert:
     that:
-      - (sinfo_cmd.stdout_lines | length) -1 >= (expected_slurm_partitions | int)
-    msg: "Expected ({{ expected_slurm_partitions }}) but found {{ (sinfo_cmd.stdout_lines | length) -1 }}"
+      - (sinfo_cmd.stdout_lines | length) - 1 >= (expected_slurm_partitions | int)
+    msg: Expected ({{ expected_slurm_partitions }}) but found {{ (sinfo_cmd.stdout_lines | length) - 1 }}
 
 - name: Check that all partitions are up
-  assert:
-    that:
-      not item.endswith(',unk,idle')
+  ansible.builtin.assert:
+    that: not item.endswith(',unk,idle')
   with_items: "{{ sinfo_cmd.stdout_lines[1:] }}"
 
 - name: Run sacctmgr
-  shell: bash -lc 'sacctmgr list -nP cluster format=cluster,ControlPort,QOS'  # noqa 305
+  ansible.builtin.command: /bin/sacctmgr list -nP cluster format=cluster,ControlPort,QOS
   register: sacctmgr_cmd
   changed_when: false
 
 - name: Split sacctmgr result
-  set_fact:
-    sactmgr_result: "{{ sacctmgr_cmd.stdout_lines[0].split('|') }}"
+  ansible.builtin.set_fact:
+    sacctmgr_result: "{{ sacctmgr_cmd.stdout_lines[0].split('|') }}"
 
 - name: Check cluster info
-  assert:
+  ansible.builtin.assert:
     that:
-      - "sactmgr_result[0] == '{{ role_slurm_cluster_name }}'"
-      - "sactmgr_result[1] == '6817'"
-      - "(sactmgr_result[2].split(',') | sort | join(',')) == '{{ role_slurm_qos | map(attribute='name') | sort | join(',') }}' "
+      - sacctmgr_result[0] == '{{ role_slurm_cluster_name }}'
+      - sacctmgr_result[1] == '6817'
+      - "(sacctmgr_result[2].split(',') | sort | join(',')) == '{{ role_slurm_qos | map(attribute='name') | sort | join(',') }}' "
 
 - name: Run test job
-  shell: bash -lc 'srun hostname'  # noqa 305
+  ansible.builtin.command: /bin/srun hostname
   register: srun_cmd
   changed_when: false
 
 - name: Check that srun worked
-  assert:
-    that:
-      srun_cmd.stdout | length > 0
+  ansible.builtin.assert:
+    that: srun_cmd.stdout | length > 0
 
 - name: Get accounting information
-  shell: bash -lc 'sacct -nP --format=JobName,State'  # noqa 305
+  ansible.builtin.command: /bin/sacct -nP --format=JobName,State
   register: sacct_cmd
   changed_when: false
   until: (sacct_cmd.stdout_lines | length > 1) and sacct_cmd.stdout_lines[-1].find("COMPLETED") != -1 and sacct_cmd.stdout_lines[-2].find("COMPLETED") != -1
@@ -58,11 +56,11 @@
   delay: 5
 
 - name: Store last two rows of accounting
-  set_fact:
+  ansible.builtin.set_fact:
     sacct_rows: "{{ sacct_cmd.stdout_lines[-2:] | sort }}"
 
 - name: Check accounting information
-  assert:
+  ansible.builtin.assert:
     that:
       - sacct_rows[0] | trim == 'extern|COMPLETED'
       - sacct_rows[1] | trim == 'hostname|COMPLETED'

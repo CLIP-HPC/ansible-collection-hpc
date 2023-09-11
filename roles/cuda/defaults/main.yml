@@ -3,4 +3,4 @@
 # By default gpu is False, set it to True on the gpu nodes in the hosts file
 role_cuda_gpu: false
 role_cuda_packages:
- - cuda-drivers
+  - cuda-drivers

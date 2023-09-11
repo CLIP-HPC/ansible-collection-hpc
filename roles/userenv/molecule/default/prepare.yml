@@ -3,6 +3,6 @@
   hosts: all
   tasks:
     - name: Install openssh-clients
-      package:
+      ansible.builtin.package:
         name: openssh-clients
         state: present

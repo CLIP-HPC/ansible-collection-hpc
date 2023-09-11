@@ -1,31 +1,40 @@
 ---
 # tasks file for role-nhc
-- name: install NHC from a yum repo
-  package: pkg=lbnl-nhc
+- name: Install NHC from a yum repo
+  ansible.builtin.package:
+    pkg: lbnl-nhc
 
-- name: template in nhc.conf
-  template: src=nhc.conf.j2 dest=/etc/nhc/nhc.conf backup=yes mode=0644
+- name: Template in nhc.conf
+  ansible.builtin.template:
+    src: nhc.conf.j2
+    dest: /etc/nhc/nhc.conf
+    backup: true
+    mode: "0644"
   tags: nhc_reconfigure
 
-- name: template in extra nhc scripts
-  template: src={{ item }} dest=/etc/nhc/scripts/{{ item }} backup=yes mode=0644
-  with_items: "{{ nhc_scripts }}"
+- name: Template in extra nhc scripts
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: /etc/nhc/scripts/{{ item }}
+    backup: true
+    mode: "0644"
+  loop: "{{ nhc_scripts }}"
   when: nhc_scripts.0 | length > 0
   tags: nhc_reconfigure
 
 - name: Overwrite watchdog timeout
-  copy:
+  ansible.builtin.copy:
     content: |
       TIMEOUT={{ nhc_watchdog_timeout }}
     dest: /etc/sysconfig/nhc
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
   when: nhc_watchdog_timeout
   tags: nhc_reconfigure
 
 - name: Remove watchdog timeout
-  file:
+  ansible.builtin.file:
     dest: /etc/sysconfig/nhc
     state: absent
   when: not nhc_watchdog_timeout

@@ -4,23 +4,18 @@ dependency:
 driver:
   name: docker
   network:
-    - name: "slurm-stream8-${INSTANCE_ID:-local}"
+    - name: slurm-stream8-${INSTANCE_ID:-local}
       driver: bridge
-lint: |
-  set -e
-  yamllint .
-  ansible-lint
-  flake8
 platforms:
-  - name: "login-stream8-${INSTANCE_ID:-local}"
+  - name: login-stream8-${INSTANCE_ID:-local}
     image: quay.io/centos/centos:stream8
     pre_build_image: true
-    hostname: "cluster-login-0"
+    hostname: cluster-login-0
     networks:
-      - name: "slurm-stream8-${INSTANCE_ID:-local}"
+      - name: slurm-stream8-${INSTANCE_ID:-local}
         links:
-          - "compute1-stream8-${INSTANCE_ID:-local}:cluster-compute1-0"
-          - "compute2-stream8-${INSTANCE_ID:-local}:cluster-compute2-0"
+          - compute1-stream8-${INSTANCE_ID:-local}:cluster-compute1-0
+          - compute2-stream8-${INSTANCE_ID:-local}:cluster-compute2-0
     groups:
       - cluster_login
     command: /sbin/init
@@ -31,11 +26,11 @@ platforms:
       - /run
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
-  - name: "compute1-stream8-${INSTANCE_ID:-local}"
-    hostname: "cluster-compute1-0"
+  - name: compute1-stream8-${INSTANCE_ID:-local}
+    hostname: cluster-compute1-0
     pre_build_image: true
     networks:
-      - name: "slurm-stream8-${INSTANCE_ID:-local}"
+      - name: slurm-stream8-${INSTANCE_ID:-local}
     image: quay.io/centos/centos:stream8
     groups:
       - cluster_batch
@@ -51,11 +46,11 @@ platforms:
       - SYS_ADMIN
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
-  - name: "compute2-stream8-${INSTANCE_ID:-local}"
-    hostname: "cluster-compute2-0"
+  - name: compute2-stream8-${INSTANCE_ID:-local}
+    hostname: cluster-compute2-0
     pre_build_image: true
     networks:
-      - name: "slurm-stream8-${INSTANCE_ID:-local}"
+      - name: slurm-stream8-${INSTANCE_ID:-local}
     image: quay.io/centos/centos:stream8
     groups:
       - cluster_batch
@@ -71,13 +66,13 @@ platforms:
       - SYS_ADMIN
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
-  - name: "control-stream8-${INSTANCE_ID:-local}"
+  - name: control-stream8-${INSTANCE_ID:-local}
     pre_build_image: true
     networks:
-      - name: "slurm-stream8-${INSTANCE_ID:-local}"
+      - name: slurm-stream8-${INSTANCE_ID:-local}
         links:
-          - "compute1-stream8-${INSTANCE_ID:-local}:cluster-compute1-0"
-          - "compute2-stream8-${INSTANCE_ID:-local}:cluster-compute2-0"
+          - compute1-stream8-${INSTANCE_ID:-local}:cluster-compute1-0
+          - compute2-stream8-${INSTANCE_ID:-local}:cluster-compute2-0
     image: quay.io/centos/centos:stream8
     groups:
       - cluster_control
@@ -89,11 +84,11 @@ platforms:
       - SYS_ADMIN
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
-  - name: "db-stream8-${INSTANCE_ID:-local}"
+  - name: db-stream8-${INSTANCE_ID:-local}
     image: quay.io/centos/centos:stream8
     pre_build_image: true
     networks:
-      - name: "slurm-stream8-${INSTANCE_ID:-local}"
+      - name: slurm-stream8-${INSTANCE_ID:-local}
     groups:
       - cluster_db
     command: /sbin/init

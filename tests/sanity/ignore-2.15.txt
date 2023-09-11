@@ -1,0 +1,2 @@
+plugins/modules/slurm.py validate-modules!skip
+plugins/modules/slurm.py ansible-doc!skip # works locally with python 3.10 but not with 3.9

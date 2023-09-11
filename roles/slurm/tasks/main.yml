@@ -1,44 +1,58 @@
 ---
-
 - name: Store role variables in hostvars
-  set_fact:
+  ansible.builtin.set_fact:
     role_slurm_enable: "{{ role_slurm_enable }}"
-    role_slurm_service: "{{ (role_slurm_enable.slurmd | bool) | ternary('slurmd',False) or omit }}"
+    role_slurm_service: "{{ (role_slurm_enable.slurmd | bool) | ternary('slurmd', False) or omit }}"
 
-- include: users.yml
+
+- name: Include users.yml tasks
+  ansible.builtin.include_tasks: users.yml
   when: role_slurm_enable.runtime | bool
 
-- include: db.yml
+- name: Include db.yml tasks
+  ansible.builtin.include_tasks: db.yml
+  args:
+    apply:
+      delegate_to: "{{ role_slurm_db_host }}"
+      delegate_facts: true
   when: role_slurm_db_host in hostvars
-  delegate_to: "{{ role_slurm_db_host }}"
-  delegate_facts: true
   run_once: true
 
-- include: control.yml
+- name: Include control.yml tasks
+  ansible.builtin.include_tasks: control.yml
+  args:
+    apply:
+      delegate_to: "{{ role_slurm_control_host }}"
+      delegate_facts: true
   when: role_slurm_control_host in hostvars
-  delegate_facts: true
-  delegate_to: "{{ role_slurm_control_host }}"
   run_once: true
 
-- include: rest.yml
+- name: Include rest.yml tasks
+  ansible.builtin.include_tasks: rest.yml
+  args:
+    apply:
+      delegate_to: "{{ role_slurm_control_host }}"
+      delegate_facts: true
   when: role_slurm_enable_rest | bool
-  delegate_facts: true
-  delegate_to: "{{ role_slurm_control_host }}"
   run_once: true
 
-- include: compute.yml
+- name: Include compute.yml tasks
+  ansible.builtin.include_tasks: compute.yml
   when: role_slurm_enable.batch | bool
 
-- include: runtime.yml
+- name: Include runtime.yml tasks
+  ansible.builtin.include_tasks: runtime.yml
   when: role_slurm_enable.runtime | bool
 
-- include: pam.yml
+- name: Include pam.yml tasks
+  ansible.builtin.include_tasks: pam.yml
   when: role_slurm_enable.batch | bool
 
-- block:
-    - include: validate.yml
-  delegate_to: "{{ groups.cluster_login | default([ role_slurm_control_host ]) | first }}"
+- name: Include validtion.yml tasks
+  ansible.builtin.include_tasks: validate.yml
+  args:
+    apply:
+      delegate_to: "{{ groups.cluster_login | default([role_slurm_control_host]) | first }}"
+  when: role_slurm_run_validate | bool
   tags: validate
   run_once: true
-  when: role_slurm_run_validate | bool
-...

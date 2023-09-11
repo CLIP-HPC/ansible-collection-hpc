@@ -2,7 +2,7 @@
 # vars file for role-lmod
 role_lmod_site_name: VBC
 role_lmod_syshost: CLIP
-role_lmod_build_env_name: "build-env"
+role_lmod_build_env_name: build-env
 role_lmod_system_folder: "{{ role_lmod_base_folder }}/system"
 role_lmod_system_modules_folder: "{{ role_lmod_system_folder }}/modules"
 

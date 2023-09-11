@@ -1,19 +1,18 @@
 ---
 - name: Install SLURM controller packages
-  yum:
+  ansible.builtin.yum:
     name:
-      - "slurm-devel"
-      - "slurm-perlapi"
-      - "slurm-slurmctld"
-      - "slurm-example-configs"
-      - "mailx"
+      - slurm-devel
+      - slurm-perlapi
+      - slurm-slurmctld
+      - slurm-example-configs
+      - mailx
     state: installed
 
 - name: Select the SLURM service to control
-  set_fact:
+  ansible.builtin.set_fact:
     role_slurm_service: slurmctld
 
-
 - name: Configure powersaving
-  import_tasks: powersave.yml
+  ansible.builtin.import_tasks: powersave.yml
   when: role_slurm_power_save | bool

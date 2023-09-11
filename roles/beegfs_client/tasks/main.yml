@@ -1,29 +1,30 @@
 ---
 # tasks file for role-beegfs-client
 - name: Ensure kernel development headers are present
-  package:
-    name: "kernel-devel-{{ ansible_kernel }}"
+  ansible.builtin.package:
+    name: kernel-devel-{{ ansible_kernel }}
     state: present
   notify: Restart BeeGFS client service
 
 - name: Ensure gcc is installed
-  package:
-    name: "gcc"
+  ansible.builtin.package:
+    name: gcc
     state: present
   notify: Restart BeeGFS client service
 
 - name: Install support packages for BeeGFS
-  package:
+  ansible.builtin.package:
     name:
-    - elfutils-libelf-devel
-    - beegfs-helperd
-    - beegfs-utils
-    state: "present"
+      - elfutils-libelf-devel
+      - beegfs-helperd
+      - beegfs-utils
+    state: present
   notify: Restart BeeGFS client service
 
 - name: Define override for beegfs-client-build.mk
-  copy:
+  ansible.builtin.copy:
     dest: /etc/beegfs/beegfs-client-build.mk
+    mode: "0644"
     content: |
       # BeeGFS client module DKMS build configuration
       # This file is only used when building via DKMS.
@@ -39,109 +40,107 @@
   when: role_beegfs_client_use_dkms | bool
 
 - name: Install beegfs-client or dkms
-  package:
-    name: "{{ (role_beegfs_client_use_dkms | bool) | ternary('beegfs-client-dkms','beegfs-client') }}"
+  ansible.builtin.package:
+    name: "{{ (role_beegfs_client_use_dkms | bool) | ternary('beegfs-client-dkms', 'beegfs-client') }}"
     state: present
   notify: Restart BeeGFS client service
 
-
 - name: Define client kernel build for IB
-  lineinfile:
-    path: "/etc/beegfs/beegfs-client-autobuild.conf"
-    regexp: "^buildArgs="
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-client-autobuild.conf
+    regexp: ^buildArgs=
     line: "{{ item.line }}"
   when: item.condition and not role_beegfs_client_use_dkms | bool
   with_items:
     - { line: "buildArgs=-j8 OFED_INCLUDE_PATH={{ role_beegfs_client_ofed_include_path }}", condition: "{{ role_beegfs_client_ofed_include_path }}" }
-    - { line: "buildArgs=-j8", condition: "{{ not role_beegfs_client_ofed_include_path }}" }
+    - { line: buildArgs=-j8, condition: "{{ not role_beegfs_client_ofed_include_path }}" }
   notify: Restart BeeGFS client service
 
 - name: Rebuild the BeeGFS client kernel module
-  command: /etc/init.d/beegfs-client rebuild
+  ansible.builtin.command: /etc/init.d/beegfs-client rebuild
   args:
-    creates: "/lib/modules/{{ ansible_kernel }}/updates/fs/beegfs_autobuild/beegfs.ko"
+    creates: /lib/modules/{{ ansible_kernel }}/updates/fs/beegfs_autobuild/beegfs.ko
   notify: Restart BeeGFS client service
   when: not role_beegfs_client_use_dkms | bool
 
 - name: Ensure the BeeGFS mount point exists
-  file:
-    mode: 0755
+  ansible.builtin.file:
+    mode: "0755"
     path: "{{ role_beegfs_client_path }}"
     state: directory
   notify: Restart BeeGFS client service
 
 - name: Copy over beegfs-mounts config file
-  template:
+  ansible.builtin.template:
     src: beegfs-mounts.conf.j2
     dest: /etc/beegfs/beegfs-mounts.conf
-    mode: 0644
+    mode: "0644"
   notify: Restart BeeGFS client service
   when: not role_beegfs_client_use_dkms | bool
 
-
 - name: Copy over connInterfacesFile file
-  template:
+  ansible.builtin.template:
     src: connInterfacesFile.j2
     dest: /etc/beegfs/connInterfacesFile
-    mode: 0644
+    mode: "0644"
   notify: Restart BeeGFS client service
 
 - name: Make of copy of BeeGFS client config file if it doesn't exist
-  copy:
-    mode: 0644
+  ansible.builtin.copy:
+    mode: "0644"
     remote_src: true
     src: /etc/beegfs/beegfs-client.conf
-    dest: "/etc/beegfs/{{ role_beegfs_client_config_file }}"
+    dest: /etc/beegfs/{{ role_beegfs_client_config_file }}
     force: false
   when: role_beegfs_client_scope_config | bool
   notify: Restart BeeGFS client service
 
 - name: Configure beegfs-client config file to point to the specified management host
-  lineinfile:
-    dest: "/etc/beegfs/{{ role_beegfs_client_config_file }}"
-    regexp: "^sysMgmtdHost"
-    line: "sysMgmtdHost = {{ role_beegfs_client_mgmt_host }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ role_beegfs_client_config_file }}
+    regexp: ^sysMgmtdHost
+    line: sysMgmtdHost = {{ role_beegfs_client_mgmt_host }}
 
 - name: Configure beegfs-client config file to use the specified port
-  lineinfile:
-    dest: "/etc/beegfs/{{ role_beegfs_client_config_file }}"
-    regexp: "^connClientPortUDP"
-    line: "connClientPortUDP = {{ role_beegfs_client_port }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ role_beegfs_client_config_file }}
+    regexp: ^connClientPortUDP
+    line: connClientPortUDP = {{ role_beegfs_client_port }}
 
 - name: Configure beegfs-client config file to ensure the specifed connection interface is used
-  lineinfile:
-    dest: "/etc/beegfs/{{ role_beegfs_client_config_file }}"
-    regexp: "^connInterfacesFile"
-    line: "connInterfacesFile = /etc/beegfs/connInterfacesFile"
-
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ role_beegfs_client_config_file }}
+    regexp: ^connInterfacesFile
+    line: connInterfacesFile = /etc/beegfs/connInterfacesFile
 
 - name: Configure beegfs-client config file to enable quota support
-  lineinfile:
-    dest: "/etc/beegfs/{{ role_beegfs_client_config_file }}"
-    regexp: "^quotaEnabled"
-    line: "quotaEnabled = {{ (role_beegfs_client_enabled_quota | bool) | ternary('true', 'false') }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ role_beegfs_client_config_file }}
+    regexp: ^quotaEnabled
+    line: quotaEnabled = {{ (role_beegfs_client_enabled_quota | bool) | ternary('true', 'false') }}
 
-- block:
-  - name: Make sure to load beegfs module after reboot
-    copy:
-      dest: /etc/modules-load.d/beegfs-client-dkms.conf
-      content: |
-        # Load the BeeGFS client module at boot
-        beegfs
-
-  - name: Load beegfs module
-    modprobe:
-      name: beegfs
-      state: present
-
-  - name: Flush handlers
-    meta: flush_handlers
-
-  - name: Mount beegfs storage
-    mount:
-      fstype: "beegfs"
-      name: "{{ role_beegfs_client_path }}"
-      opts: "rw,relatime,cfgFile=/etc/beegfs/{{ role_beegfs_client_config_file }},_netdev,x-systemd.after=beegfs-helperd.service"
-      src: "beegfs_nodev"
-      state: mounted
+- name: Configure BeeGFS DKMS client module
   when: role_beegfs_client_use_dkms | bool
+  block:
+    - name: Make sure to load beegfs module after reboot
+      ansible.builtin.copy:
+        mode: "0644"
+        dest: /etc/modules-load.d/beegfs-client-dkms.conf
+        content: |
+          # Load the BeeGFS client module at boot
+          beegfs
+
+    - name: Load beegfs module
+      community.general.modprobe:
+        name: beegfs
+        state: present
+
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+    - name: Mount beegfs storage
+      ansible.posix.mount:
+        fstype: beegfs
+        name: "{{ role_beegfs_client_path }}"
+        opts: rw,relatime,cfgFile=/etc/beegfs/{{ role_beegfs_client_config_file }},_netdev,x-systemd.after=beegfs-helperd.service
+        src: beegfs_nodev
+        state: mounted

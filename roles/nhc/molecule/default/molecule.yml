@@ -3,11 +3,6 @@ dependency:
   name: galaxy
 driver:
   name: docker
-lint: |
-  set -e
-  yamllint .
-  ansible-lint
-  flake8
 platforms:
   - name: instance-centos7-${INSTANCE_ID:-local}
     image: centos/systemd:latest

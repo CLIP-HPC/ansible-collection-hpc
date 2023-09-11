@@ -1,121 +1,134 @@
 # Install SlurmDBD services and packages
 ---
-- block:
-  - name: Create new mariadb datadir folder
-    file:
-      mode: 0755
-      state: directory
-      path: "{{ role_slurm_db_data_dir }}"
-
-  - name: Symlink default datadir
-    file:
-      force: true
-      dest: /var/lib/mysql
-      src: "{{ role_slurm_db_data_dir }}"
-      state: link
+- name: Create data folder for MariaDB
   when: role_slurm_db_data_dir and role_slurm_db_data_dir != '/var/lib/mysql' and role_slurm_db_data_dir | length > 0
+  block:
+    - name: Create new mariadb datadir folder
+      ansible.builtin.file:
+        mode: "0755"
+        state: directory
+        path: "{{ role_slurm_db_data_dir }}"
 
-- name: install slurmdbd specific packages
+    - name: Symlink default datadir
+      ansible.builtin.file:
+        force: true
+        dest: /var/lib/mysql
+        src: "{{ role_slurm_db_data_dir }}"
+        state: link
+
+- name: Install slurmdbd specific packages
   vars:
-    mariadb_prefix: "{{ (role_slurm_maria_upstream | bool) | ternary('MariaDB','mariadb') }}"
-  yum:
+    mariadb_prefix: "{{ (role_slurm_maria_upstream | bool) | ternary('MariaDB', 'mariadb') }}"
+  ansible.builtin.yum:
     name:
       - "{{ mariadb_prefix }}"
       - "{{ mariadb_prefix }}-server"
       - "{{ mariadb_prefix }}-devel"
-      - "{{ (ansible_distribution_major_version=='8') | ternary('python3-mysql','MySQL-python') }}"
-      - "slurm-slurmdbd"
+      - "{{ (ansible_distribution_major_version == '8') | ternary('python3-mysql', 'MySQL-python') }}"
+      - slurm-slurmdbd
     state: installed
   notify:
     - Restart mariadb service
 
-- block:
+- name: Fix Selinux policy for SlurmDB
+  when: role_slurm_db_data_dir and role_slurm_db_data_dir != '/var/lib/mysql' and role_slurm_db_data_dir | length > 0
+  block:
     - name: Add Selinux policy
-      command: "semanage fcontext -a -e /var/lib/mysql {{ role_slurm_db_data_dir }}"
+      ansible.builtin.command: semanage fcontext -a -e /var/lib/mysql {{ role_slurm_db_data_dir }}
       register: selinux_policy
       changed_when: selinux_policy.rc != 1
       failed_when: false
 
     - name: Apply Selinux policy
-      command: "restorecon -R -v {{ role_slurm_db_data_dir }}"
+      ansible.builtin.command: restorecon -R -v {{ role_slurm_db_data_dir }}
       register: restore_result
       changed_when: restore_result.stdout | length > 0
 
     - name: Modify /etc/my.conf to point to new datadir
-      ini_file:
+      community.general.ini_file:
         path: /etc/my.cnf
-        mode: 0644
+        mode: "0644"
         section: mysqld
-        option: "datadir"
+        option: datadir
         value: "{{ role_slurm_db_data_dir }}"
 
-  when: role_slurm_db_data_dir and role_slurm_db_data_dir != '/var/lib/mysql' and role_slurm_db_data_dir | length > 0
 
-- name: template in custom mariadb config
-  ini_file:
+- name: Template in custom mariadb config
+  community.general.ini_file:
     path: /etc/my.cnf
-    mode: 0644
+    mode: "0644"
     section: mysqld
     option: "{{ item.option }}"
     value: "{{ item.value }}"
   loop:
-    - { option: 'innodb_buffer_pool_size', value: "{{ (hostvars[role_slurm_db_host].ansible_memtotal_mb / 2) | int }}M" }
-    - { option: 'innodb_log_file_size', value: 64M }
-    - { option: 'innodb_lock_wait_timeout', value: '900'}
-  notify: "Restart mariadb service"
+    - { option: innodb_buffer_pool_size, value: "{{ (hostvars[role_slurm_db_host].ansible_memtotal_mb / 2) | int }}M" }
+    - { option: innodb_log_file_size, value: 64M }
+    - { option: innodb_lock_wait_timeout, value: "900" }
+  notify: Restart mariadb service
 
 - name: Enable replication
-  ini_file:
+  community.general.ini_file:
     path: /etc/my.cnf
-    mode: 0644
+    mode: "0644"
     section: mariadb
     allow_no_value: "{{ (item.option == 'log-bin') | ternary(true, false) }}"
     option: "{{ item.option }}"
     value: "{{ item.value | default(omit) }}"
   loop:
-    - { option: 'log-bin'}
-    - { option: 'server_id', value: "{{ role_slurm_db_server_id }}"}
-    - { option: 'log-basename', value: 'slurmdb_master{{ role_slurm_db_server_id }}'}
-    - { option: 'binlog-format', value: 'mixed'}
+    - { option: log-bin }
+    - { option: server_id, value: "{{ role_slurm_db_server_id }}" }
+    - { option: log-basename, value: "slurmdb_master{{ role_slurm_db_server_id }}" }
+    - { option: binlog-format, value: mixed }
   when: role_slurm_db_enable_replication | bool
-  notify: "Restart mariadb service"
+  notify: Restart mariadb service
 
-- name: start and enable mariadb/mysql
-  service: name=mariadb state=started enabled=yes
+- name: Start and enable mariadb/mysql
+  ansible.builtin.service:
+    name: mariadb
+    state: started
+    enabled: true
 
-- name: wait for mysql in port 3306 to start
-  wait_for: port=3306 delay=10 timeout=60
+- name: Wait for mysql in port 3306 to start
+  ansible.builtin.wait_for:
+    port: 3306
+    delay: 10
+    timeout: 60
+
 
 - name: Set root sql user password
   # If .my.cnf already exists, this will cause an mysql-root-password update.
   # check_implicit_admin means it tries without password first
-  mysql_user:
+  community.mysql.mysql_user:
     name: root
     password: "{{ role_slurm_db_root_password }}"
     check_implicit_admin: true
     host: "{{ item }}"
-  ignore_errors: true
-  with_items:
-    - "::1"
-    - "127.0.0.1"
-    - "localhost"
+  failed_when: false
+  loop:
+    - ::1
+    - 127.0.0.1
+    - localhost
 
-- name: template .my.cnf
-  template:
-    src: ".my.cnf.j2"
-    dest: "/root/.my.cnf"
+- name: Template .my.cnf
+  ansible.builtin.template:
+    src: .my.cnf.j2
+    dest: /root/.my.cnf
     owner: root
     group: root
     mode: "0600"
 
-- name: delete anonymous sql server user for localhost
-  mysql_user: user="" state=absent
+- name: Delete anonymous sql server user for localhost
+  community.mysql.mysql_user:
+    user: ""
+    state: absent
 
-- name: remove the mysql test database
-  mysql_db: db=test state=absent
+- name: Remove the mysql test database
+  community.mysql.mysql_db:
+    db: test
+    state: absent
 
 - name: Create replication user
-  mysql_user:
+  community.mysql.mysql_user:
     name: replication
     host: "%"
     password: "{{ role_slurm_db_replication_pw }}"
@@ -123,52 +136,56 @@
     state: present
   when: role_slurm_db_enable_replication | bool and role_slurm_db_replication_pw is defined
 
-- name: create slurm acct db
-  mysql_db: name=slurm_acct_db state=present
+- name: Create slurm acct db
+  community.mysql.mysql_db:
+    name: slurm_acct_db
+    state: present
 
-- name: create slurm sql user
-  mysql_user:
+- name: Create slurm sql user
+  community.mysql.mysql_user:
     name: slurm
     state: present
     password: "{{ role_slurm_db_password }}"
   register: mysqlslurmuser
   ignore_errors: true
 
-- name: print mysqlslurmuser
-  debug: var=mysqlslurmuser verbosity=1
-  changed_when: false
 
-- name: ensure slurm sql user has a password and privileges if it does not exist or if it was just added
-  mysql_user:
+- name: Ensure slurm sql user has a password and privileges if it does not exist or if it was just added
+  community.mysql.mysql_user:
     name: slurm
     password: "{{ role_slurm_db_password }}"
-    priv: "slurm_acct_db.*:ALL"
+    priv: slurm_acct_db.*:ALL
     state: present
     update_password: always
   when: mysqlslurmuser is failed or mysqlslurmuser is changed
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers
 
-- name: add slurm etc dir
-  file: path="/etc/slurm" state=directory owner=root group=root mode=0755
+- name: Add slurm etc dir
+  ansible.builtin.file:
+    path: /etc/slurm
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
 
 - name: Create archive folder for purged DB objects
-  file:
+  ansible.builtin.file:
     state: directory
     path: "{{ role_slurm_dbd_archive_dir }}"
     owner: slurm
     group: root
-    mode: 0750
+    mode: "0750"
   when: role_slurm_dbd_archive_dir is defined
 
-- name: template in slurmdbd.conf
+- name: Template in slurmdbd.conf
   tags: reconfigure
-  template:
+  ansible.builtin.template:
     src: slurmdbd.conf.j2
     dest: /etc/slurm/slurmdbd.conf
     owner: slurm
-    mode: 0600
+    mode: "0600"
     backup: true
   notify:
     - Restart slurmdbd

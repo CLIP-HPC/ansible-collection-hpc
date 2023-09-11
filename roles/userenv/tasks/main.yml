@@ -1,22 +1,22 @@
 # tasks file for role-userenv
 ---
 - name: Make sure that bash-completion package is installed
-  package:
+  ansible.builtin.package:
     name: bash-completion
     state: installed
 
 - name: Copy skel folder
-  copy:
-    src: "files/skel"
+  ansible.builtin.copy:
+    src: files/skel
     dest: /etc/
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
 
 - name: Copy profile.d files
-  copy:
+  ansible.builtin.copy:
     src: "{{ item }}"
     dest: /etc/profile.d/
     backup: true
-    mode: 0644
-  with_fileglob: "files/profile.d/*"
+    mode: "0644"
+  with_fileglob: files/profile.d/*

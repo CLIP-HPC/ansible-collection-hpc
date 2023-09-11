@@ -12,7 +12,7 @@ role_slurm_enable:
 role_slurm_db_root_password: "{{ role_slurm_db_password }}"
 role_slurm_node_prefix:
 role_slurm_healthcheck_interval: 300
-role_slurm_healthcheck_program: ''
+role_slurm_healthcheck_program: ""
 role_slurm_max_job_time:
 role_slurm_job_def_time:
 role_slurm_default_partition:
@@ -23,7 +23,7 @@ role_slurm_default_partition_mem: 4096
 role_slurm_ssh_access: []
 role_slurm_adopt_selinux: true
 role_slurm_db_data_dir:
-role_slurm_prio_decay_half_time: "7-0"
+role_slurm_prio_decay_half_time: 7-0
 role_slurm_prio_usage_period:
 role_slurm_prio_calc_period: "00:05:00"
 role_slurm_prio_weight_age: 1000
@@ -33,9 +33,9 @@ role_slurm_prio_weight_jobsize: 1000
 role_slurm_prio_weight_partition: 500
 role_slurm_prio_weight_qos: 500
 role_slurm_prio_weight_tres:
-role_slurm_prio_max_age: "7-0"
+role_slurm_prio_max_age: 7-0
 role_slurm_prio_favor_small: "no"
-role_slurm_accounting_storage_tres: ['gres/gpu']
+role_slurm_accounting_storage_tres: [gres/gpu]
 role_slurm_accounting_storage_flags: []
 role_slurm_run_validate: true
 role_slurm_max_array_size: 3001
@@ -43,8 +43,8 @@ role_slurm_max_job_count: 90000
 role_slurm_configless_dns: true
 role_slurm_db_enable_replication: true
 role_slurm_db_server_id: 1
-role_slurm_conf_scheduler_parameters: ''
-role_slurm_conf_debug_flags: ''
+role_slurm_conf_scheduler_parameters: ""
+role_slurm_conf_debug_flags: ""
 role_slurm_reboot_program: /usr/sbin/reboot
 role_slurm_maria_upstream: false
 role_slurm_job_container_base_path:
@@ -60,6 +60,6 @@ role_slurm_power_save_exc_partitons:
 role_slurm_power_save_exc_nodes:
 role_slurm_power_save_resume_program:
 role_slurm_power_save_suspend_program:
-role_slurm_dbd_conf_debug_flags: ''
+role_slurm_dbd_conf_debug_flags: ""
 role_slurm_enable_rest: false
-role_slurm_auth_alt_parameters: "jwt_key=/etc/slurm/jwt.key"
+role_slurm_auth_alt_parameters: jwt_key=/etc/slurm/jwt.key

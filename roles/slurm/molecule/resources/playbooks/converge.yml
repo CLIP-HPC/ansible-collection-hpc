@@ -3,8 +3,8 @@
   hosts: all
   tasks:
     - name: Include slurm role
-      #tags: reconfigure
-      include_role:
+      # tags: reconfigure
+      ansible.builtin.include_role:
         name: slurm
       vars:
         role_slurm_enable:
@@ -15,17 +15,17 @@
           runtime: true
         role_slurm_db_host: "{{ groups['cluster_db'] | first }}"
         role_slurm_control_host: "{{ groups['cluster_control'] | first }}"
-        role_slurm_db_password: "test"
+        role_slurm_db_password: test
         role_slurm_partitions:
           - name: compute1
-            qos: ["short"]
+            qos: [short]
             groups:
               - name: compute1
                 ram_mb: 2048
                 num_nodes: 1
                 features: special
           - name: compute2
-            qos: ["short"]
+            qos: [short]
             groups:
               - name: compute1
                 ram_mb: 2048
@@ -50,7 +50,7 @@
             maxtres: cpu=5,mem=5G
             maxtresperuser: cpu=5,mem=5G
         role_slurm_adopt_selinux: false
-        role_slurm_ssh_access: ['admins']
+        role_slurm_ssh_access: [admins]
         role_slurm_db_data_dir: /srv/slurm_db
         role_slurm_default_partition_mem: 100
         role_slurm_configless_dns: false
@@ -58,15 +58,15 @@
         role_slurm_db_upstream: "{{ ansible_distribution_major_version == '7' }}"
         role_slurm_job_container_base_path: /mnt
         role_slurm_job_container_shared_storage: true
-        role_slurm_accounting_storage_flags: ["job_comment", "job_env", "job_script"]
+        role_slurm_accounting_storage_flags: [job_comment, job_env, job_script]
         role_slurm_dbd_archive_dir: /tmp/archive
-        role_slurm_dbd_archive_events: yes
-        role_slurm_dbd_archive_jobs: yes
-        role_slurm_dbd_archive_resvs: yes
-        role_slurm_dbd_archive_steps: no
-        role_slurm_dbd_archive_suspend: no
-        role_slurm_dbd_archive_txn: no
-        role_slurm_dbd_archive_usage: no
+        role_slurm_dbd_archive_events: true
+        role_slurm_dbd_archive_jobs: true
+        role_slurm_dbd_archive_resvs: true
+        role_slurm_dbd_archive_steps: false
+        role_slurm_dbd_archive_suspend: false
+        role_slurm_dbd_archive_txn: false
+        role_slurm_dbd_archive_usage: false
         role_slurm_dbd_purge_events: 1month
         role_slurm_dbd_purge_jobs: 12month
         role_slurm_dbd_purge_resvs: 1month

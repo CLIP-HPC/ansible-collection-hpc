@@ -1,1 +1,0 @@
-plugins/modules/slurm.py validate-modules!skip # required because 2 tests fail

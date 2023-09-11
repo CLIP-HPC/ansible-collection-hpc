@@ -2,15 +2,15 @@
 # handlers file for role-beegfs-client
 
 - name: Restart BeeGFS helperd
-  systemd:
-    name: "beegfs-helperd"
+  ansible.builtin.systemd:
+    name: beegfs-helperd
     daemon-reload: true
     state: restarted
-  listen: "Restart BeeGFS client service"
+  listen: Restart BeeGFS client service
 
 - name: Restart BeeGFS client
-  systemd:
-    name: "beegfs-client"
+  ansible.builtin.systemd:
+    name: beegfs-client
     daemon-reload: true
     state: restarted
   when: not role_beegfs_client_use_dkms | bool

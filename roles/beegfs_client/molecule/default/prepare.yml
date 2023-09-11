@@ -5,8 +5,8 @@
   tasks:
     - name: Setup artifactory
       vars:
-        baseurl: "https://www.beegfs.io/release/beegfs_7.2.1/dists/rhel{{ ansible_distribution_major_version }}"
-      yum_repository:
+        baseurl: https://www.beegfs.io/release/beegfs_7.2.1/dists/rhel{{ ansible_distribution_major_version }}
+      ansible.builtin.yum_repository:
         name: beegfs
         description: Beegfs RPM repo
         file: beegfs_repos

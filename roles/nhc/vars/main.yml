@@ -5,6 +5,7 @@ nhc_scripts:
   - goss.nhc
   - nvidia_smi.nhc
   - nvidia_smi_page_retirement.nhc
+  - nvidia_smi_remapped_rows.nhc
   - sssd.nhc
 
 nhc_rm: slurm

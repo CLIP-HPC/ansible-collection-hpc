@@ -2,8 +2,6 @@
 # parameter is a group name from which to randomly pick a user
 # this is to reduce the effect of SSD caching if the sssd upstream connection is bad
 
-DEBUG=""
-
 function check_id_from_group() {
 
   GROUPNAME=$1

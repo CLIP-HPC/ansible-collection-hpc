@@ -7,8 +7,6 @@
 #        Double Bit ECC                    : 2
 #        Pending Page Blacklist            : Yes
 
-DEBUG=""
-
 function check_nvidia_smi_page_retirement() {
 
   RETIREMENT_DATA=$(nvidia-smi -q -d PAGE_RETIREMENT | grep -B4 Yes)

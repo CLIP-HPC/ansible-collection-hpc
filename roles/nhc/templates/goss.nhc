@@ -1,6 +1,5 @@
 #!/bin/sh
 
-DEBUG=""
 GOSS_FORMAT="silent"
 
 function check_goss() {

@@ -1,0 +1,28 @@
+# NHC check for testing nvidia uncorrectable remapped rows
+# check if there are uncorrectable remapped rows
+# If the threshold is above a certain number the GPU needs to be replaced:
+# see: https://support.lenovo.com/us/en/solutions/ht513682-nvidia-a100-gpu-reports-ecc-errors-lenovo-thinkagile-and-thinksystem
+#  example:
+# GPU 00000000:00:08.0
+#    Remapped Rows
+#        Correctable Error                 : 16
+#        Uncorrectable Error               : 44
+#        Pending                           : Yes
+#        Remapping Failure Occurred        : No
+#        Bank Remap Availability Histogram
+#            Max                           : 624 bank(s)
+#            High                          : 1 bank(s)
+#            Partial                       : 14 bank(s)
+#            Low                           : 0 bank(s)
+#            None                          : 1 bank(s)
+
+function check_nvidia_smi_remapped_rows() {
+
+  REMAPPED_DATA=$(nvidia-smi --query-remapped-rows=remapped_rows.uncorrectable --format=noheader,csv | grep -v 0 | grep -v '[N/A]')
+  if [ -n "$DEBUG" ]; then echo "uncorrectable remapped rows:"; echo $REMAPPED_DATA ; fi
+  if [ -z "$REMAPPED_DATA" ];
+  then
+    return 0
+  fi
+  return 1
+}

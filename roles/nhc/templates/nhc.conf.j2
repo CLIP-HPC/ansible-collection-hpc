@@ -243,3 +243,5 @@
 # check for page retirement errors that require GPU device re-init
    *-g*-* || check_nvidia_smi_page_retirement
 
+# check for uncorrectable remapped rows that require the GPU to be replaced
+   *-g*-* || check_nvidia_smi_remapped_rows

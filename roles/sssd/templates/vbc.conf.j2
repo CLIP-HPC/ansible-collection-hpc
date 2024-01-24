@@ -1,0 +1,19 @@
+[sssd]
+{% if role_sssd_use_ssh_key %}
+services = nss, pam, ssh
+{% endif %}
+
+[domain/{{ domain_to_join.name }}]
+{% if role_sssd_override_homedir is defined %}
+override_homedir = {{ role_sssd_override_homedir }}
+{% endif %}
+
+{% if role_sssd_use_ssh_key %}
+ldap_user_extra_attrs = altSecurityIdentities
+ldap_user_ssh_public_key = altSecurityIdentities
+{% endif %}
+
+{% if role_sssd_allowed_groups | length > 0 %}
+access_provider = simple
+simple_allow_groups = {{ role_sssd_allowed_groups | default([]) | join(',') }}
+{% endif %}

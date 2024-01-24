@@ -21,7 +21,7 @@ provisioner:
   env:
     OP_SERVICE_ACCOUNT_TOKEN: ${OP_SERVICE_ACCOUNT_TOKEN}
 scenario:
-  name: default
+  name: ad
   check_sequence:
     - dependency
     - cleanup

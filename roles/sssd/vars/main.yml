@@ -7,6 +7,9 @@ role_sssd_packages:
   - oddjob-mkhomedir
   - adcli
   - samba-common-tools
+  - sssd-tools
+  - sssd-ldap
+  - openldap-clients
 
 role_sssd_domains:
   VBC:
@@ -26,3 +29,11 @@ role_sssd_domains:
     fully_qualified_names: "yes"
     computer_ou: OU=realmd_test,OU=server,OU=linux,OU=managed,OU=vbc.computer,DC=imp,DC=univie,DC=ac,DC=at
     ad_username: svc_realmd_test_join@IMP.UNIVIE.AC.AT
+
+  LDAP:
+    name: imp.univie.ac.at
+    id_provider: ldap
+    auth_provider: ldap
+    ldap_uri: ldaps://rodc-impimba-1.imp.ac.at
+    ldap_default_bind_dn: CN=svc_baseline_ldap,OU=service,OU=managed,OU=vbc.user,DC=imp,DC=univie,DC=ac,DC=at
+    ldap_search_base: DC=imp,DC=univie,DC=ac,DC=at

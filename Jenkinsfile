@@ -24,7 +24,7 @@ testAnsibleCollection([
       moleculeScenarios: ["default"]
     ],
     sssd: [
-      moleculeScenarios: ["default","remove"]
+      moleculeScenarios: ["ad","remove", "ldap"]
     ],
     sudoers: [
       moleculeScenarios: ["default", "remove"]

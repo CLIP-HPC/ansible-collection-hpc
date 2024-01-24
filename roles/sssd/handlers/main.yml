@@ -8,6 +8,7 @@
 - name: Restart sssd
   ansible.builtin.service:
     name: sssd
+    enabled: true
     state: restarted
 
 - name: Restart sshd

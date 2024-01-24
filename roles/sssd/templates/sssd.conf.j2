@@ -1,0 +1,44 @@
+[sssd]
+domains = {{ domain_to_join.name }}
+config_file_version = 2
+services = nss, pam
+full_name_format = %1$s
+
+[domain/{{ domain_to_join.name }}]
+cache_credentials = True
+default_shell = /bin/bash
+fallback_homedir = /home/%u
+id_provider = {{ domain_to_join.id_provider }}
+auth_provider = {{ domain_to_join.auth_provider }}
+
+# KRB5 settings
+
+krb5_store_password_if_offline = True
+{% if domain_to_join.krb5_server is defined %}
+krb5_realm = {{ domain_to_join.name }}
+krb5_server = {{ domain_to_join.krb5_server }}
+{% endif %}
+
+# LDAP settings
+ldap_default_bind_dn = {{ domain_to_join.ldap_default_bind_dn }}
+ldap_referrals = {{ domain_to_join.ldap_id_mapping | default('false') }}
+ldap_schema = AD
+ldap_search_base = {{ domain_to_join.ldap_search_base }}
+ldap_tls_reqcert = hard
+ldap_uri = {{ domain_to_join.ldap_uri }}
+ldap_tls_reqcert = hard
+ldap_id_mapping = False
+ldap_default_authtok = {{ role_sssd_ldap_password }}
+
+
+use_fully_qualified_names = False
+
+# Cache credentials for offline login
+cache_credentials = true
+
+# Disable enumeration for performance
+enumerate = false
+
+# How often to check for updates
+ldap_enumeration_refresh_timeout = 3600
+ldap_purge_cache_timeout = 0

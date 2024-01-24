@@ -1,0 +1,66 @@
+---
+# tasks for configuring sssd on the node
+- name: Configure SSD config for LDAP
+  block:
+  - name: Generate SSSD config for LDAP
+    ansible.builtin.template:
+      src: sssd.conf.j2
+      dest: /etc/sssd/sssd.conf
+      mode: "0600"
+    notify: Restart sssd
+
+    # force due to: https://access.redhat.com/solutions/7011856
+  - name: Use authselect (RHEL >= 8) to set sssd with mkhomedir
+    ansible.builtin.command: /usr/bin/authselect select sssd with-mkhomedir --force
+    when: ansible_os_family == "RedHat" and (ansible_distribution_major_version | int) > 7
+    notify: Restart sssd
+
+  - name: Use authconfig (RHEL == 7) to set sssd with mkhomedir
+    ansible.builtin.command: /usr/sbin/authconfig --enablesssd --enablesssdauth --enablemkhomedir --updateall
+    when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+    notify: Restart sssd
+
+  - name: Enable oddjobd service
+    service:
+      name: oddjobd
+      state: started
+      enabled: true
+  when: domain_to_join['id_provider'] == 'ldap'
+
+- name: Generate custom VBC SSSD config
+  ansible.builtin.template:
+    src: vbc.conf.j2
+    dest: /etc/sssd/conf.d/vbc.conf
+    mode: "0600"
+  notify: Restart sssd
+
+- name: Enable password authentication in ssh config
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: ^PasswordAuthentication
+    line: PasswordAuthentication yes
+    mode: "0600"
+  notify: Restart sshd
+
+- name: Enable SSSD integration into SSH Server
+  when: role_sssd_use_ssh_key
+  block:
+    - name: Set AuthorizedKeysCommand to sss command
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: ^AuthorizedKeysCommand
+        insertafter: ^#AuthorizedKeysCommand
+        line: AuthorizedKeysCommand /usr/bin/sss_ssh_authorizedkeys
+        state: present
+        mode: "0600"
+      notify: Restart sshd
+
+    - name: Set AuthorizedUsername to nobody
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        insertafter: ^#AuthorizedKeysCommandUser
+        regexp: ^AuthorizedKeysCommandUser
+        line: AuthorizedKeysCommandUser nobody
+        state: present
+        mode: "0600"
+      notify: Restart sshd

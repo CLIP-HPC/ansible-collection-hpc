@@ -1,0 +1,26 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: instance-ubi8.8-1-${INSTANCE_ID:-local}
+    image: docker.artifactory.imp.ac.at/vbc/ubi8/tde:8.8-1
+    privileged: true
+    command: /sbin/init
+    hostname: inst-ubi.imp.ac.at
+    pre_build_image: true
+  - name: instance-centos7-${INSTANCE_ID:-local}
+    hostname: inst-cent7.imp.ac.at
+    image: docker.artifactory.imp.ac.at/it/molecule/centos7:latest
+    command: /usr/sbin/init
+    privileged: true
+    pre_build_image: true
+provisioner:
+  name: ansible
+  env:
+    OP_SERVICE_ACCOUNT_TOKEN: ${OP_SERVICE_ACCOUNT_TOKEN}
+scenario:
+  name: ldap
+verifier:
+  name: testinfra

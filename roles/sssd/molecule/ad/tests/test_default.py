@@ -37,8 +37,8 @@ def test_ad_user(host):
 
 def test_permit(host):
     ap = "access_provider = simple"
-    host.run_expect([0], f'cat /etc/sssd/sssd.conf | grep "{ap}"')
-    host.run_expect([0], 'cat /etc/sssd/sssd.conf | grep is.grp')
+    host.run_expect([0], f'cat /etc/sssd/conf.d/vbc.conf | grep "{ap}"')
+    host.run_expect([0], 'cat /etc/sssd/conf.d/vbc.conf | grep is.grp')
 
 
 def test_password_auth_enabled(host):
@@ -48,7 +48,7 @@ def test_password_auth_enabled(host):
 
 def test_override_homedir(host):
     homedir = "override_homedir = /users/%u"
-    host.run_expect([0], f'cat /etc/sssd/sssd.conf | grep "{homedir}"')
+    host.run_expect([0], f'cat /etc/sssd/conf.d/vbc.conf | grep "{homedir}"')
 
 
 def test_sss_sshd_public_key(host):

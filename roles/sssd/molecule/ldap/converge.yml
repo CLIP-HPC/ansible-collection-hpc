@@ -1,0 +1,16 @@
+---
+- name: Converge
+  hosts: all
+  vars:
+    role_sssd_allowed_groups: [is.grp]
+    ad_password: "{{ lookup('onepassword', 'svc_baseline_ldap', vault='accounts', \
+      service_account_token=lookup('ansible.builtin.env', 'OP_SERVICE_ACCOUNT_TOKEN')) }}"
+
+  tasks:
+    - name: Include sssd role
+      ansible.builtin.include_role:
+        name: sssd
+      vars:
+        role_sssd_domain: LDAP
+        role_sssd_override_homedir: /users/%u
+        role_sssd_ldap_password: "{{ ad_password }}"

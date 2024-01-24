@@ -1,19 +1,36 @@
 ---
 # main tasks for role-sssd
-- name: Check that password for realm_join user is specified
-  ansible.builtin.assert:
-    that:
-      - role_sssd_ad_password is defined
-  when: role_sssd_present
-
 - name: Retrieve domain to join
   ansible.builtin.set_fact:
     domain_to_join: "{{ role_sssd_domains[role_sssd_domain] }}"
 
+- name: Check that password for realm_join user is specified
+  ansible.builtin.assert:
+    that:
+      - role_sssd_ad_password is defined
+  when: role_sssd_present and domain_to_join['id_provider'] == 'ad'
+
+- name: Check that password for ldap user is specified
+  ansible.builtin.assert:
+    that:
+      - role_sssd_ldap_password is defined
+  when: role_sssd_present and domain_to_join['id_provider'] == 'ldap'
+
+- name: Install sssd packages
+  ansible.builtin.package:
+    name: "{{ role_sssd_packages }}"
+    state: present
+  when: role_sssd_present
+
 - name: Enroll machine
   ansible.builtin.include_tasks: enroll.yml
-  when: role_sssd_present
+  when: role_sssd_present and domain_to_join['id_provider'] == 'ad'
 
 - name: Un-enroll machine
   ansible.builtin.include_tasks: leave.yml
-  when: not role_sssd_present
+  when: not role_sssd_present and domain_to_join['id_provider'] == 'ad'
+
+
+- name: Configure sssd
+  ansible.builtin.include_tasks: sssd.yml
+  when: role_sssd_present

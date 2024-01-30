@@ -20,6 +20,8 @@ SlurmctldPort=6817
 SlurmdPort=6818
 SlurmctldParameters=enable_configless,idle_on_node_suspend
 AuthType=auth/munge
+# https://slurm.schedmd.com/slurm.conf.html#OPT_AuthInfo
+AuthInfo=socket={{ role_slurm_auth_socket | default('/var/run/munge/munge.socket.2' }},cred_expire={{ role_slurm_auth_cred_expire | defaut(120) }},ttl={{ role_slurm_auth_ttl | default(300) }}
 {% if role_slurm_enable_rest %}
 AuthAltTypes=auth/jwt
 AuthAltParameters={{ role_slurm_auth_alt_parameters }}

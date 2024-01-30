@@ -63,3 +63,8 @@ role_slurm_power_save_suspend_program:
 role_slurm_dbd_conf_debug_flags: ""
 role_slurm_enable_rest: false
 role_slurm_auth_alt_parameters: jwt_key=/etc/slurm/jwt.key
+# upstream defaults
+role_slurm_auth_socket: /var/run/munge/munge.socket.2
+role_slurm_auth_cred_expire: 120
+# extended ttl to allow for node reboot
+role_slurm_auth_ttl: 600

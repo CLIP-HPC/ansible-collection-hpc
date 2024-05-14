@@ -12,7 +12,7 @@ nhc_fs_mount_check: []
 nhc_fs_mount_default_opts: /(^|,)vers=3(,|$)/
 
 # sssd check which group to pick random user from
-nhc_group_random_user: role.cbe.users
+nhc_group_random_user:
 
 ## these hw checks are no longer run
 # nhc_hw_swap_free: 0

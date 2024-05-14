@@ -230,8 +230,10 @@
 {% endif %}
 {% endif %}
 
+{% if nhc_group_random_user | length > 0 %}
 # check if sssd is properly resolving user ids
-    * || check_id_from_group role.cbe.users
+    * || check_id_from_group {{ nhc_group_random_user }}
+{% endif %}
 
 # nVidia HealthMon GPU health checks (requires Tesla Development Kit)
 #   * || check_nv_healthmon

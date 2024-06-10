@@ -12,7 +12,7 @@ testAnsibleCollection([
       moleculeScenarios: [] // fails due to kernel requirements
     ],
     slurm: [
-      moleculeScenarios: ["centos7", "stream8"]
+      moleculeScenarios: ["centos7", "almalinux9"]
     ],
   ]
 ])

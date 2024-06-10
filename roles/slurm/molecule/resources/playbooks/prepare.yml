@@ -3,23 +3,31 @@
 - name: Install SLURM package
   hosts: all
   vars:
-    role_slurm_version: 22.05.8-1.el{{ansible_distribution_major_version}}
+    role_slurm_version: 24.05.0-1.el{{ansible_distribution_major_version}}
   tasks:
+    - block:
+      - name: Comment out mirrorlist in CentOS-Base.repo (Centos7 EOL bugfix)
+        ansible.builtin.replace:
+          path: /etc/yum.repos.d/CentOS-Base.repo
+          regexp: '^mirrorlist='
+          replace: '#mirrorlist='
+
+      - name: Ensure baseurl lines are uncommented and updated
+        ansible.builtin.replace:
+          path: /etc/yum.repos.d/CentOS-Base.repo
+          regexp: '^#baseurl=http://mirror.centos.org'
+          replace: 'baseurl=http://vault.centos.org'
+      when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '7'
+
     - name: Install epel-release and versionlock
       ansible.builtin.yum:
         name:
           - epel-release
           - hostname
           - yum-plugin-versionlock
-          - "{{ (ansible_distribution_major_version == '8') | ternary('policycoreutils-python-utils', 'policycoreutils-python') }}"
+          - "{{ (ansible_distribution_major_version == '7') | ternary('policycoreutils-python', 'policycoreutils-python-utils') }}"
         state: installed
-      failed_when: false
-
-    # Until 2.11 ansible is released: https://github.com/ansible/ansible/commit/7f0eb7ad799e531a8fbe5cc4f46046a4b1aeb093
-    - name: Retrieve centos-release string
-      ansible.builtin.slurp:
-        src: /etc/centos-release
-      register: centos_release
+      #failed_when: false
 
     - name: Setup artifactory
       vars:
@@ -28,7 +36,7 @@
         name: artifactory
         description: Artifactory slurm RPM repo
         file: external_repos
-        baseurl: https://artifactory.imp.ac.at/localSLURM/{{ os_distro }}{{ ansible_distribution_major_version }}
+        baseurl: https://artifactory.imp.ac.at/localSLURM/{{ ansible_distribution | lower }}{{ ansible_distribution_major_version }}
         gpgcheck: false
 
     - name: Setup MariaDB Upstream

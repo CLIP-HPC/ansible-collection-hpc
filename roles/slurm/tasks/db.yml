@@ -23,8 +23,7 @@
     name:
       - "{{ mariadb_prefix }}"
       - "{{ mariadb_prefix }}-server"
-      - "{{ mariadb_prefix }}-devel"
-      - "{{ (ansible_distribution_major_version == '8') | ternary('python3-mysql', 'MySQL-python') }}"
+      - "{{ (ansible_distribution_major_version | int == 7) | ternary('MySQL-python', 'python3-PyMySQL') }}"
       - slurm-slurmdbd
     state: installed
   notify:
@@ -103,6 +102,7 @@
     password: "{{ role_slurm_db_root_password }}"
     check_implicit_admin: true
     host: "{{ item }}"
+    login_unix_socket: /var/lib/mysql/mysql.sock
   failed_when: false
   loop:
     - ::1

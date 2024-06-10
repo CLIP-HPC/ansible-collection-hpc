@@ -6,7 +6,7 @@
       - slurm-perlapi
       - slurm-slurmctld
       - slurm-example-configs
-      - mailx
+      - "{{ (ansible_distribution_major_version == '7') | ternary('mailx', 's-nail') }}"
     state: installed
 
 - name: Select the SLURM service to control

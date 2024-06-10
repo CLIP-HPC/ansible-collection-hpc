@@ -25,7 +25,8 @@ platforms:
       - /tmp
       - /run
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
   - name: compute1-centos7-${INSTANCE_ID:-local}
     hostname: cluster-compute1-0
     pre_build_image: true
@@ -45,7 +46,8 @@ platforms:
     capabilities:
       - SYS_ADMIN
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
   - name: compute2-centos7-${INSTANCE_ID:-local}
     hostname: cluster-compute2-0
     pre_build_image: true
@@ -65,7 +67,8 @@ platforms:
     capabilities:
       - SYS_ADMIN
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
   - name: control-centos7-${INSTANCE_ID:-local}
     pre_build_image: true
     networks:
@@ -83,7 +86,8 @@ platforms:
     capabilities:
       - SYS_ADMIN
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
   - name: db-centos7-${INSTANCE_ID:-local}
     image: centos/systemd:latest
     pre_build_image: true
@@ -98,7 +102,8 @@ platforms:
     capabilities:
       - SYS_ADMIN
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
 provisioner:
   name: ansible
   playbooks:

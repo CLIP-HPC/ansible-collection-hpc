@@ -35,11 +35,11 @@ def test_slurmrestd(host):
     rest_url = "http://localhost:6820"
     token = host.check_output("scontrol token lifespan=99999").split("=")[1]
     header = f'-H "X-SLURM-USER-NAME:root" -H "X-SLURM-USER-TOKEN:{token}"'
-    ping_cmd = f'curl -s -X GET {header} {rest_url}/slurm/v0.0.37/ping'
-    jobs_cmd = f'curl -s -X GET {header} {rest_url}/slurmdb/v0.0.37/jobs'
+    ping_cmd = f'curl -s -X GET {header} {rest_url}/slurm/v0.0.41/ping'
+    jobs_cmd = f'curl -s -X GET {header} {rest_url}/slurmdb/v0.0.41/jobs'
     ping = json.loads(host.check_output(f"bash -lc '{ping_cmd}'"))
     assert len(ping['errors']) == 0
-    assert ping['pings'][0]['ping'] == 'UP'
+    assert ping['pings'][0]['pinged'] == 'UP'
     jobs = json.loads(host.check_output(f"bash -lc '{jobs_cmd}'"))
     assert len(jobs['errors']) == 0
     assert len(jobs['jobs']) > 0

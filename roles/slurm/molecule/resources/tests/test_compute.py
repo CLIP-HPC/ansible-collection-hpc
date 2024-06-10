@@ -48,7 +48,7 @@ def test_slurmd_service_running(host):
 
 def test_systemd_login_not_running(host):
     systemd_login_service = host.service("systemd-logind")
-    assert not systemd_login_service.is_enabled
+    assert systemd_login_service.is_masked
     assert not systemd_login_service.is_running
 
 

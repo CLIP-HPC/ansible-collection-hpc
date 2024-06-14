@@ -1,6 +1,7 @@
 # NHC check for testing nvidia uncorrectable remapped rows
-# check if there are uncorrectable remapped rows
-# If the threshold is above a certain number the GPU needs to be replaced:
+# 2 checks are implemented:
+# 1. check_nvidia_smi_remapping_pending: Check if there are pending remapping rows. If this is the case the GPU needs to be reset
+# 2. check_nvidia_smi_remapping_failure: If this flag is set, the GPU needs to be replaced
 # see: https://support.lenovo.com/us/en/solutions/ht513682-nvidia-a100-gpu-reports-ecc-errors-lenovo-thinkagile-and-thinksystem
 #  example:
 # GPU 00000000:00:08.0
@@ -16,10 +17,21 @@
 #            Low                           : 0 bank(s)
 #            None                          : 1 bank(s)
 
-function check_nvidia_smi_remapped_rows() {
+function check_nvidia_smi_remapping_pending() {
 
-  REMAPPED_DATA=$(nvidia-smi --query-remapped-rows=remapped_rows.uncorrectable --format=noheader,csv | grep -v 0 | grep -v '[N/A]')
-  if [ -n "$DEBUG" ]; then echo "uncorrectable remapped rows:"; echo $REMAPPED_DATA ; fi
+  REMAPPED_DATA=$(nvidia-smi --query-remapped-rows=remapped_rows.pending --format=noheader,csv | grep -v 0 | grep -v '[N/A]')
+  if [ -n "$DEBUG" ]; then echo "pending row-remappings (reset GPU to fix):"; echo $REMAPPED_DATA ; fi
+  if [ -z "$REMAPPED_DATA" ];
+  then
+    return 0
+  fi
+  return 1
+}
+
+function check_nvidia_smi_remapping_failure() {
+
+  REMAPPED_DATA=$(nvidia-smi --query-remapped-rows=remapped_rows.failure --format=noheader,csv | grep -v 0 | grep -v '[N/A]')
+  if [ -n "$DEBUG" ]; then echo "row-remapping failure (RMA GPU):"; echo $REMAPPED_DATA ; fi
   if [ -z "$REMAPPED_DATA" ];
   then
     return 0

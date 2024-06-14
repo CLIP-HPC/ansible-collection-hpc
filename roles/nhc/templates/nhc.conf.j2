@@ -242,8 +242,8 @@
 # nVidia-smi GPU health checks (requires Tesla Development Kit)
    *-g*-* || check_nvsmi_healthmon
 
-# check for page retirement errors that require GPU device re-init
-   *-g*-* || check_nvidia_smi_page_retirement
+# check for pending remapped rows that require the GPU to be reset
+   *-g*-* || check_nvidia_smi_remapping_pending
 
-# check for uncorrectable remapped rows that require the GPU to be replaced
-   *-g*-* || check_nvidia_smi_remapped_rows
+# check for remapping failures that require the GPU to be replaced
+   *-g*-* || check_nvidia_smi_remapping_failure

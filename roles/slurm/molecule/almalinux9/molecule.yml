@@ -22,11 +22,10 @@ platforms:
     capabilities:
       - SYS_ADMIN
     tmpfs:
-      - /tmp
-      - /run
+      /run: rw
+      /tmp: rw
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    privileged: true
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
   - name: compute1-alma9-${INSTANCE_ID:-local}
     hostname: cluster-compute1-0
     pre_build_image: true
@@ -41,13 +40,12 @@ platforms:
     security_opts:
       - apparmor:unconfined
     tmpfs:
-      - /tmp
-      - /run
+      /run: rw
+      /tmp: rw
     capabilities:
       - SYS_ADMIN
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    privileged: true
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
   - name: compute2-alma9-${INSTANCE_ID:-local}
     hostname: cluster-compute2-0
     pre_build_image: true
@@ -62,12 +60,12 @@ platforms:
     security_opts:
       - apparmor:unconfined
     tmpfs:
-      - /tmp
-      - /run
+      /run: rw
+      /tmp: rw
     capabilities:
       - SYS_ADMIN
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
     privileged: true
   - name: control-alma9-${INSTANCE_ID:-local}
     pre_build_image: true
@@ -81,12 +79,12 @@ platforms:
       - cluster_control
     command: /sbin/init
     tmpfs:
-      - /tmp
-      - /run
+      /run: rw
+      /tmp: rw
     capabilities:
       - SYS_ADMIN
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
     privileged: true
   - name: db-alma9-${INSTANCE_ID:-local}
     image: almalinux:9.4
@@ -97,12 +95,12 @@ platforms:
       - cluster_db
     command: /sbin/init
     tmpfs:
-      - /tmp
-      - /run
+      /run: rw
+      /tmp: rw
     capabilities:
       - SYS_ADMIN
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
     privileged: true
 provisioner:
   name: ansible
@@ -112,5 +110,4 @@ provisioner:
 scenario:
   name: almalinux9
 verifier:
-  name: testinfra
-  directory: ../resources/tests/
+  name: ansible

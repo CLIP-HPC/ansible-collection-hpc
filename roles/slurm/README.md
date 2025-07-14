@@ -1,9 +1,8 @@
-# role-slurm
+# clip.slurm
 
 This Ansible role is used to have a fully functional SLURM Cluster
 
-Role Variables
---------------
+## Role Variables
 
 `role_slurm_service_enabled`: checks whether `role_slurm_service` is enabled
 

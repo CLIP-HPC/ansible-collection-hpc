@@ -1,7 +1,0 @@
----
-- name: Converge
-  hosts: all
-  tasks:
-    - name: Include beegfs_client role
-      ansible.builtin.include_role:
-        name: beegfs_client

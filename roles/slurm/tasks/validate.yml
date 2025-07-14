@@ -1,66 +1,33 @@
 # Playbook to validate slurm setup
 ---
-# can only check availability (%a) but not state (%t) because state of node is unk (unknown) instead of idle
-- name: Run sinfo_cmd # noqa command-instead-of-shell
-  ansible.builtin.shell: bash -lc 'sinfo -o %P,%a,%t'
-  register: sinfo_cmd
-  changed_when: false
-  until: sinfo_cmd.stdout.find("unk") == -1
-  retries: 10
-  delay: 5
+- name: Check openhpc_slurm_control_host and slurm_cluster_name
+  assert:
+    that:
+      - slurm_cluster_name is defined
+      - slurm_cluster_name != ''
+    fail_msg: slurm role variables not correctly defined, see detail above
+  delegate_to: localhost
+  run_once: true
 
-- name: Check number of partitions match
+- name: Check no host appears in more than one nodegroup
+  assert:
+    that: "{{ _slurm_check_hosts.values() | select('greaterthan', 1) | length == 0 }}"
+    fail_msg: |
+      Some hosts appear more than once in inventory groups {{ _openhpc_node_inventory_groups | join(', ') }}:
+      {{ _openhpc_check_hosts | dict2items | rejectattr('value', 'equalto', 1) | items2dict | to_nice_yaml }}
   vars:
-    expected_slurm_partitions: "{{ role_slurm_partitions | json_query('[?!(hidden)]') }}"
-  ansible.builtin.assert:
-    that:
-      - (sinfo_cmd.stdout_lines | length) - 1 >= (expected_slurm_partitions | int)
-    msg: Expected ({{ expected_slurm_partitions }}) but found {{ (sinfo_cmd.stdout_lines | length) - 1 }}
+    _openhpc_node_inventory_groups: "{{ openhpc_nodegroups | map(attribute='name') | map('regex_replace', '^', openhpc_cluster_name ~ '_') }}"
+    _openhpc_check_hosts: "{{ groups | dict2items | list | selectattr('key', 'in', _openhpc_node_inventory_groups) | map(attribute='value') | flatten | community.general.counter }}"
+  delegate_to: localhost
+  run_once: true
 
-- name: Check that all partitions are up
-  ansible.builtin.assert:
-    that: not item.endswith(',unk,idle')
-  with_items: "{{ sinfo_cmd.stdout_lines[1:] }}"
-
-- name: Run sacctmgr
-  ansible.builtin.command: /bin/sacctmgr list -nP cluster format=cluster,ControlPort,QOS
-  register: sacctmgr_cmd
-  changed_when: false
-
-- name: Split sacctmgr result
-  ansible.builtin.set_fact:
-    sacctmgr_result: "{{ sacctmgr_cmd.stdout_lines[0].split('|') }}"
-
-- name: Check cluster info
-  ansible.builtin.assert:
-    that:
-      - sacctmgr_result[0] == '{{ role_slurm_cluster_name }}'
-      - sacctmgr_result[1] == '6817'
-      - "(sacctmgr_result[2].split(',') | sort | join(',')) == '{{ role_slurm_qos | map(attribute='name') | sort | join(',') }}' "
-
-- name: Run test job
-  ansible.builtin.command: /bin/srun hostname
-  register: srun_cmd
-  changed_when: false
-
-- name: Check that srun worked
-  ansible.builtin.assert:
-    that: srun_cmd.stdout | length > 0
-
-- name: Get accounting information
-  ansible.builtin.command: /bin/sacct -nP --format=JobName,State
-  register: sacct_cmd
-  changed_when: false
-  until: (sacct_cmd.stdout_lines | length > 1) and sacct_cmd.stdout_lines[-1].find("COMPLETED") != -1 and sacct_cmd.stdout_lines[-2].find("COMPLETED") != -1
-  retries: 10
-  delay: 5
-
-- name: Store last two rows of accounting
-  ansible.builtin.set_fact:
-    sacct_rows: "{{ sacct_cmd.stdout_lines[-2:] | sort }}"
-
-- name: Check accounting information
-  ansible.builtin.assert:
-    that:
-      - sacct_rows[0] | trim == 'extern|COMPLETED'
-      - sacct_rows[1] | trim == 'hostname|COMPLETED'
+- name: Validate openhpc_nodegroups
+  ansible.utils.validate:
+    criteria: "{{ lookup('file', 'nodegroup.schema') }}"
+    engine: 'ansible.utils.jsonschema'
+    data: "{{ item }}"
+  vars:
+    ansible_jsonschema_draft: '2020-12'
+  delegate_to: localhost
+  loop: "{{ openhpc_nodegroups }}"
+  run_once: true

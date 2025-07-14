@@ -1,0 +1,18 @@
+---
+- name: Build host-specific list of required slurm packages
+  set_fact:
+    openhpc_slurm_pkglist: "{{ openhpc_slurm_pkglist | default([]) + item.value }}"
+  loop: "{{ ohpc_slurm_packages | dict2items }}"
+  when: (openhpc_enable.get(item.key, false)) or ()
+
+- name: Install required slurm packages
+  dnf:
+    name: "{{ openhpc_slurm_pkglist | reject('eq', '') }}"
+    install_weak_deps: false # avoids getting recommended packages
+  when: openhpc_slurm_pkglist | default(false, true)
+
+- name: Install other packages
+  yum:
+    name: "{{ openhpc_packages + [openhpc_slurm_accounting_storage_client_package] }}"
+
+...

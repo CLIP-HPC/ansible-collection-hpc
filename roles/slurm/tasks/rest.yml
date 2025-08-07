@@ -1,50 +1,24 @@
 ---
-- name: Install SLURM Rest packages
-  ansible.builtin.yum:
-    name:
-      - slurm-slurmrestd
-    state: installed
-  tags: rest
-
-- name: Create Slurm Rest Daemon user
+- name: rest | Create Slurm Rest Daemon user
   ansible.builtin.user:
-    name: slurmrest
+    name: slurmrestd
     comment: SLURM REST daemon user
     system: true
     shell: /sbin/nologin
   tags: rest
 
-- name: Create socket folder
+- name: rest | Create socket folder
   ansible.builtin.file:
     state: directory
     path: /var/run/slurmrestd
-    owner: slurmrest
-    group: slurmrest
+    owner: slurmrestd
+    group: slurmrestd
     mode: "755"
   tags: rest
 
-- name: Remove unix and port config from systemd
-  community.general.ini_file:
-    option: ExecStart
-    section: Service
-    value: /usr/sbin/slurmrestd $SLURMRESTD_OPTIONS
-    path: /usr/lib/systemd/system/slurmrestd.service
-    mode: "644"
-  notify: Restart slurmrestd
-  tags: rest
-
-- name: Copy /etc/default/slurmrestd
-  ansible.builtin.copy:
-    content: |
-      SLURMRESTD_OPTIONS="-u slurmrest -g slurmrest"
-      SLURMRESTD_LISTEN="unix:/var/run/slurmrestd/slurmrestd.socket,0.0.0.0:6820"
-    dest: /etc/default/slurmrestd
-    mode: "644"
-  notify: Restart slurmrestd
-  tags: rest
-
-- name: Ensure Slurmrest service is enabled
+- name: rest | Ensure Slurmrest service is enabled
   ansible.builtin.service:
     name: slurmrestd
-    enabled: "true"
+    enabled: "{{ slurm_service_enabled | bool }}"
+    state: "{{ 'started' if slurm_service_started | bool else 'stopped' }}"
   tags: rest

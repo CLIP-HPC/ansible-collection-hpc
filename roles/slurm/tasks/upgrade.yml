@@ -1,0 +1,80 @@
+- name: upgrade | Check if slurm database has been initialised
+  # DB is initialised on the first slurmdbd startup (without -u option).
+  # If it is not initialised, `slurmdbd -u` errors with something like
+  # > Slurm Database is somehow higher than expected '4294967294' but I only
+  # > know as high as '16'. Conversion needed.
+  community.mysql.mysql_query:
+    login_db: "{{ slurm_dbd_mysql_database }}"
+    login_user: "{{ slurm_dbd_mysql_username }}"
+    login_password: "{{ slurm_dbd_mysql_password }}"
+    login_host: "{{ slurm_db_host }}"
+    query: SHOW TABLES
+    config_file: ''
+  register: _slurm_slurmdb_tables
+
+- name: upgrade | Check if slurm database requires an upgrade
+  ansible.builtin.command: slurmdbd -u
+  register: _slurm_slurmdbd_check
+  changed_when: false
+  failed_when: >-
+    _slurm_slurmdbd_check.rc > 1 or
+    'Slurm Database is somehow higher than expected' in _slurm_slurmdbd_check.stdout
+  # from https://github.com/SchedMD/slurm/blob/master/src/plugins/accounting_storage/mysql/as_mysql_convert.c
+  when: _slurm_slurmdb_tables.query_result | flatten | length > 0 # i.e. when db is initialised
+
+- name: upgrade | Set fact for slurm database upgrade
+  # Explanation of ifs below:
+  # - `slurmdbd -u` rc == 0 then no conversion required (from manpage)
+  # - default of 0 on rc skips upgrade steps if check was skipped because
+  #   db is not initialised
+  # - Usage message (and rc == 1) if -u option doesn't exist, in which case
+  # it can't be a major upgrade due to existing openhpc versions
+  ansible.builtin.set_fact:
+    _openhpc_slurmdb_upgrade: >-
+      {{ false
+          if (
+            ( _slurm_slurmdbd_check.rc | default(0) == 0)
+            or
+            ( 'Usage: slurmdbd' in _slurm_slurmdbd_check.stderr )
+          ) else
+          true
+      }}
+
+- name: upgrade | Ensure Slurm database service stopped
+  ansible.builtin.systemd:
+    name: "slurmdbd"
+    state: stopped
+  register: _slurm_slurmdb_state
+  when:
+    - _slurm_slurmdb_upgrade
+
+- name: upgrade | Backup Slurm database
+  ansible.builtin.shell: # noqa: command-instead-of-shell
+    cmd: "{{ openhpc_slurm_accounting_storage_backup_cmd }}"
+  delegate_to: "{{ openhpc_slurm_accounting_storage_backup_host }}"
+  become: "{{ openhpc_slurm_accounting_storage_backup_become }}"
+  changed_when: true
+  run_once: true
+  when:
+    - _openhpc_slurmdb_upgrade
+    - openhpc_slurm_accounting_storage_backup_cmd != ''
+
+- name: upgrade | Ensure Slurm database service started
+  ansible.builtin.systemd:
+    name: "{{ openhpc_slurm_accounting_storage_service }}"
+    state: started
+  when:
+    - openhpc_slurm_accounting_storage_service != ''
+    - _openhpc_slurmdb_state.changed | default(false)
+
+- name: upgrade | Run slurmdbd in foreground for upgrade
+  ansible.builtin.expect:
+    command: /usr/sbin/slurmdbd -D -vvv
+    responses:
+      (?i)Everything rolled up:
+  # See https://wiki.fysik.dtu.dk/Niflheim_system/Slurm_installation/#upgrade-slurmdbd
+  # and
+  # https://github.com/SchedMD/slurm/blob/0ce058c5adcf63001ec2ad211c65e67b0e7682a8/src/plugins/accounting_storage/mysql/as_mysql_usage.c#L1042
+  become: true
+  become_user: slurm
+  when: _openhpc_slurmdb_upgrade

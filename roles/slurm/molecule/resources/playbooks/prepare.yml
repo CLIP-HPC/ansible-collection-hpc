@@ -3,31 +3,18 @@
 - name: Install SLURM package
   hosts: all
   vars:
-    role_slurm_version: 24.05.0-1.el{{ansible_distribution_major_version}}
+    role_slurm_version: 25.05.0-1.el{{ansible_distribution_major_version}}
   tasks:
-    - block:
-      - name: Comment out mirrorlist in CentOS-Base.repo (Centos7 EOL bugfix)
-        ansible.builtin.replace:
-          path: /etc/yum.repos.d/CentOS-Base.repo
-          regexp: '^mirrorlist='
-          replace: '#mirrorlist='
 
-      - name: Ensure baseurl lines are uncommented and updated
-        ansible.builtin.replace:
-          path: /etc/yum.repos.d/CentOS-Base.repo
-          regexp: '^#baseurl=http://mirror.centos.org'
-          replace: 'baseurl=http://vault.centos.org'
-      when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '7'
-
-    - name: Install epel-release and versionlock
-      ansible.builtin.yum:
+    - name: Install required packages
+      ansible.builtin.dnf:
         name:
           - epel-release
           - hostname
-          - yum-plugin-versionlock
-          - "{{ (ansible_distribution_major_version == '7') | ternary('policycoreutils-python', 'policycoreutils-python-utils') }}"
+          - python3-dnf-plugin-versionlock
+          - openssh-server
+          # - "{{ (ansible_distribution_major_version == '7') | ternary('policycoreutils-python', 'policycoreutils-python-utils') }}"
         state: installed
-      #failed_when: false
 
     - name: Setup artifactory
       vars:
@@ -39,18 +26,7 @@
         baseurl: https://artifactory.imp.ac.at/localSLURM/{{ ansible_distribution | lower }}{{ ansible_distribution_major_version }}
         gpgcheck: false
 
-    - name: Setup MariaDB Upstream
-      ansible.builtin.yum_repository:
-        name: mariadb
-        description: MariaDB upstream RPM repo
-        file: external_repos
-        baseurl: http://yum.mariadb.org/10.5/centos{{ ansible_distribution_major_version }}-amd64
-        gpgcheck: false
-      when:
-        - ansible_os_family == 'RedHat'
-        - ansible_distribution_major_version | int == 7
-
     - name: Lock the version of slurm
-      community.general.yum_versionlock:
+      community.general.dnf_versionlock:
         name:
           - slurm*-{{ role_slurm_version }}

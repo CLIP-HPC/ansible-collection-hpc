@@ -1,8 +1,0 @@
----
-- name: Install Required packages
-  hosts: all
-  tasks:
-    - name: Install openssh-clients
-      ansible.builtin.package:
-        name: openssh-clients
-        state: present

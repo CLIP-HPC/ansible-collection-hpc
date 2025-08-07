@@ -1,58 +1,117 @@
 ---
-- name: Store role variables in hostvars
-  ansible.builtin.set_fact:
-    role_slurm_enable: "{{ role_slurm_enable }}"
-    role_slurm_service: "{{ (role_slurm_enable.slurmd | bool) | ternary('slurmd', False) or omit }}"
+- name: Validate configuration
+  ansible.builtin.include_tasks: validate.yml
+  when: slurm_enable.runtime | default(false) | bool
+  tags:
+    - install
+    - validate
 
 
-- name: Include users.yml tasks
-  ansible.builtin.include_tasks: users.yml
-  when: role_slurm_enable.runtime | bool
+- name: Install packages
+  ansible.builtin.include_tasks: install.yml
+  when: slurm_enable.runtime | default(false) | bool
+  tags: install
 
-- name: Include db.yml tasks
-  ansible.builtin.include_tasks: db.yml
-  args:
-    apply:
-      delegate_to: "{{ role_slurm_db_host }}"
-      delegate_facts: true
-  when: role_slurm_db_host in hostvars
-  run_once: true
 
-- name: Include control.yml tasks
-  ansible.builtin.include_tasks: control.yml
-  args:
-    apply:
-      delegate_to: "{{ role_slurm_control_host }}"
-      delegate_facts: true
-  when: role_slurm_control_host in hostvars
-  run_once: true
+- name: Configure MySQL Database
+  ansible.builtin.include_role:
+    name: geerlingguy.mysql
+  vars:
+    mysql_innodb_buffer_pool_size: "{{ (hostvars[slurm_db_host].ansible_memtotal_mb / 2) | int }}M"
+    mysql_innodb_lock_wait_timeout: 900
+    mysql_root_password: "{{ slurm_db_root_password | default(omit) }}"
+    mysql_datadir: "{{ slurm_db_data_dir | default(omit) }}"
+    mysql_databases:
+      - name: "{{ slurm_dbd_mysql_database }}"
+    mysql_users:
+      - name: slurm
+        password: "{{ slurm_db_password }}"
+        priv: "{{ slurm_dbd_mysql_database }}.*:ALL"
+  when: slurm_enable.database | default(false) | bool
+  tags:
+    - database
 
-- name: Include rest.yml tasks
+
+- name: Configure SLURM Rest
   ansible.builtin.include_tasks: rest.yml
-  args:
-    apply:
-      delegate_to: "{{ role_slurm_control_host }}"
-      delegate_facts: true
-  when: role_slurm_enable_rest | bool
-  run_once: true
+  when:
+    - slurm_rest_enable | default(false) | bool
+    - slurm_enable.rest | default(false) | bool
+  tags:
+    - rest
+    - reconfigure
 
-- name: Include compute.yml tasks
-  ansible.builtin.include_tasks: compute.yml
-  when: role_slurm_enable.batch | bool
+- name: Configure Munge
+  ansible.builtin.include_tasks: munge.yml
+  when: slurm_enable.runtime | default(false) | bool
+  tags:
+    - always
+    - munge
 
-- name: Include runtime.yml tasks
-  ansible.builtin.include_tasks: runtime.yml
-  when: role_slurm_enable.runtime | bool
+- name: Configure JWT Key for REST
+  when: slurm_rest_enable | default(false) | bool and
+        (slurm_enable.rest | default(false) | bool or slurm_enable.database | default(false) | bool)
+  tags:
+    - always
+    - jwt
+  block:
+    - name: Create /etc/slurm directory
+      ansible.builtin.file:
+        path: /etc/slurm
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Write JWT key
+      ansible.builtin.copy:
+        content: "{{ slurm_rest_jwt_key | b64decode }}"
+        dest: /etc/slurm/jwt.key
+        owner: slurm
+        group: slurm
+        mode: "0600"
+      notify:
+        - Restart slurmdbd service
+        - Restart slurmctld service
+        - Restart slurmrestd
+
+- name: Configure SLURM Database Deamon
+  ansible.builtin.include_tasks: db.yml
+  when: slurm_enable.database | default(false) | bool
+  tags:
+    - database
+    - reconfigure
+
+- name: Configure SLURM Controller
+  ansible.builtin.include_tasks: control.yml
+  when: slurm_enable.control | default(false) | bool
+  tags:
+    - control
+    - reconfigure
+
+- name: Configure SLURM slurmd nodes
+  ansible.builtin.include_tasks: slurmd.yml
+  when: slurm_enable.slurmd | default(false) | bool
+  tags:
+    - slurmd
+
 
 - name: Include pam.yml tasks
+  tags:
+    - pam
   ansible.builtin.include_tasks: pam.yml
-  when: role_slurm_enable.batch | bool
+  when: slurm_enable.batch | bool
 
-- name: Include validtion.yml tasks
-  ansible.builtin.include_tasks: validate.yml
-  args:
-    apply:
-      delegate_to: "{{ groups.cluster_login | default([role_slurm_control_host]) | first }}"
-  when: role_slurm_run_validate | bool
-  tags: validate
-  run_once: true
+
+- name: Add QOS to Cluster
+  ansible.builtin.include_tasks: qos.yml
+  when: slurm_enable.control | default(false) | bool
+  tags:
+    - qos
+
+- name: Create facts
+  ansible.builtin.import_tasks: facts.yml
+  tags:
+    - always
+    - facts
+  when: not slurm_enable.database | default(false) | bool

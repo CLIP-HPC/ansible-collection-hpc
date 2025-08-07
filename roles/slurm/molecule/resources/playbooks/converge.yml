@@ -3,76 +3,77 @@
   hosts: all
   tasks:
     - name: Include slurm role
-      # tags: reconfigure
+      tags: always
       ansible.builtin.include_role:
-        name: slurm
+        name: "slurm"
       vars:
-        role_slurm_enable:
-          db: "{{ inventory_hostname in groups['cluster_db'] }}"
+        slurm_enable:
+          database: "{{ inventory_hostname in groups['cluster_db'] }}"
           control: "{{ inventory_hostname in groups['cluster_control'] }}"
           batch: "{{ inventory_hostname in groups['cluster_batch'] }}"
           slurmd: "{{ inventory_hostname not in (groups['cluster_db'] + groups['cluster_control']) }}"
+          rest: "{{ inventory_hostname in groups['cluster_control'] }}"
           runtime: true
-        role_slurm_db_host: "{{ groups['cluster_db'] | first }}"
-        role_slurm_control_host: "{{ groups['cluster_control'] | first }}"
-        role_slurm_db_password: test
-        role_slurm_partitions:
+        slurm_db_host: "{{ groups['cluster_db'] | first }}"
+        slurm_control_host: "{{ groups['cluster_control'] | first }}"
+        slurm_login_only_nodes: cluster_login
+        slurm_db_password: test
+        slurm_nodegroups:
+          - name: compute1
+            ram_mb: 2048
+            features:
+              - special
+          - name: compute2
+            ram_mb: 2048
+            features:
+              - special
+        slurm_partitions:
           - name: compute1
             qos: [short]
-            groups:
-              - name: compute1
-                ram_mb: 2048
-                num_nodes: 1
-                features: special
+            default: "YES"
+            nodegroups:
+              - compute1
+            partition_params:
+              AllowQoS: 'short'
           - name: compute2
-            qos: [short]
-            groups:
-              - name: compute1
-                ram_mb: 2048
-                num_nodes: 1
-                features: special
-              - name: compute2
-                num_nodes: 1
-                max_ix: 1
-          - name: login
-            ram_mb: 2048
-            hidden: true
-            groups:
-              - name: login
-                num_nodes: 1
-        role_slurm_cluster_name: cluster
-        role_slurm_node_prefix: cluster
-        role_slurm_qos:
+            default: "NO"
+            partition_params:
+              AllowQoS: 'short'
+            nodegroups:
+              - compute1
+              - compute2
+        slurm_cluster_name: cluster
+        slurm_qos:
           - name: short
             priority: 4
             maxwall: "08:00:00"
             grptres: cpu=12,mem=10G
             maxtres: cpu=5,mem=5G
             maxtresperuser: cpu=5,mem=5G
-        role_slurm_adopt_selinux: false
-        role_slurm_ssh_access: [admins]
-        role_slurm_db_data_dir: /srv/slurm_db
-        role_slurm_default_partition_mem: 100
-        role_slurm_configless_dns: false
-        role_slurm_db_replication_pw: replicationpw
-        role_slurm_db_upstream: "{{ ansible_distribution_major_version == '7' }}"
-        role_slurm_job_container_base_path: /mnt
-        role_slurm_job_container_shared_storage: true
-        role_slurm_accounting_storage_flags: [job_comment, job_env, job_script]
-        role_slurm_dbd_archive_dir: /tmp/archive
-        role_slurm_dbd_archive_events: true
-        role_slurm_dbd_archive_jobs: true
-        role_slurm_dbd_archive_resvs: true
-        role_slurm_dbd_archive_steps: false
-        role_slurm_dbd_archive_suspend: false
-        role_slurm_dbd_archive_txn: false
-        role_slurm_dbd_archive_usage: false
-        role_slurm_dbd_purge_events: 1month
-        role_slurm_dbd_purge_jobs: 12month
-        role_slurm_dbd_purge_resvs: 1month
-        role_slurm_dbd_purge_steps: 1month
-        role_slurm_dbd_purge_suspend: 1month
-        role_slurm_dbd_purge_txn: 12month
-        role_slurm_dbd_purge_usage: 24month
-        role_slurm_enable_rest: true
-        role_slurm_disable_token_creation: true
+        slurm_munge_key: "X+NfDwhSNSYCEvONXGig3AG4Ld/6RY4mv4O7QnRkiNs="
+        slurm_adopt_selinux: false
+        slurm_ssh_access: [admins]
+        slurm_db_data_dir: /srv/slurm_db
+        slurm_default_partition_mem: 100
+        slurm_job_container_base_path: /mnt
+        slurm_job_container_shared_storage: true
+        slurm_config:
+          AccountingStoreFlags: [job_comment, job_env, job_script]
+        slurm_dbd_archive_dir: /tmp/archive
+        slurm_dbd_archive_events: true
+        slurm_dbd_archive_jobs: true
+        slurm_dbd_archive_resvs: true
+        slurm_dbd_archive_steps: false
+        slurm_dbd_archive_suspend: false
+        slurm_dbd_archive_txn: false
+        slurm_dbd_archive_usage: false
+        slurm_dbd_purge_events: 1month
+        slurm_dbd_purge_jobs: 12month
+        slurm_dbd_purge_resvs: 1month
+        slurm_dbd_purge_steps: 1month
+        slurm_dbd_purge_suspend: 1month
+        slurm_dbd_purge_txn: 12month
+        slurm_dbd_purge_usage: 24month
+        slurm_rest_enable: true
+        slurm_rest_jwt_key: "X+NfDwhSNSYCEvONXGig3AG4Ld/6RY4mv4O7QnRkiNs="
+        slurm_disable_token_creation: true

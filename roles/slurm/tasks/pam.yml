@@ -1,50 +1,105 @@
 ---
-# Setup slurm_adopt and restrict ssh access
-- name: Copy /etc/pam.d/sshd
-  ansible.builtin.copy:
-    mode: "0644"
-    src: files/pam.d/{{ item }}
-    dest: /etc/pam.d
-  loop:
-    - sshd
-    - slurm
 
-- name: Fix pam_systemd lines in /etc/pam.d/ auth files
+- name: pam | Add pam_slurm_adopt and pam_access to SSH PAM configuration
+  tags:
+    - pam
+  ansible.builtin.blockinfile:
+    path: /etc/pam.d/sshd
+    insertafter: '^account\s+include\s+password-auth'
+    block: |
+      account    sufficient   pam_slurm_adopt.so action_no_jobs=deny action_unknown=newest action_adopt_failure=deny action_generic_failure=deny
+      account    required     pam_access.so
+    backup: true
+
+
+- name: pam | Fix pam_systemd lines in /etc/pam.d/ auth files
+  tags:
+    - pam
   ansible.builtin.lineinfile:
     path: "{{ item }}"
-    regexp: pam_systemd
-    state: absent
+    regexp: -session     optional      pam_systemd.so
+    line: "#-session     optional      pam_systemd.so"
   loop:
     - /etc/pam.d/system-auth
     - /etc/pam.d/password-auth
 
-- name: Install selinux rpm
-  ansible.builtin.yum:
-    name: slurm_pam_slurm_adopt_selinux
-    state: present
-  when: role_slurm_adopt_selinux | bool
 
-- name: SELINUX fix context on /var/spool/slurm
-  ansible.builtin.command: /sbin/restorecon -Fvri /var/spool/slurm
-  when: role_slurm_adopt_selinux | bool
-  changed_when: true
+# - name: SELINUX fix context on /var/spool/slurm
+#   ansible.builtin.command: /sbin/restorecon -Fvri "{{ slurm_spool_dir }}"
+#   changed_when: true
 
-- name: Stop, disable, mask systemd-logind
-  ansible.builtin.systemd:
-    name: systemd-logind
-    state: stopped
-    enabled: false
-    masked: true
+# - name: Stop, disable, mask systemd-logind
+#   ansible.builtin.systemd:
+#     name: systemd-logind
+#     state: stopped
+#     enabled: false
+#     masked: true
 
-- name: Fix /etc/security/access.conf
+- name: pam | Fix /etc/security/access.conf
+  tags:
+    - pam
   ansible.builtin.blockinfile:
     path: /etc/security/access.conf
     marker: "# {mark} ANSIBLE MANAGED BLOCK"
     insertafter: EOF
     block: |
-      {% for item in role_slurm_ssh_access | default([]) %}+:{{ item }}:ALL
+      {% for item in slurm_ssh_access | default([]) %}+:{{ item }}:ALL
       {% endfor %}
       {% if ansible_user is defined %}+:{{ ansible_user }}:ALL
       {% endif %}
-      +:root:cron crond
       -:ALL:ALL
+
+- name: pam | Check if SELinux module is installed
+  tags:
+    - pam
+  ansible.builtin.command:
+    cmd: semodule -l | grep -q '^pam_slurm_adopt'
+  register: semodule_check
+  failed_when: false
+  changed_when: false
+  when: ansible_selinux.status == "enabled"
+
+- name: pam | Configure SELinux Policy for SLURM adopt
+  tags:
+    - pam
+  when: ansible_selinux.status == "enabled" and semodule_check.rc != 0
+  block:
+    - name: pam | Create temporary directory for SELinux policy
+      tags:
+        - pam
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: selinux
+      register: selinux_tempdir
+
+    - name: pam | Copy SELinux policy file
+      tags:
+        - pam
+      ansible.builtin.copy:
+        src: pam_slurm_adopt.te
+        dest: "{{ selinux_tempdir.path }}/pam_slurm_adopt.te"
+        mode: '0644'
+
+    - name: pam | Package SELinux policy module
+      tags:
+        - pam
+      ansible.builtin.command:
+        cmd: "make -f /usr/share/selinux/devel/Makefile pam_slurm_adopt.pp"
+        creates: "{{ selinux_tempdir.path }}/pam_slurm_adopt.pp"
+      args:
+        chdir: "{{ selinux_tempdir.path }}"
+
+    - name: pam | Install SELinux policy module
+      tags:
+        - pam
+      ansible.builtin.command:
+        cmd: "semodule -i {{ selinux_tempdir.path }}/pam_slurm_adopt.pp"
+      register: semodule_install
+      changed_when: semodule_install.rc == 0
+
+    - name: pam | Cleanup temporary directory
+      tags:
+        - pam
+      ansible.builtin.file:
+        path: "{{ selinux_tempdir.path }}"
+        state: absent

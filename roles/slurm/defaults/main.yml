@@ -1,65 +1,102 @@
 ---
-role_slurm_service_enabled: true
-role_slurm_reconfigure: false
-role_slurm_service:
-role_slurm_control_host:
-role_slurm_db_host:
-role_slurm_partitions: []
-role_slurm_cluster_name:
-role_slurm_enable:
+slurm_cluster_name:
+slurm_control_host:
+slurm_db_host:
+slurm_enable:
+  control: false
   batch: false
+  database: false
   runtime: false
-role_slurm_db_root_password: "{{ role_slurm_db_password }}"
-role_slurm_node_prefix:
-role_slurm_healthcheck_interval: 300
-role_slurm_healthcheck_program: ""
-role_slurm_max_job_time:
-role_slurm_job_def_time:
-role_slurm_default_partition:
-role_slurm_qos: []
-role_slurm_job_submit_plugin: false
-role_slurm_default_qos:
-role_slurm_default_partition_mem: 4096
-role_slurm_ssh_access: []
-role_slurm_adopt_selinux: true
-role_slurm_db_data_dir:
-role_slurm_prio_decay_half_time: 7-0
-role_slurm_prio_usage_period:
-role_slurm_prio_calc_period: "00:05:00"
-role_slurm_prio_weight_age: 1000
-role_slurm_prio_weight_assoc: 0
-role_slurm_prio_weight_fairshare: 2000
-role_slurm_prio_weight_jobsize: 1000
-role_slurm_prio_weight_partition: 500
-role_slurm_prio_weight_qos: 500
-role_slurm_prio_weight_tres:
-role_slurm_prio_max_age: 7-0
-role_slurm_prio_favor_small: "no"
-role_slurm_accounting_storage_tres: [gres/gpu]
-role_slurm_accounting_storage_flags: []
-role_slurm_run_validate: true
-role_slurm_max_array_size: 3001
-role_slurm_max_job_count: 90000
-role_slurm_configless_dns: true
-role_slurm_db_enable_replication: true
-role_slurm_db_server_id: 1
-role_slurm_conf_scheduler_parameters: ""
-role_slurm_conf_debug_flags: ""
-role_slurm_reboot_program: /usr/sbin/reboot
-role_slurm_maria_upstream: false
-role_slurm_job_container_base_path:
-role_slurm_job_container_shared_storage: false
-role_slurm_power_save: false
-role_slurm_power_save_suspend_time: 600
-role_slurm_power_save_suspend_timeout: 180
-role_slurm_power_save_suspend_rate: 60
-role_slurm_power_save_resume_rate: 300
-role_slurm_power_save_resume_timeout: 300
-role_slurm_power_save_batch_start_timeout: 10
-role_slurm_power_save_exc_partitons:
-role_slurm_power_save_exc_nodes:
-role_slurm_power_save_resume_program:
-role_slurm_power_save_suspend_program:
-role_slurm_dbd_conf_debug_flags: ""
-role_slurm_enable_rest: false
-role_slurm_auth_alt_parameters: jwt_key=/etc/slurm/jwt.key
+  slurmd: false
+
+slurm_reconfigure: false
+slurm_spool_dir: /var/spool/slurmd
+slurm_state_save_location: /var/spool/slurm
+
+
+slurm_config: {}
+
+slurm_default_config:
+  # This only defines values which are not Slurm defaults
+  SlurmctldHost: "{{ slurm_control_host }}"
+  SlurmctldParameters: enable_configless,idle_on_node_suspend
+  AuthAltTypes: auth/jwt
+  AuthAltParameters: "{{ slurm_auth_alt_parameters | default(omit) }}"
+  SlurmdSpoolDir: "{{ slurm_spool_dir }}"
+  StateSaveLocation: "{{ slurm_state_save_location }}"
+  ProctrackType: proctrack/cgroup
+  # Want nodes that drop out of SLURM's configuration to be automatically
+  # returned to service when they come back.
+  ReturnToService: 2
+  PropagateResourceLimitsExcept: MEMLOCK
+  PrologFlags: contain,alloc,x11
+  LaunchParameters: ulimit_pam_adopt
+  X11Parameters: home_xauthority
+  ScronParameters: enable
+  TaskPlugin: "task/cgroup,task/affinity"
+  HealthCheckInterval: 300
+  SlurmctldTimeout: 300
+  SchedulerType: sched/backfill
+  SelectType: select/cons_tres
+  SelectTypeParameters: CR_Core_Memory
+  PriorityWeightPartition: 500
+  PriorityType: priority/multifactor
+  SlurmUser: slurm
+
+
+  AccountingStorageHost: "{{ slurm_db_host }}"
+  AccountingStorageType: "accounting_storage/slurmdbd"
+  AccountingStorageUser: "{{ slurm_dbd_mysql_username }}"
+
+  JobAcctGatherType: "jobacct_gather/cgroup"
+
+  JobContainerType: job_container/tmpfs
+
+  RebootProgram: /usr/sbin/reboot
+
+slurm_service_enabled: true
+slurm_service_started: "{{ slurm_service_enabled }}"
+
+slurm_service:
+
+slurm_partitions: []
+
+
+slurm_qos: []
+
+slurm_default_qos:
+slurm_default_partition_mem: 4096
+slurm_ssh_access: []
+slurm_adopt_selinux: true
+
+
+slurm_job_container_base_path: ""
+slurm_job_container_shared_storage: false
+
+# REST
+slurm_rest_enable: false
+
+slurm_login_only_nodes: ''
+
+# Authentication
+slurm_auth_alt_parameters: jwt_key=/etc/slurm/jwt.key
+slurm_rest_jwt_key: ''
+slurm_munge_key: ''
+
+# Database configuration
+slurm_dbd_mysql_database: slurm_acct_db
+slurm_dbd_mysql_username: slurm
+slurm_dbd_mysql_host: localhost
+slurm_dbd_port: 6819
+slurm_dbd_conf_debug_flags: ""
+slurm_db_data_dir:
+slurm_db_root_password: "{{ slurm_db_password }}"
+
+# Auto detection
+slurm_ram_multiplier: 0.95
+
+slurm_power_save: false
+
+slurm_job_submit_script:
+
+slurm_job_submit_plugins: []

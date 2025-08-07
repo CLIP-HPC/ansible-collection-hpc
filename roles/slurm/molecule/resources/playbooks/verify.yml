@@ -1,0 +1,19 @@
+---
+- name: Slurm role tests
+  hosts: all
+  become: true
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Check if munge service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - "'munge' in services"
+          - services['munge'].state == 'running'
+          - services['munge'].enabled == true
+        fail_msg: "Munge service is not running and enabled"
+
+    - name: Import tasks for slurmrestd service check
+      ansible.builtin.include_tasks: rest.yml
+      when: slurm_enabled.rest | bool | default(false)

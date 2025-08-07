@@ -1,18 +1,67 @@
 ---
-- name: Build host-specific list of required slurm packages
-  set_fact:
-    openhpc_slurm_pkglist: "{{ openhpc_slurm_pkglist | default([]) + item.value }}"
-  loop: "{{ ohpc_slurm_packages | dict2items }}"
-  when: (openhpc_enable.get(item.key, false)) or ()
+- name: install | Create SLURM User and Group
+  tags: install
+  ansible.builtin.include_tasks: users.yml
 
-- name: Install required slurm packages
-  dnf:
-    name: "{{ openhpc_slurm_pkglist | reject('eq', '') }}"
+- name: install | Build host-specific list of required slurm packages
+  tags: install
+  ansible.builtin.set_fact:
+    slurm_pkglist: "{{ slurm_pkglist | default([]) + item.value }}"
+  loop: "{{ slurm_slurm_packages | dict2items }}"
+  when: (slurm_enable.get(item.key, false)) or ()
+
+- name: install | Install required slurm packages
+  tags: install
+  ansible.builtin.dnf:
+    name: "{{ slurm_pkglist | reject('eq', '') }}"
     install_weak_deps: false # avoids getting recommended packages
-  when: openhpc_slurm_pkglist | default(false, true)
+  when: slurm_pkglist | default(false, true)
 
-- name: Install other packages
-  yum:
-    name: "{{ openhpc_packages + [openhpc_slurm_accounting_storage_client_package] }}"
+- name: install | Install other packages
+  tags: install
+  ansible.builtin.dnf:
+    name: "{{ slurm_packages }}"
 
-...
+- name: install | Gather package facts
+  tags: install
+  ansible.builtin.package_facts:
+    manager: rpm
+
+- name: install | Set slurm version fact
+  tags: install
+  ansible.builtin.set_fact:
+    slurm_installed_version: "{{ ansible_facts.packages['slurm'][0].version.split('.')[:2] | join('.') }}"
+
+- name: install | Install slurm_completion.sh
+  tags: install
+  ansible.builtin.get_url:
+    url: "https://raw.githubusercontent.com/SchedMD/slurm/slurm-{{ slurm_installed_version }}/contribs/slurm_completion_help/slurm_completion.sh"
+    dest: "/etc/bash_completion.d/"
+    mode: '0644'
+
+- name: install | Symlink slurm binaries
+  tags: install
+  ansible.builtin.file:
+    src: "/etc/bash_completion.d/slurm_completion.sh"
+    dest: "/etc/bash_completion.d/{{ item }}"
+    state: link
+  loop:
+    - sacct
+    - sacctmgr
+    - salloc
+    - sattach
+    - sbatch
+    - sbcast
+    - scancel
+    - scontrol
+    - scrontab
+    - sdiag
+    - sinfo
+    - slurmrestd
+    - sprio
+    - squeue
+    - sreport
+    - srun
+    - sshare
+    - sstat
+    - strigger

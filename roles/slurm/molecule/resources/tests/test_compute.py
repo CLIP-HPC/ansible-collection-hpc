@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function
+
 __metaclass__ = type
 
 import os
@@ -7,31 +8,26 @@ import pytest
 import testinfra.utils.ansible_runner
 
 testinfra_hosts = testinfra.utils.ansible_runner.AnsibleRunner(
-    os.environ['MOLECULE_INVENTORY_FILE']).get_hosts('cluster_batch')
+    os.environ["MOLECULE_INVENTORY_FILE"]
+).get_hosts("cluster_batch")
 
 
-@pytest.mark.parametrize('pkg', [
-    "libicu",
-    "numactl",
-    "slurm",
-    "munge",
-    "slurm-pam_slurm",
-    "slurm-libpmi",
-    "slurm-slurmd"
-])
+@pytest.mark.parametrize(
+    "pkg", ["slurm", "munge", "slurm-pam_slurm", "slurm-libpmi", "slurm-slurmd"]
+)
 def test_pkgs(host, pkg):
     package = host.package(pkg)
     assert package.is_installed
 
 
 def test_no_slurm_configs(host):
-    assert not host.file('/etc/slurm/').exists
+    assert not host.file("/etc/slurm/").exists
 
 
 def test_job_container_dir_exists(host):
-    hostname = host.check_output('hostname -s')
-    assert host.file(f'/mnt/{hostname}').exists
-    assert host.file(f'/mnt/{hostname}').is_directory
+    hostname = host.check_output("hostname -s")
+    assert host.file(f"/mnt/{hostname}").exists
+    assert host.file(f"/mnt/{hostname}").is_directory
 
 
 def test_munge_service_running(host):
@@ -46,33 +42,33 @@ def test_slurmd_service_running(host):
     assert slurmd_service.is_running
 
 
-def test_systemd_login_not_running(host):
-    systemd_login_service = host.service("systemd-logind")
-    assert systemd_login_service.is_masked
-    assert not systemd_login_service.is_running
+# def test_systemd_login_not_running(host):
+#     systemd_login_service = host.service("systemd-logind")
+#     assert systemd_login_service.is_masked
+#     assert not systemd_login_service.is_running
 
 
 def test_pam_d_adopt(host):
-    sshd_file = '/etc/pam.d/sshd'
+    sshd_file = "/etc/pam.d/sshd"
     adopt = "pam_slurm_adopt.so"
     host.run_expect([0], f'cat {sshd_file} | grep "{adopt}"')
 
 
 def test_pam_d_not_systemd(host):
-    system_auth_file = '/etc/pam.d/system-auth'
-    password_auth_file = '/etc/pam.d/password-auth'
-    systemd = "pam_systemd"
-    host.run_expect([1], f'cat {system_auth_file} | grep "{systemd}"')
-    host.run_expect([1], f'cat {password_auth_file} | grep "{systemd}"')
+    system_auth_file = "/etc/pam.d/system-auth"
+    password_auth_file = "/etc/pam.d/password-auth"
+    systemd = "^-session\\s*(optional|required)\\s*pam_systemd\.so"
+    host.run_expect([1], f'cat {system_auth_file} | egrep "{systemd}"')
+    host.run_expect([1], f'cat {password_auth_file} | egrep "{systemd}"')
 
 
 def test_pam_ssh_access(host):
-    access_file = '/etc/security/access.conf'
+    access_file = "/etc/security/access.conf"
     admin_group = "admins"
     regex = f"^\\+:{admin_group}:ALL$"
     command = f'cat {access_file} | egrep "{regex}"'
     host.run_expect([0], command)
 
 
-def test_pam_slurm_exists(host):
-    assert host.file('/etc/pam.d/slurm').exists
+# def test_pam_slurm_exists(host):
+#     assert host.file('/etc/pam.d/slurm').exists

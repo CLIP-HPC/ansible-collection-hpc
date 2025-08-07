@@ -1,27 +1,40 @@
 # Playbook to validate slurm setup
 ---
-- name: Check openhpc_slurm_control_host and slurm_cluster_name
-  assert:
+- name: validate | Check required variables
+  tags:
+    - validate
+    - install
+    - variables
+  ansible.builtin.assert:
     that:
       - slurm_cluster_name is defined
       - slurm_cluster_name != ''
+      - slurm_munge_key is defined
+      - slurm_munge_key != ''
+      - not (slurm_rest_enable | bool) or (slurm_rest_jwt_key is defined and slurm_rest_jwt_key and slurm_rest_jwt_key != '')
     fail_msg: slurm role variables not correctly defined, see detail above
   delegate_to: localhost
   run_once: true
 
-- name: Check no host appears in more than one nodegroup
-  assert:
+- name: validate | Check no host appears in more than one nodegroup
+  tags:
+    - validate
+    - install
+  ansible.builtin.assert:
     that: "{{ _slurm_check_hosts.values() | select('greaterthan', 1) | length == 0 }}"
     fail_msg: |
-      Some hosts appear more than once in inventory groups {{ _openhpc_node_inventory_groups | join(', ') }}:
-      {{ _openhpc_check_hosts | dict2items | rejectattr('value', 'equalto', 1) | items2dict | to_nice_yaml }}
+      Some hosts appear more than once in inventory groups {{ _slurm_node_inventory_groups | join(', ') }}:
+      {{ _slurm_check_hosts | dict2items | rejectattr('value', 'equalto', 1) | items2dict | to_nice_yaml }}
   vars:
-    _openhpc_node_inventory_groups: "{{ openhpc_nodegroups | map(attribute='name') | map('regex_replace', '^', openhpc_cluster_name ~ '_') }}"
-    _openhpc_check_hosts: "{{ groups | dict2items | list | selectattr('key', 'in', _openhpc_node_inventory_groups) | map(attribute='value') | flatten | community.general.counter }}"
+    _slurm_node_inventory_groups: "{{ slurm_nodegroups | map(attribute='name') | map('regex_replace', '^', slurm_cluster_name ~ '_') }}"
+    _slurm_check_hosts: "{{ groups | dict2items | list | selectattr('key', 'in', _slurm_node_inventory_groups) | map(attribute='value') | flatten | community.general.counter }}" # noqa: yaml[line-length]
   delegate_to: localhost
   run_once: true
 
-- name: Validate openhpc_nodegroups
+- name: validate | Validate slurm_nodegroups
+  tags:
+    - validate
+    - install
   ansible.utils.validate:
     criteria: "{{ lookup('file', 'nodegroup.schema') }}"
     engine: 'ansible.utils.jsonschema'
@@ -29,5 +42,5 @@
   vars:
     ansible_jsonschema_draft: '2020-12'
   delegate_to: localhost
-  loop: "{{ openhpc_nodegroups }}"
+  loop: "{{ slurm_nodegroups }}"
   run_once: true

@@ -1,11 +1,11 @@
 ---
-- name: Create slurm group
+- name: users | Create slurm group
   ansible.builtin.group:
     name: slurm
     gid: 202
     system: true
 
-- name: Create slurm user
+- name: users | Create slurm user
   ansible.builtin.user:
     name: slurm
     comment: SLURM resource manager

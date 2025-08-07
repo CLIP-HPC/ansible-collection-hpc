@@ -1,9 +1,0 @@
----
-- name: Converge
-  hosts: all
-  tasks:
-    - name: Include goss role
-      ansible.builtin.include_role:
-        name: goss
-      vars:
-        goss_run_as_service: true

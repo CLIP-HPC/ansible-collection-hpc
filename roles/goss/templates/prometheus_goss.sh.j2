@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-PROM_TMP_FILE={{ goss_node_exporter_textfile_dir }}/goss.prom.$$
-PROM_OUT_FILE={{ goss_node_exporter_textfile_dir }}/goss.prom
-
-{{ goss_install_dir }}/goss-linux-amd64 --gossfile {{ goss_install_dir }}/{{ goss_test_file }} {% if goss_template_vars | default(False) %} --vars {{ goss_install_dir }}/{{ goss_template_vars_file }}{% endif %} validate --format prometheus --no-color > $PROM_TMP_FILE
-
-mv $PROM_TMP_FILE $PROM_OUT_FILE

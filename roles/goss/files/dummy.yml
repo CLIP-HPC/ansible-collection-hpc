@@ -1,9 +1,0 @@
-# dummy file
----
-user:
-  root:
-    exists: true
-    uid: 0
-    gid: 0
-    groups:
-      - root

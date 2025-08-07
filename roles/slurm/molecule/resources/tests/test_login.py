@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function
+
 __metaclass__ = type
 
 import os
@@ -7,25 +8,22 @@ import pytest
 import testinfra.utils.ansible_runner
 
 testinfra_hosts = testinfra.utils.ansible_runner.AnsibleRunner(
-    os.environ['MOLECULE_INVENTORY_FILE']).get_hosts('cluster_login')
+    os.environ["MOLECULE_INVENTORY_FILE"]
+).get_hosts("cluster_login")
 
 
-@pytest.mark.parametrize('pkg', [
-    "slurm",
-    "munge",
-    "slurm-slurmd"
-])
+@pytest.mark.parametrize("pkg", ["slurm", "munge", "slurm-slurmd"])
 def test_pkgs(host, pkg):
     package = host.package(pkg)
     assert package.is_installed
 
 
 def test_no_slurm_configs(host):
-    assert not host.file('/etc/slurm/').exists
+    assert not host.file("/etc/slurm/").exists
 
 
 def test_bash_completion_files(host):
-    assert host.file('/etc/bash_completion.d/slurm_completion.sh').exists
+    assert host.file("/etc/bash_completion.d/slurm_completion.sh").exists
 
 
 def test_munge_service_running(host):
@@ -41,9 +39,11 @@ def test_slurmd_service_running(host):
 
 
 def test_sinfo(host):
-    output = ("PARTITION AVAIL  TIMELIMIT  NODES  STATE NODELIST\n"
-              "compute1*    up   infinite      1   idle cluster-compute1-0\n"
-              "compute2     up   infinite      2   idle cluster-compute1-0,cluster-compute2-0")  # noqa E501
+    output = (
+        f"PARTITION AVAIL  TIMELIMIT  NODES  STATE NODELIST\n"
+        f"compute1*    up   infinite      1   idle cluster-compute1-0\n"
+        f"compute2     up   infinite      2   idle cluster-compute1-0,cluster-compute2-0"
+    )  # noqa E501
     sinfo_output = host.check_output("bash -lc 'sinfo'")
     assert sinfo_output == output
 
@@ -78,7 +78,7 @@ def test_sbatch(host):
     # check comment
     comment_cmd = f"bash -lc 'sacct -P -j {job_id} -o comment'"
     comment = host.check_output(comment_cmd)
-    assert 'test' in comment
+    assert "test" in comment
 
     # check job envs
     job_env_cmd = f"bash -lc 'sacct -j {job_id} --env-vars | grep TEST_ENV'"
@@ -100,12 +100,13 @@ hostname
 
 def test_sacct(host):
     sacct_output = host.check_output("bash -lc 'sacct'")
-    assert len(sacct_output.split('\n')) >= 3
+    assert len(sacct_output.split("\n")) >= 3
 
 
 def test_qos(host):
-    output = ("normal|0||||\n"
-              "short|4|cpu=12,mem=10G|cpu=5,mem=5G|cpu=5,mem=5G|08:00:00")
+    output = (
+        "normal|0||||\n" "short|4|cpu=12,mem=10G|cpu=5,mem=5G|cpu=5,mem=5G|08:00:00"
+    )
     cmd = "bash -lc 'sacctmgr -nP show qos format=Name,Priority,GrpTRES,MaxTRES,MaxTRESPerUser,MaxWALL'"  # noqa: E501
     qos_output = host.check_output(cmd)
     assert qos_output == output

@@ -1,0 +1,40 @@
+---
+- name: qos | Add QOS
+  tags:
+    - qos
+  clip.hpc.slurm:
+    state: present
+    entity: qos
+    name: "{{ item.name }}"
+    priority: "{{ item.priority | default(omit) }}"
+    maxtres: "{{ item.maxtres | default(omit) }}"
+    grptres: "{{ item.grptres | default(omit) }}"
+    maxwall: "{{ item.maxwall | default(omit) }}"
+    maxtresperuser: "{{ item.maxtresperuser | default(omit) }}"
+  loop: "{{ slurm_qos }}"
+
+- name: qos | Add custom QOSes to cluster
+  tags:
+    - qos
+  clip.hpc.slurm:
+    state: present
+    entity: cluster
+    name: "{{ slurm_cluster_name }}"
+    qoslevel: "{{ slurm_qos | map(attribute='name') | join(',') }}"
+    defaultqos: "{{ slurm_default_qos | default((slurm_qos | first).name) }}"
+  when: slurm_qos | length > 0
+  changed_when: false # required because not idempotent
+
+
+- name: qos | Add custom QOSes to root user
+  tags:
+    - qos
+  clip.hpc.slurm:
+    state: present
+    entity: user
+    name: root
+    account: root
+    qoslevel: "{{ slurm_qos | map(attribute='name') | join(',') }}"
+    defaultqos: "{{ slurm_default_qos | default((slurm_qos | first).name) }}"
+  when: slurm_qos | length > 0
+  changed_when: false # required because not idempotentc

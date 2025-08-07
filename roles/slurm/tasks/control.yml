@@ -1,18 +1,81 @@
 ---
-- name: Install SLURM controller packages
-  ansible.builtin.yum:
-    name:
-      - slurm-devel
-      - slurm-perlapi
-      - slurm-slurmctld
-      - slurm-example-configs
-      - "{{ (ansible_distribution_major_version == '7') | ternary('mailx', 's-nail') }}"
-    state: installed
 
-- name: Select the SLURM service to control
-  ansible.builtin.set_fact:
-    role_slurm_service: slurmctld
+- name: control | Create State Save directory
+  tags:
+    - control
+    - reconfigure
+  ansible.builtin.file:
+    path: "{{ slurm_state_save_location }}"
+    state: directory
+    mode: "0755"
+    owner: slurm
+    group: slurm
 
-- name: Configure powersaving
+
+- name: control | Template job_container.conf
+  tags:
+    - control
+    - reconfigure
+  ansible.builtin.template:
+    src: job_container.conf.j2
+    dest: /etc/slurm/job_container.conf
+    mode: "0644" # perms/ownership based off src from ohpc package
+    owner: root
+    group: root
+
+- name: control | Template slurm.conf
+  tags:
+    - control
+    - reconfigure
+  ansible.builtin.template:
+    src: slurm.conf.j2
+    dest: /etc/slurm/slurm.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Restart slurmctld service
+    - Reconfigure slurmctld
+  register: slurm_conf
+  # NB uses restart rather than reload as number of nodes might have changed
+
+- name: control | Create gres.conf
+  tags:
+    - control
+    - reconfigure
+  ansible.builtin.template:
+    src: "gres.conf.j2"
+    dest: /etc/slurm/gres.conf
+    mode: "0600"
+    owner: slurm
+    group: slurm
+  notify:
+    - Restart slurmctld service
+    - Reconfigure slurmctld
+  register: slurm_gres_conf
+  # NB uses restart rather than reload as this is needed in some cases
+
+- name: control | Template cgroup.conf
+  tags:
+    - control
+    - reconfigure
+  ansible.builtin.template:
+    src: cgroup.conf.j2
+    dest: /etc/slurm/cgroup.conf
+    mode: "0644" # perms/ownership based off src from ohpc package
+    owner: root
+    group: root
+
+- name: control | Configure powersaving
   ansible.builtin.import_tasks: powersave.yml
-  when: role_slurm_power_save | bool
+  when: slurm_power_save | default(false) | bool
+
+
+- name: control | Ensure slurmctld state
+  tags:
+    - control
+    - reconfigure
+  ansible.builtin.service:
+    name: slurmctld
+    enabled: "{{ slurm_service_enabled | bool }}"
+    state: "{{ 'started' if slurm_service_started | bool else 'stopped' }}"

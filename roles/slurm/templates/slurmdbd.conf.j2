@@ -1,88 +1,87 @@
-# {{ ansible_managed }}
+# {{ ansible_managed | comment}}
 # See the slurmdbd.conf man page for more information.
 
 
 # Purging & Archival
-{% if role_slurm_dbd_archive_dir is defined %}
-ArchiveDir={{ role_slurm_dbd_archive_dir }}
+{% if slurm_dbd_archive_dir is defined %}
+ArchiveDir={{ slurm_dbd_archive_dir }}
 {% endif %}
-{% if role_slurm_dbd_archive_script is defined %}
-ArchiveScript={{ role_slurm_dbd_archive_script }}
+{% if slurm_dbd_archive_script is defined %}
+ArchiveScript={{ slurm_dbd_archive_script }}
 {% endif %}
-{% if role_slurm_dbd_archive_events is defined %}
-ArchiveEvents={{ role_slurm_dbd_archive_events }}
+{% if slurm_dbd_archive_events is defined %}
+ArchiveEvents={{ slurm_dbd_archive_events }}
 {% endif %}
-{% if role_slurm_dbd_archive_jobs is defined %}
-ArchiveJobs={{ role_slurm_dbd_archive_jobs }}
+{% if slurm_dbd_archive_jobs is defined %}
+ArchiveJobs={{ slurm_dbd_archive_jobs }}
 {% endif %}
-{% if role_slurm_dbd_archive_resvs is defined %}
-ArchiveResvs={{ role_slurm_dbd_archive_resvs }}
+{% if slurm_dbd_archive_resvs is defined %}
+ArchiveResvs={{ slurm_dbd_archive_resvs }}
 {% endif %}
-{% if role_slurm_dbd_archive_steps is defined %}
-ArchiveSteps={{ role_slurm_dbd_archive_steps }}
+{% if slurm_dbd_archive_steps is defined %}
+ArchiveSteps={{ slurm_dbd_archive_steps }}
 {% endif %}
-{% if role_slurm_dbd_archive_suspend is defined %}
-ArchiveSuspend={{ role_slurm_dbd_archive_suspend }}
+{% if slurm_dbd_archive_suspend is defined %}
+ArchiveSuspend={{ slurm_dbd_archive_suspend }}
 {% endif %}
-{% if role_slurm_dbd_archive_txn is defined %}
-ArchiveTXN={{ role_slurm_dbd_archive_txn }}
+{% if slurm_dbd_archive_txn is defined %}
+ArchiveTXN={{ slurm_dbd_archive_txn }}
 {% endif %}
-{% if role_slurm_dbd_archive_usage is defined %}
-ArchiveUsage={{ role_slurm_dbd_archive_usage }}
+{% if slurm_dbd_archive_usage is defined %}
+ArchiveUsage={{ slurm_dbd_archive_usage }}
 {% endif %}
 
-{% if role_slurm_dbd_purge_events is defined %}
-PurgeEventAfter={{ role_slurm_dbd_purge_events }}
+{% if slurm_dbd_purge_events is defined %}
+PurgeEventAfter={{ slurm_dbd_purge_events }}
 {% endif %}
-{% if role_slurm_dbd_purge_jobs is defined %}
-PurgeJobAfter={{ role_slurm_dbd_purge_jobs }}
+{% if slurm_dbd_purge_jobs is defined %}
+PurgeJobAfter={{ slurm_dbd_purge_jobs }}
 {% endif %}
-{% if role_slurm_dbd_purge_resvs is defined %}
-PurgeResvAfter={{ role_slurm_dbd_purge_resvs }}
+{% if slurm_dbd_purge_resvs is defined %}
+PurgeResvAfter={{ slurm_dbd_purge_resvs }}
 {% endif %}
-{% if role_slurm_dbd_purge_steps is defined %}
-PurgeStepAfter={{ role_slurm_dbd_purge_steps }}
+{% if slurm_dbd_purge_steps is defined %}
+PurgeStepAfter={{ slurm_dbd_purge_steps }}
 {% endif %}
-{% if role_slurm_dbd_purge_suspend is defined %}
-PurgeSuspendAfter={{ role_slurm_dbd_purge_suspend }}
+{% if slurm_dbd_purge_suspend is defined %}
+PurgeSuspendAfter={{ slurm_dbd_purge_suspend }}
 {% endif %}
-{% if role_slurm_dbd_purge_txn is defined %}
-PurgeTXNAfter={{ role_slurm_dbd_purge_txn }}
+{% if slurm_dbd_purge_txn is defined %}
+PurgeTXNAfter={{ slurm_dbd_purge_txn }}
 {% endif %}
-{% if role_slurm_dbd_purge_usage is defined %}
-PurgeUsageAfter={{ role_slurm_dbd_purge_usage }}
+{% if slurm_dbd_purge_usage is defined %}
+PurgeUsageAfter={{ slurm_dbd_purge_usage }}
 {% endif %}
 
 
 # Authentication info
 AuthType=auth/munge
 #AuthInfo=/var/run/munge/munge.socket.2
-{% if role_slurm_enable_rest %}
+{% if slurm_rest_enable %}
 AuthAltTypes=auth/jwt
-AuthAltParameters={{ role_slurm_auth_alt_parameters }}
+AuthAltParameters={{ slurm_auth_alt_parameters }}
 {% endif %}
 
 # SlurmDBD info
-DbdHost={{ role_slurm_db_host }}
-#DbdPort=7031
+DbdHost={{ hostvars[slurm_db_host]['ansible_hostname'] }}
+DbdPort={{ slurm_dbd_port }}
 SlurmUser=slurm
 #MessageTimeout=300
 DebugLevel=info
-{% if role_slurm_dbd_conf_debug_flags %}
-DebugFlags={{ role_slurm_dbd_conf_debug_flags }}
+{% if slurm_dbd_conf_debug_flags %}
+DebugFlags={{ slurm_dbd_conf_debug_flags }}
 {% endif %}
 #DefaultQOS=normal,standby
-PidFile=/var/run/slurmdbd.pid
+PidFile=/var/run/slurmdbd/slurmdbd.pid
 #PluginDir=/usr/lib/slurm
 #PrivateData=accounts,users,usage,jobs
 #TrackWCKey=yes
-LogFile=/var/log/slurm/slurmdbd.log
+#LogFile=/var/log/slurm/slurmdbd.log
 
 
 # Database info
 StorageType=accounting_storage/mysql
-StorageHost=localhost
-StoragePort=1234
-StoragePass={{ role_slurm_db_password | mandatory('You must set role_slurm_db_password') }}
-StorageUser=slurm
-StorageLoc=slurm_acct_db
+StorageHost={{ slurm_dbd_mysql_host }}
+StoragePass={{ slurm_db_password | mandatory('You must set slurm_db_password') }}
+StorageUser={{ slurm_dbd_mysql_username }}
+StorageLoc={{ slurm_dbd_mysql_database }}

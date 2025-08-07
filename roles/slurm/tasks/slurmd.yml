@@ -1,0 +1,20 @@
+---
+
+- name: slurmd | Copy sysconfig for configless slurm
+  tags:
+    - slurmd
+  ansible.builtin.template:
+    mode: "0644"
+    src: sysconfig.j2
+    dest: /etc/sysconfig/slurmd
+  notify:
+    - Restart slurmd service
+
+
+- name: slurmd | Ensure slurmd state
+  tags:
+    - slurmd
+  ansible.builtin.service:
+    name: slurmd
+    enabled: "{{ slurm_service_enabled | bool }}"
+    state: "{{ 'started' if slurm_service_started | bool else 'stopped' }}"

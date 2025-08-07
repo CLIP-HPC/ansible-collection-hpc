@@ -1,0 +1,23 @@
+---
+slurm_slurm_packages:
+  control:
+    - "slurm-slurmctld"
+    - "slurm-example-configs"
+    - "s-nail"
+  batch:
+    - "slurm"
+    - "slurm-pam_slurm"
+    - "slurm-libpmi"
+    - "selinux-policy-devel"
+  runtime:
+    - "slurm"
+    - "slurm-slurmd"
+    - "munge"
+  database:
+    - "slurm-slurmdbd"
+    - "mariadb-server"
+    - "python3-PyMySQL"
+  rest:
+    - "slurm-slurmrestd"
+slurm_packages:
+  - slurm-libpmi

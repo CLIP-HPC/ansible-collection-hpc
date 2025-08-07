@@ -45,6 +45,8 @@ tags: ['infrastructrure', 'linux', 'hpc', 'slurm']
 # range specifiers can be set and are separated by ','
 dependencies:
   ansible.posix: ">=1.6.2"
+  community.general: ">=11.1.0"
+  ansible.utils: ">=6.0.0"
 
 # The URL of the originating SCM repository
 repository: https://github.com/CLIP-HPC/ansible-collection-hpc

@@ -1,0 +1,8 @@
+---
+- name: Check if slurmrestd service is running and enabled
+  ansible.builtin.assert:
+    that:
+      - "'slurmrestd' in services"
+      - services['slurmrestd'].state == 'running'
+      - services['slurmrestd'].enabled == true
+    fail_msg: "Slurmrestd service is not running and enabled"

@@ -1,0 +1,3 @@
+---
+# defaults file for clip.hpc.rocev2
+rocev2_mlx_qos_service_state: started

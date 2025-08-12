@@ -1,0 +1,23 @@
+---
+# argument spec file for clip.hpc.doca
+
+argument_specs:
+  main:
+    short_description: Role description.
+    options:
+      doca_version:
+        type: str
+        description: The version of DOCA version to use when configuring the DOCA repo
+        default: "3.0.0"
+      doca_profile:
+        type: str
+        description: The profile to use when configuring the DOCA repo
+        default: "doca-ofed"
+      doca_repo_url:
+        type: str
+        description: The URL of the DOCA repo
+        default: "https://linux.mellanox.com/public/repo/doca/{{ doca_version }}/rhel{{ ansible_distribution_version }}/{{ ansible_architecture }}/"
+      doca_use_upstream_repo:
+        type: bool
+        description: Whether to use the upstream DOCA repo
+        default: true

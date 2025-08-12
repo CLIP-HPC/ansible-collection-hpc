@@ -1,0 +1,12 @@
+---
+# argument spec file for clip.hpc.multirail
+
+argument_specs:
+  main:
+    short_description: Main entrypoint for clip.hpc.multirail role
+    options:
+      multirail_interfaces:
+        type: list
+        description: A list of network interfaces to configure for multirail.
+        elements: "str"
+        required: true

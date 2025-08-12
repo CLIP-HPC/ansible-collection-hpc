@@ -1,0 +1,69 @@
+---
+# tasks file for clip.hpc.multirail
+- name: Validate variables
+  ansible.builtin.assert:
+    that:
+      - multirail_interfaces != None
+      - multirail_interfaces | length == 2
+      - multirail_interfaces | unique | length == 2
+    fail_msg: "multirail_interfaces must contain exactly two unique interface names."
+
+- name: ARP Settings for Multi Homing
+  become: true
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: true
+    sysctl_set: true
+    sysctl_file: /etc/sysctl.d/99-beegfs.conf
+  loop:
+    - {key: 'net.ipv4.conf.all.arp_ignore', value: '{{ multirail_net_arp_ignore }}'}
+    - {key: 'net.ipv4.conf.all.arp_announce', value: '{{ multirail_net_arp_announce }}'}
+    - {key: 'net.ipv4.conf.all.rp_filter', value: '{{ multirail_net_rp_filter }}'}
+    - {key: 'net.ipv4.conf.all.arp_filter', value: '{{ multirail_net_arp_filter }}'}
+    - {key: 'net.ipv4.conf.default.arp_ignore', value: '{{ multirail_net_arp_ignore }}'}
+    - {key: 'net.ipv4.conf.default.arp_announce', value: '{{ multirail_net_arp_announce }}'}
+    - {key: 'net.ipv4.conf.default.rp_filter', value: '{{ multirail_net_rp_filter }}'}
+    - {key: 'net.ipv4.conf.default.arp_filter', value: '{{ multirail_net_arp_filter }}'}
+
+
+- name: Add custom routing tables to rt_tables
+  become: true
+  ansible.builtin.blockinfile:
+    path: "{{ '/usr/share/iproute2/rt_tables' if ansible_facts['distribution_major_version'] == '10' else '/etc/iproute2/rt_tables' }}"
+    block: |
+      201 {{ multirail_interfaces | first }}
+      202 {{ multirail_interfaces | last }}
+    marker: "# {mark} ANSIBLE MANAGED ROUTING TABLES"
+
+- name: Modify NetworkManager connection for {{ multirail_interfaces | first }}
+  become: true
+  vars:
+    interface_info: "{{ hostvars[inventory_hostname]['ansible_' + multirail_interfaces | first] }}"
+  community.general.nmcli:
+    conn_name: "{{ __nmcli_connection_prefix }} {{ multirail_interfaces | first }}"
+    state: present
+    routes4_extended:
+      - ip: "0.0.0.0/0"
+        next_hop: "{{ (interface_info['ipv4']['network'] + '/' + interface_info['ipv4']['prefix']) | ansible.utils.ipaddr('next_usable') }}"
+        table: "201"
+    routing_rules4:
+      - "priority 201 from {{ interface_info['ipv4']['address'] }} table 201"
+  notify: Reload first interface
+
+- name: Modify NetworkManager connection for {{ multirail_interfaces | last }}
+  become: true
+  vars:
+    interface_info: "{{ hostvars[inventory_hostname]['ansible_' + multirail_interfaces | last] }}"
+  community.general.nmcli:
+    conn_name: "{{ __nmcli_connection_prefix }} {{ multirail_interfaces | last }}"
+    state: present
+    routes4_extended:
+      - ip: "0.0.0.0/0"
+        next_hop: "{{ (interface_info['ipv4']['network'] + '/' + interface_info['ipv4']['prefix']) | ansible.utils.ipaddr('next_usable') }}"
+        table: "202"
+    routing_rules4:
+      - "priority 202 from {{ interface_info['ipv4']['address'] }} table 202"
+    never_default4: true
+  notify: Reload second interface

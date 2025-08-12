@@ -1,0 +1,16 @@
+---
+# handlers file for clip.hpc.multirail
+- name: Restart NetworkManager
+  ansible.builtin.service:
+    name: NetworkManager
+    state: restarted
+
+- name: Reload first interface
+  ansible.builtin.command: "/usr/bin/nmcli dev reapply {{ multirail_interfaces | first }}"
+  become: true
+  changed_when: true
+
+- name: Reload second interface
+  ansible.builtin.command: "/usr/bin/nmcli dev reapply {{ multirail_interfaces | last }}"
+  become: true
+  changed_when: true

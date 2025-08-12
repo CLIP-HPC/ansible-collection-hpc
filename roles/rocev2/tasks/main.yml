@@ -1,0 +1,6 @@
+---
+- name: Import install.yml tasks
+  ansible.builtin.import_tasks: install.yml
+
+- name: Import dcbx.yml tasks
+  ansible.builtin.import_tasks: dcbx.yml

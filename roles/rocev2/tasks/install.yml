@@ -1,0 +1,30 @@
+---
+- name: Enable RoCE ECN packages
+  become: true
+  ansible.posix.sysctl:
+    name: "net.ipv4.tcp_ecn"
+    value: "1"
+    state: present
+    reload: true
+    sysctl_set: true
+    sysctl_file: /etc/sysctl.d/99-roce.conf
+
+- name: install | Copy script to the target machine
+  ansible.builtin.copy:
+    src: mlnx-roce-qos.sh
+    dest: /usr/local/bin/mlnx-roce-qos.sh
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  notify: Restart MLNX RoCE QoS service
+
+- name: install | Create systemd service unit file
+  ansible.builtin.copy:
+    src: mlnx-roce-qos.service
+    dest: /etc/systemd/system/mlnx-roce-qos.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Restart MLNX RoCE QoS service

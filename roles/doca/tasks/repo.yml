@@ -1,0 +1,14 @@
+---
+- name: repos | Imort DOCA GPG key
+  ansible.builtin.rpm_key:
+    key: "https://linux.mellanox.com/public/repo/doca/GPG-KEY-Mellanox.pub"
+    state: present
+
+- name: repos | Install DOCA repo
+  ansible.builtin.yum_repository:
+    name: doca
+    file: doca
+    description: DOCA Online Repo
+    baseurl: "{{ doca_repo_url }}"
+    enabled: true
+    gpgcheck: true

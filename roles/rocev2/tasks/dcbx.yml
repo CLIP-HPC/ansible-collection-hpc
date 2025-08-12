@@ -1,0 +1,72 @@
+---
+- name: Start mst
+  become: true
+  ansible.builtin.command: "/usr/bin/mst start"
+  changed_when: false
+  failed_when: false
+
+- name: Retrieve MLX device
+  become: true
+  ansible.builtin.command: "/usr/bin/mst status"
+  register: mst_status
+  changed_when: false
+
+- name: Store MLX devies
+  ansible.builtin.set_fact:
+    mlx_devices: '{{ mst_status.stdout | regex_findall("^\s*(/dev/mst/\S+)", multiline=True) }}'
+
+- name: Retrieve MLX firmware settings
+  become: true
+  ansible.builtin.command: "/usr/bin/mlxconfig -d {{ item }} q"
+  loop: "{{ mlx_devices }}"
+  register: mlx_current_settings
+  changed_when: false
+
+
+- name: Store Current DCBX settings
+  ansible.builtin.set_fact:
+    lldp_nb_dcbx_ports: "{{ lldp_nb_dcbx_ports | default({}) | combine({item.item: item.stdout | regex_findall('(LLDP_NB_DCBX_P[1-2])\\s+(\\w*)', '\\1', '\\2') | selectattr('1', 'ne', 'True') | map(attribute='0') | list  }) }}"
+    lldp_nb_rx_mode_ports: "{{ lldp_nb_rx_mode_ports | default({}) | combine({item.item: item.stdout | regex_findall('(LLDP_NB_RX_MODE_P[1-2])\\s+(\\w*)', '\\1', '\\2') | selectattr('1', 'ne', 'ALL') | map(attribute='0') | list  }) }}"
+    lldp_nb_tx_mode_ports: "{{ lldp_nb_tx_mode_ports | default({}) | combine({item.item: item.stdout | regex_findall('(LLDP_NB_TX_MODE_P[1-2])\\s+(\\w*)', '\\1', '\\2') | selectattr('1', 'ne', 'ALL') | map(attribute='0') | list  }) }}"
+  loop: "{{ mlx_current_settings.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Enable LLDP DCBX on all ports
+  become: true
+  ansible.builtin.command: >
+    /usr/bin/mlxconfig -d {{ pair.0.key }} -y s
+    {{ pair.1 }}=1
+  loop: "{{ lldp_nb_dcbx_ports | dict2items | subelements('value', skip_missing=True) }}"
+  loop_control:
+    loop_var: pair
+    label: "{{ pair.0.key }} / {{ pair.1 }} "
+  changed_when: true
+  notify: Reboot server
+
+- name: Enable LLDP DCBX RX on all ports
+  become: true
+  ansible.builtin.command: >
+    /usr/bin/mlxconfig -d {{ pair.0.key }} -y s
+    {{ pair.1 }}=2
+  loop: "{{ lldp_nb_rx_mode_ports | dict2items | subelements('value', skip_missing=True) }}"
+  loop_control:
+    loop_var: pair
+    label: "{{ pair.0.key }} / {{ pair.1 }} "
+  changed_when: true
+  notify: Reboot server
+
+- name: Enable LLDP DCBX TX on all ports
+  become: true
+  ansible.builtin.command: >
+    /usr/bin/mlxconfig -d {{ pair.0.key }} -y s
+    {{ pair.1 }}=2
+  loop: "{{ lldp_nb_tx_mode_ports | dict2items | subelements('value', skip_missing=True) }}"
+  loop_control:
+    loop_var: pair
+    label: "{{ pair.0.key }} / {{ pair.1 }} "
+  changed_when: true
+  notify: Reboot server
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

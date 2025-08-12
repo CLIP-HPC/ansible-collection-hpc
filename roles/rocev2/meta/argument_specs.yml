@@ -1,0 +1,11 @@
+---
+# argument spec file for clip.hpc.rocev2
+
+argument_specs:
+  main:
+    short_description: Main entrypoint for clip.hpc.rocev2 role
+    options:
+      rocev2_mlx_qos_service_state:
+        type: str
+        description: The state of the RoCEv2 MLX QoS service
+        default: "started"

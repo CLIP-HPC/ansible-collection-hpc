@@ -1,0 +1,5 @@
+---
+# tasks file for clip.hpc.doca
+
+- name: Import install.yml tasks
+  ansible.builtin.import_tasks: install.yml

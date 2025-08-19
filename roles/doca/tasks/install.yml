@@ -30,6 +30,18 @@
 - name: Install DOCA packages
   ansible.builtin.dnf:
     name: "{{ doca_profile }}"
+  register: _doca_install
+
+- name: Reboot
+  ansible.builtin.reboot:
+    post_reboot_delay: 30
+  when: _doca_install.changed
+
+- name: Wait for hosts to be reachable
+  wait_for_connection:
+    sleep: 15
+  when: _doca_install.changed
+
 
 # - name: Cleanup DOCA build directories
 #   ansible.builtin.file:

@@ -1,36 +1,58 @@
 ---
-#- import_tasks: install-kernel-devel.yml
+- name: Import install-kernel-devel.yml
+  ansible.builtin.include_tasks: install-kernel-devel.yml
 
 - include_tasks: repo.yml
   when: doca_use_upstream_repo | bool
 
-# - name: Install doca-extra package
-#   ansible.builtin.dnf:
-#     name: doca-extra
+- name: Install doca-extra package
+  ansible.builtin.dnf:
+    name: doca-extra
 
-# - name: Build DOCA kernel modules
-#   ansible.builtin.shell:
-#     cmd: /opt/mellanox/doca/tools/doca-kernel-support
-#   register: _doca_kernel_build
+- name: Check if DNF doca-kernel repo already exists
+  ansible.builtin.command: /usr/bin/dnf repolist doca-kernel-"{{ ansible_kernel }}"
+  register: _doca_kernel_repo_check
+  failed_when: false
+  changed_when: false
 
+- name: Install DOCA Kernel repo
+  when: "'doca-kernel-' not in _doca_kernel_repo_check.stdout"
+  block:
+    - name: Build DOCA kernel modules
+      ansible.builtin.shell:
+        cmd: /opt/mellanox/doca/tools/doca-kernel-support
+      register: _doca_kernel_build
 
-# - name: Find generated doca-kernel-repo
-#   ansible.builtin.shell: 'find /tmp/DOCA.* -name doca-kernel-repo-*'
-#   register: _doca_kernel_repo # e.g. /tmp/DOCA.WVMchs2QWo/doca-kernel-repo-24.10.1.1.4.0-1.kver.5.14.0.427.31.1.el9.4.x86.64.x86_64.rpm
-#   changed_when: false
+    - name: Find generated doca-kernel-repo
+      ansible.builtin.shell: 'find /tmp/DOCA.* -name doca-kernel-repo-*'
+      register: _doca_kernel_repo # e.g. /tmp/DOCA.WVMchs2QWo/doca-kernel-repo-24.10.1.1.4.0-1.kver.5.14.0.427.31.1.el9.4.x86.64.x86_64.rpm
+      changed_when: false
 
-# - name: Create dnf cache
-#   ansible.builtin.command: dnf makecache
+    - name: Create dnf cache
+      ansible.builtin.command: dnf makecache
 
-# - name: Install DOCA repository package
-#   ansible.builtin.dnf:
-#     name: "{{ _doca_kernel_repo.stdout }}"
-#     disable_gpg_check: true
+    - name: Install DOCA repository package
+      ansible.builtin.dnf:
+        name: "{{ _doca_kernel_repo.stdout }}"
+        disable_gpg_check: true
 
 - name: Install DOCA packages
   ansible.builtin.dnf:
     name: "{{ doca_profile }}"
   register: _doca_install
+
+- name: Cleanup DOCA build directories
+  ansible.builtin.file:
+    state: absent
+    path: "{{ (_doca_kernel_repo.stdout | split('/'))[:3] | join('/') }}" # leading / means 1st element of split list is ''
+  when: "not (_doca_kernel_build.skipped | default(false) | bool)"
+
+- name: Update initramfs
+  ansible.builtin.command:
+    cmd: dracut -f
+  register: _doca_dracut
+  failed_when: _doca_dracut.stderr != '' # appears rc is always 0
+  when: "not (_doca_kernel_build.skipped | default(false) | bool)"
 
 - name: Reboot
   ansible.builtin.reboot:
@@ -42,17 +64,6 @@
     sleep: 15
   when: _doca_install.changed
 
-
-# - name: Cleanup DOCA build directories
-#   ansible.builtin.file:
-#     state: absent
-#     path: "{{ (_doca_kernel_repo.stdout | split('/'))[:3] | join('/') }}" # leading / means 1st element of split list is ''
-
-# - name: Update initramfs
-#   ansible.builtin.command:
-#     cmd: dracut -f
-#   register: _doca_dracut
-#   failed_when: _doca_dracut.stderr != '' # appears rc is always 0
 
 # - name: Load the new driver
 #   ansible.builtin.command: /etc/init.d/openibd restart

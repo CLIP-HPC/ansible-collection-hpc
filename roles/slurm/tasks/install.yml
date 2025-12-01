@@ -8,14 +8,14 @@
   ansible.builtin.set_fact:
     slurm_pkglist: "{{ slurm_pkglist | default([]) + item.value }}"
   loop: "{{ slurm_slurm_packages | dict2items }}"
-  when: (slurm_enable.get(item.key, false)) or ()
+  when: slurm_enable is defined and slurm_enable.get(item.key, false) | bool
 
 - name: install | Install required slurm packages
   tags: install
   ansible.builtin.dnf:
     name: "{{ slurm_pkglist | reject('eq', '') }}"
     install_weak_deps: false # avoids getting recommended packages
-  when: slurm_pkglist | default(false, true)
+  when: slurm_pkglist is defined and slurm_pkglist | length > 0
 
 - name: install | Install other packages
   tags: install

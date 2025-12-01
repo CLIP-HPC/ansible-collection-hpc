@@ -27,10 +27,10 @@
       "minLength": 1
     },
     "ram_mb": {
-      "type": "number",
+      "type": "number"
     },
     "ram_multiplier": {
-      "type": "number",
+      "type": "number"
     },
     "features": {
     	"type": "array",
@@ -39,7 +39,7 @@
         }
     },
     "node_params": {
-    	"type": "object",
+    	"type": "object"
     },
     "gres_autodetect": {
       "type": "string",

@@ -3,7 +3,7 @@
 - name: Install SLURM package
   hosts: all
   vars:
-    role_slurm_version: 25.05.0-1.el{{ansible_distribution_major_version}}
+    role_slurm_version: 25.05.2-1.el{{ansible_distribution_major_version}}
   tasks:
 
     - name: Install required packages
@@ -13,6 +13,7 @@
           - hostname
           - python3-dnf-plugin-versionlock
           - openssh-server
+          - sudo
           # - "{{ (ansible_distribution_major_version == '7') | ternary('policycoreutils-python', 'policycoreutils-python-utils') }}"
         state: installed
 

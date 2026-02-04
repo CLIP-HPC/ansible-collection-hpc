@@ -1,0 +1,177 @@
+---
+- name: Test SLURM runtime behavior
+  hosts: cluster_login
+  become: true
+  vars:
+    expected_sinfo: |-
+      compute1*,up,infinite,1,idle,cluster-compute1-0
+      compute2,up,infinite,2,idle,cluster-compute1-0,cluster-compute2-0
+    expected_qos: |-
+      normal|0||||
+      short|4|cpu=12,mem=10G|cpu=5,mem=5G|cpu=5,mem=5G|08:00:00
+    sbatch_cmd: sbatch --parsable --comment=test --wrap hostname
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+
+    - name: Assert slurm config directory does not exist
+      ansible.builtin.stat:
+        path: /etc/slurm
+      register: slurm_conf_dir
+
+    - name: Verify slurm config directory is absent
+      ansible.builtin.assert:
+        that:
+          - not slurm_conf_dir.stat.exists
+          - not slurm_conf_dir.stat.isreg | default(false)
+        fail_msg: "Unexpected slurm configuration directory or file found in /etc/slurm"
+
+    - name: Check bash completion file presence
+      ansible.builtin.stat:
+        path: /etc/bash_completion.d/slurm_completion.sh
+      register: slurm_completion
+
+    - name: Assert bash completion file exists
+      ansible.builtin.assert:
+        that:
+          - slurm_completion.stat.exists
+          - slurm_completion.stat.isreg
+        fail_msg: "Missing /etc/bash_completion.d/slurm_completion.sh"
+
+    - name: Verify slurmd service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - "'slurmd.service' in services"
+          - services['slurmd.service'].state == 'running'
+          - services['slurmd.service'].status == 'enabled'
+        fail_msg: "Slurmd service is not running and enabled"
+
+    - name: Capture sinfo output
+      ansible.builtin.command: sinfo --noheader --format="%P,%a,%l,%D,%t,%N"
+      register: sinfo_output
+      changed_when: false
+
+    - name: Check slurm partition info
+      ansible.builtin.assert:                        # PARTITION AVAIL  TIMELIMIT  NODES  STATE NODELIST
+        that: "sinfo_output.stdout == expected_sinfo"
+        fail_msg: "FAILED - actual value: {{ sinfo_output.stdout_lines }}"
+
+    - name: Assert sinfo output matches expectation
+      ansible.builtin.assert:
+        that: sinfo_output.stdout == expected_sinfo
+        fail_msg: "sinfo output does not match expected layout"
+
+    - name: Capture sacctmgr cluster details
+      ansible.builtin.command: sacctmgr list -nP cluster format=cluster,ControlPort,QOS
+      register: sacctmgr_output
+      changed_when: false
+
+    - name: Assert sacctmgr output matches expectation
+      ansible.builtin.assert:
+        that: sacctmgr_output.stdout == 'cluster|6817|short'
+        fail_msg: "sacctmgr cluster details differ from expected"
+
+    - name: Run srun hostname
+      ansible.builtin.command: srun --qos=short hostname
+      register: srun_output
+      changed_when: false
+
+    - name: Assert srun output
+      ansible.builtin.assert:
+        that: srun_output.stdout | trim == 'cluster-compute1-0'
+        fail_msg: "Unexpected hostname from srun"
+
+    - name: Submit sbatch job
+      ansible.builtin.command: "{{ sbatch_cmd }}"
+      environment:
+        TEST_ENV: test
+      register: sbatch_result
+      changed_when: false
+
+    - name: Wait for submit line to include sbatch command
+      ansible.builtin.command: "sacct -P -j {{ sbatch_result.stdout }} -o submitline%50"
+      register: submit_line
+      changed_when: false
+      until: sbatch_cmd in submit_line.stdout
+      retries: 30
+      delay: 1
+
+    - name: Assert sbatch submit line contains command
+      ansible.builtin.assert:
+        that: sbatch_cmd in submit_line.stdout
+        fail_msg: "Submit line does not include expected sbatch command"
+
+    - name: Check sbatch comment
+      ansible.builtin.command: "sacct -P -j {{ sbatch_result.stdout }} -o comment"
+      register: sbatch_comment
+      changed_when: false
+
+    - name: Assert sbatch comment contains test
+      ansible.builtin.assert:
+        that: "'test' in sbatch_comment.stdout"
+        fail_msg: "sbatch comment does not include expected value"
+
+    - name: Check job environment variables
+      ansible.builtin.command: sacct -j {{ sbatch_result.stdout }} --env-vars
+      register: sbatch_env
+      changed_when: false
+      failed_when: "'TEST_ENV' not in sbatch_env.stdout"
+
+    - name: Capture sbatch script
+      ansible.builtin.command: "sacct -j {{ sbatch_result.stdout }} --batch"
+      register: sbatch_script
+      changed_when: false
+
+    - name: Assert sbatch script matches expected
+      ansible.builtin.assert:
+        that:
+          - sbatch_script.stdout | trim == (
+              'Batch Script for ' ~ sbatch_result.stdout ~ '\n' ~
+              '--------------------------------------------------------------------------------\n' ~
+              '#!/bin/sh\n' ~
+              '# This script was created by sbatch --wrap.\n\n' ~
+              'hostname')
+        fail_msg: "sbatch script content differs from expected"
+
+    - name: Capture sacct output
+      ansible.builtin.command: sacct
+      register: sacct_output
+      changed_when: false
+
+    - name: Assert sacct output has multiple lines
+      ansible.builtin.assert:
+        that: sacct_output.stdout_lines | length >= 3
+        fail_msg: "sacct output is shorter than expected"
+
+    - name: Capture QOS details
+      ansible.builtin.command: sacctmgr -nP show qos format=Name,Priority,GrpTRES,MaxTRES,MaxTRESPerUser,MaxWALL
+      register: qos_output
+      changed_when: false
+
+    - name: Assert QOS output matches expectation
+      ansible.builtin.assert:
+        that: qos_output.stdout == expected_qos
+        fail_msg: "QOS output does not match expected values"
+
+    - name: Verify compute1 partition allows short qos
+      ansible.builtin.shell: set -o pipefail && scontrol show part compute1 -o | grep AllowQos=short
+      register: part_compute1
+      changed_when: false
+      failed_when: part_compute1.rc != 0
+
+    - name: Verify compute2 partition allows short qos
+      ansible.builtin.shell: set -o pipefail && scontrol show part compute2 -o | grep AllowQos=short
+      register: part_compute2
+      changed_when: false
+      failed_when: part_compute2.rc != 0
+
+    - name: Run srun with feature constraint
+      ansible.builtin.command: srun --qos=short -C special hostname
+      register: srun_features
+      changed_when: false
+
+    - name: Assert srun with feature constraint output
+      ansible.builtin.assert:
+        that: srun_features.stdout | trim == 'cluster-compute1-0'
+        fail_msg: "Unexpected hostname from feature-constrained srun"

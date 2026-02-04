@@ -1,0 +1,70 @@
+---
+- name: Test SLURM controller services
+  hosts: cluster_control
+  become: true
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Check if slurmrestd service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - "'slurmrestd.service' in services"
+          - services['slurmrestd.service'].state == 'running'
+          - services['slurmrestd.service'].status == 'enabled'
+        fail_msg: "Slurmrestd service is not running and enabled"
+
+    - name: Fetch slurmrestd token
+      ansible.builtin.command: scontrol token lifespan=99999
+      register: slurm_token_cmd
+      changed_when: false
+
+    - name: Extract slurmrestd token
+      ansible.builtin.set_fact:
+        slurm_token: "{{ slurm_token_cmd.stdout | regex_replace('^.*=', '') }}"
+
+    - name: Fail if token could not be extracted
+      ansible.builtin.assert:
+        that: slurm_token | length > 0
+        fail_msg: "Failed to obtain slurmrestd token"
+
+    - name: Ping slurmrestd API
+      ansible.builtin.uri:
+        url: "http://localhost:6820/slurm/v0.0.43/ping"
+        headers:
+          X-SLURM-USER-TOKEN: "{{ slurm_token }}"
+      register: slurm_ping
+      changed_when: false
+      failed_when: slurm_ping.status != 200
+
+
+    - name: Parse slurmrestd ping response
+      ansible.builtin.set_fact:
+        slurm_ping_json: "{{ slurm_ping.json }}"
+
+    - name: Assert slurmrestd ping is up
+      ansible.builtin.assert:
+        that:
+          - slurm_ping_json.errors | length == 0
+          - slurm_ping_json.pings[0].pinged == 'UP'
+        fail_msg: "slurmrestd ping failed or reported down"
+
+    - name: Query slurmrestd jobs
+      ansible.builtin.uri:
+        url: "http://localhost:6820/slurmdb/v0.0.43/jobs"
+        headers:
+          X-SLURM-USER-TOKEN: "{{ slurm_token }}"
+      register: slurm_jobs
+      changed_when: false
+      failed_when: slurm_jobs.status != 200
+
+    - name: Parse slurmrestd jobs response
+      ansible.builtin.set_fact:
+        slurm_jobs_json: "{{ slurm_jobs.json }}"
+
+    - name: Assert slurmrestd jobs response is healthy
+      ansible.builtin.assert:
+        that:
+          - slurm_jobs_json.errors | length == 0
+          - slurm_jobs_json.jobs | length > 0
+        fail_msg: "slurmrestd jobs API returned errors or no jobs"

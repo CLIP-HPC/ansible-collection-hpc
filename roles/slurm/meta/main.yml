@@ -11,4 +11,5 @@ galaxy_info:
       versions:
         - "9"
   galaxy_tags: []
-dependencies: []
+dependencies: 
+  - role: geerlingguy.mysql

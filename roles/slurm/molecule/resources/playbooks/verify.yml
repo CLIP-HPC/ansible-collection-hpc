@@ -15,9 +15,6 @@
         fail_msg: "Munge service is not running and enabled"
 
 
-- name: Import REST API test playbook
-  ansible.builtin.import_playbook: test_rest.yml
-
 - name: Import Compute test playbook
   ansible.builtin.import_playbook: test_compute.yml
 
@@ -26,3 +23,6 @@
 
 - name: Import Runtime test playbook
   ansible.builtin.import_playbook: test_runtime.yml
+
+- name: Import REST API test playbook
+  ansible.builtin.import_playbook: test_rest.yml

@@ -1,4 +1,13 @@
 ---
+
+- name: qos | Add Cluster
+  tags:
+    - qos
+  clip.hpc.slurm:
+    state: present
+    entity: cluster
+    name: "{{ slurm_cluster_name }}"
+
 - name: qos | Add QOS
   tags:
     - qos

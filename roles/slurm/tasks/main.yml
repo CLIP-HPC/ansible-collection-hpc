@@ -103,12 +103,6 @@
   when: slurm_enable.batch | bool
 
 
-- name: Add QOS to Cluster
-  ansible.builtin.include_tasks: qos.yml
-  when: slurm_enable.control | default(false) | bool
-  tags:
-    - qos
-
 - name: Flush handlers
   ansible.builtin.meta: flush_handlers
   tags:

@@ -109,6 +109,11 @@
   tags:
     - qos
 
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+  tags:
+    - always
+
 - name: Create facts
   ansible.builtin.import_tasks: facts.yml
   tags:

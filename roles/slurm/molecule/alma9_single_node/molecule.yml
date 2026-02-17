@@ -1,0 +1,120 @@
+---
+dependency:
+  name: galaxy
+  options:
+    requirements-file: "molecule/resources/requirements.yml"
+driver:
+  name: podman
+platforms:
+  - name: cluster-login-0
+    image: quay.io/almalinuxorg/9-init:9.7
+    hostname: cluster-login-0
+    platform: linux/amd64
+    pre_build_image: true
+    network: slurm-alma9-${INSTANCE_ID:-local}
+    groups:
+      - cluster_login
+    command: /sbin/init
+    tmpfs:
+      /run: rw
+      /tmp: rw
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
+  - name: cluster-compute1-0
+    hostname: cluster-compute1-0
+    pre_build_image: true
+    network: slurm-alma9-${INSTANCE_ID:-local}
+    image: quay.io/almalinuxorg/9-init:9.7
+    platform: linux/amd64
+    groups:
+      - cluster_batch
+      - cluster_compute1
+    command: /sbin/init
+    security_opts:
+      - apparmor:unconfined
+    tmpfs:
+      /run: rw
+      /tmp: rw
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
+  - name: cluster-compute2-0
+    hostname: cluster-compute2-0
+    pre_build_image: true
+    network: slurm-alma9-${INSTANCE_ID:-local}
+    image: quay.io/almalinuxorg/9-init:9.7
+    platform: linux/amd64
+    groups:
+      - cluster_batch
+      - cluster_compute2
+    command: /sbin/init
+    security_opts:
+      - apparmor:unconfined
+    tmpfs:
+      /run: rw
+      /tmp: rw
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
+  - name: cluster-compute2-1
+    hostname: cluster-compute2-1
+    pre_build_image: true
+    network: slurm-alma9-${INSTANCE_ID:-local}
+    image: quay.io/almalinuxorg/9-init:9.7
+    platform: linux/amd64
+    groups: # this is NOT in the "cluster_compute2" so that it isn't added to slurm.conf initially
+      - new
+      - cluster_compute2
+    command: /sbin/init
+    security_opts:
+      - apparmor:unconfined
+    tmpfs:
+      /run: rw
+      /tmp: rw
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
+  - name: cluster-control-0
+    hostname: cluster-control-0
+    pre_build_image: true
+    network: slurm-alma9-${INSTANCE_ID:-local}
+    image: quay.io/almalinuxorg/9-init:9.7
+    platform: linux/amd64
+    groups:
+      - cluster_control
+    command: /sbin/init
+    tmpfs:
+      /run: rw
+      /tmp: rw
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
+  - name: cluster-db-0
+    hostname: cluster-db-0
+    image: quay.io/almalinuxorg/9-init:9.7
+    platform: linux/amd64
+    pre_build_image: true
+    network: slurm-alma9-${INSTANCE_ID:-local}
+    groups:
+      - cluster_db
+    command: /sbin/init
+    tmpfs:
+      /run: rw
+      /tmp: rw
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
+provisioner:
+  name: ansible
+  playbooks:
+    converge: ../resources/playbooks/converge.yml
+    prepare: ../resources/playbooks/prepare.yml
+    verify: ../resources/playbooks/verify_single.yml
+  config_options:
+    defaults:
+      roles_path: "$MOLECULE_PROJECT_DIRECTORY/..:~/.ansible/roles"
+scenario:
+  name: alma9_single_node
+verifier:
+  name: ansible

@@ -3,9 +3,6 @@
   hosts: cluster_login
   become: true
   vars:
-    expected_sinfo: |-
-      compute1*,up,infinite,1,idle,cluster-compute1-0
-      compute2,up,infinite,2,idle,cluster-compute1-0,cluster-compute2-0
     expected_qos: |-
       normal|0||||
       short|4|cpu=12,mem=10G|cpu=5,mem=5G|cpu=5,mem=5G|08:00:00

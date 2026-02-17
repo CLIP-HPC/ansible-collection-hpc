@@ -7,11 +7,11 @@ driver:
   name: podman
 platforms:
   - name: cluster-login-0
-    image: quay.io/almalinuxorg/10-init:10.1
+    image: quay.io/almalinuxorg/9-init:9.7
     hostname: cluster-login-0
     platform: linux/amd64
     pre_build_image: true
-    network: slurm-alma10-${INSTANCE_ID:-local}
+    network: slurm-alma9-${INSTANCE_ID:-local}
     groups:
       - cluster_login
     command: /sbin/init
@@ -24,12 +24,11 @@ platforms:
   - name: cluster-compute1-0
     hostname: cluster-compute1-0
     pre_build_image: true
-    network: slurm-alma10-${INSTANCE_ID:-local}
-    image: quay.io/almalinuxorg/10-init:10.1
+    network: slurm-alma9-${INSTANCE_ID:-local}
+    image: quay.io/almalinuxorg/9-init:9.7
     platform: linux/amd64
     groups:
       - cluster_batch
-    children:
       - cluster_compute1
     command: /sbin/init
     security_opts:
@@ -43,12 +42,11 @@ platforms:
   - name: cluster-compute2-0
     hostname: cluster-compute2-0
     pre_build_image: true
-    network: slurm-alma10-${INSTANCE_ID:-local}
-    image: quay.io/almalinuxorg/10-init:10.1
+    network: slurm-alma9-${INSTANCE_ID:-local}
+    image: quay.io/almalinuxorg/9-init:9.7
     platform: linux/amd64
     groups:
       - cluster_batch
-    children:
       - cluster_compute2
     command: /sbin/init
     security_opts:
@@ -62,8 +60,8 @@ platforms:
   - name: cluster-control-0
     hostname: cluster-control-0
     pre_build_image: true
-    network: slurm-alma10-${INSTANCE_ID:-local}
-    image: quay.io/almalinuxorg/10-init:10.1
+    network: slurm-alma9-${INSTANCE_ID:-local}
+    image: quay.io/almalinuxorg/9-init:9.7
     platform: linux/amd64
     groups:
       - cluster_control
@@ -76,10 +74,10 @@ platforms:
     privileged: true
   - name: cluster-db-0
     hostname: cluster-db-0
-    image: quay.io/almalinuxorg/10-init:10.1
+    image: quay.io/almalinuxorg/9-init:9.7
     platform: linux/amd64
     pre_build_image: true
-    network: slurm-alma10-${INSTANCE_ID:-local}
+    network: slurm-alma9-${INSTANCE_ID:-local}
     groups:
       - cluster_db
     command: /sbin/init
@@ -99,6 +97,6 @@ provisioner:
     defaults:
       roles_path: "$MOLECULE_PROJECT_DIRECTORY/..:~/.ansible/roles"
 scenario:
-  name: almalinux10
+  name: alma9_base
 verifier:
   name: ansible

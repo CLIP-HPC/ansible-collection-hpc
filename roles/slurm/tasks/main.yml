@@ -91,7 +91,7 @@
 
 - name: Configure SLURM slurmd nodes
   ansible.builtin.include_tasks: slurmd.yml
-  when: slurm_enable.slurmd | default(false) | bool
+  when: slurm_enable.slurmd | default(false) | bool and slurm_enable.runtime | default(false) | bool
   tags:
     - slurmd
 
@@ -113,4 +113,4 @@
   tags:
     - always
     - facts
-  when: not slurm_enable.database | default(false) | bool
+  when: not slurm_enable.database | default(false) | bool and slurm_enable.runtime | default(false) | bool

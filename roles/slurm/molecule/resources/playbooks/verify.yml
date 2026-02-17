@@ -1,6 +1,10 @@
 ---
 - name: Test some services on all nodes
-  hosts: all
+  hosts:
+    - cluster_batch
+    - cluster_login
+    - cluster_control
+    - cluster_db
   become: true
   tasks:
     - name: Gather service facts
@@ -23,6 +27,11 @@
 
 - name: Import Runtime test playbook
   ansible.builtin.import_playbook: test_runtime.yml
+  vars:
+    expected_sinfo: |-
+      compute1*,up,infinite,1,idle,cluster-compute1-0
+      compute2,up,infinite,2,idle,cluster-compute1-0,cluster-compute2-0
+
 
 - name: Import REST API test playbook
   ansible.builtin.import_playbook: test_rest.yml

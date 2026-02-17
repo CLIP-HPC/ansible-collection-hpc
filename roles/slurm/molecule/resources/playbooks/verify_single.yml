@@ -30,7 +30,7 @@
   vars:
     expected_sinfo: |-
       compute1*,up,infinite,1,idle,cluster-compute1-0
-      compute2,up,infinite,1,down*,cluster-compute2-1
+      compute2,up,infinite,1,unk*,cluster-compute2-1
       compute2,up,infinite,2,idle,cluster-compute1-0,cluster-compute2-0
 
 - name: Import REST API test playbook
@@ -59,6 +59,7 @@
           runtime: true
         slurm_munge_key: "X+NfDwhSNSYCEvONXGig3AG4Ld/6RY4mv4O7QnRkiNs="
         slurm_control_host: "{{ groups['cluster_control'] | first }}"
+        slurm_ssh_access: [admins]
         slurm_nodegroups:
           - name: compute1
             ram_mb: 2048
@@ -94,4 +95,3 @@
     expected_sinfo: |-
       compute1*,up,infinite,1,idle,cluster-compute1-0
       compute2,up,infinite,3,idle,cluster-compute1-0,cluster-compute2-[0-1]
-

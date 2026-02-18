@@ -76,7 +76,7 @@
     - qos
     - reconfigure
     - control
-    
+
 
 - name: control | Ensure slurmctld state
   tags:

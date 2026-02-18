@@ -4,4 +4,4 @@ multirail_net_arp_ignore: 2
 multirail_net_arp_announce: 2
 multirail_net_rp_filter: 0
 multirail_net_arp_filter: 1
-__nmcli_connection_prefix: "{{ 'cloud-init' if ansible_facts['distribution_major_version'] == '10' else 'System' }}"
+multirail_nmcli_connection_prefix: "{{ 'cloud-init' if ansible_facts['distribution_major_version'] == '10' else 'System' }}"

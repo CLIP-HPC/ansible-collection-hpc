@@ -7,10 +7,10 @@
   tasks:
 
       # due to https://github.com/geerlingguy/docker-rockylinux9-ansible/issues/6
-    - name: Fix /etc/shadow
-      ansible.builtin.shell:
-        cmd: |
-          chmod 0400 /etc/shadow
+    - name: Ensure /etc/shadow has correct permissions
+      ansible.builtin.file:
+        path: /etc/shadow
+        mode: '0400'
 
     - name: Install required packages
       ansible.builtin.dnf:

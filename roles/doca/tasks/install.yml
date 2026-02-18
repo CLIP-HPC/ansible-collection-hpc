@@ -2,7 +2,8 @@
 - name: Import install-kernel-devel.yml
   ansible.builtin.include_tasks: install-kernel-devel.yml
 
-- include_tasks: repo.yml
+- name: Include repo.yml
+  ansible.builtin.include_tasks: repo.yml
   when: doca_use_upstream_repo | bool
 
 - name: Install doca-extra package
@@ -19,9 +20,10 @@
   when: "'doca-kernel-' not in _doca_kernel_repo_check.stdout"
   block:
     - name: Build DOCA kernel modules
-      ansible.builtin.shell:
+      ansible.builtin.command:
         cmd: /opt/mellanox/doca/tools/doca-kernel-support
       register: _doca_kernel_build
+      changed_when: true
 
     - name: Find generated doca-kernel-repo
       ansible.builtin.shell: 'find /tmp/DOCA.* -name doca-kernel-repo-*'
@@ -30,6 +32,7 @@
 
     - name: Create dnf cache
       ansible.builtin.command: dnf makecache
+      changed_when: false
 
     - name: Install DOCA repository package
       ansible.builtin.dnf:
@@ -40,6 +43,7 @@
   ansible.builtin.dnf:
     name: "{{ doca_profile }}"
   register: _doca_install
+  notify: Reboot machine
 
 - name: Cleanup DOCA build directories
   ansible.builtin.file:
@@ -53,17 +57,10 @@
   register: _doca_dracut
   failed_when: _doca_dracut.stderr != '' # appears rc is always 0
   when: "not (_doca_kernel_build.skipped | default(false) | bool)"
+  changed_when: true
 
-- name: Reboot
-  ansible.builtin.reboot:
-    post_reboot_delay: 30
-  when: _doca_install.changed
-
-- name: Wait for hosts to be reachable
-  wait_for_connection:
-    sleep: 15
-  when: _doca_install.changed
-
+- name: Notify handlers
+  ansible.builtin.meta: flush_handlers
 
 # - name: Load the new driver
 #   ansible.builtin.command: /etc/init.d/openibd restart

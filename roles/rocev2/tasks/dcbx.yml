@@ -25,9 +25,30 @@
 
 - name: Store Current DCBX settings
   ansible.builtin.set_fact:
-    lldp_nb_dcbx_ports: "{{ lldp_nb_dcbx_ports | default({}) | combine({item.item: item.stdout | regex_findall('(LLDP_NB_DCBX_P[1-2])\\s+(\\w*)', '\\1', '\\2') | selectattr('1', 'ne', 'True') | map(attribute='0') | list  }) }}"
-    lldp_nb_rx_mode_ports: "{{ lldp_nb_rx_mode_ports | default({}) | combine({item.item: item.stdout | regex_findall('(LLDP_NB_RX_MODE_P[1-2])\\s+(\\w*)', '\\1', '\\2') | selectattr('1', 'ne', 'ALL') | map(attribute='0') | list  }) }}"
-    lldp_nb_tx_mode_ports: "{{ lldp_nb_tx_mode_ports | default({}) | combine({item.item: item.stdout | regex_findall('(LLDP_NB_TX_MODE_P[1-2])\\s+(\\w*)', '\\1', '\\2') | selectattr('1', 'ne', 'ALL') | map(attribute='0') | list  }) }}"
+    lldp_nb_dcbx_ports: >-
+      {{ lldp_nb_dcbx_ports | default({}) | combine({
+        item.item: item.stdout
+        | regex_findall('(LLDP_NB_DCBX_P[1-2])\\s+(\\w*)', '\\1', '\\2')
+        | selectattr('1', 'ne', 'True')
+        | map(attribute='0')
+        | list
+      }) }}
+    lldp_nb_rx_mode_ports: >-
+      {{ lldp_nb_rx_mode_ports | default({}) | combine({
+        item.item: item.stdout
+        | regex_findall('(LLDP_NB_RX_MODE_P[1-2])\\s+(\\w*)', '\\1', '\\2')
+        | selectattr('1', 'ne', 'ALL')
+        | map(attribute='0')
+        | list
+      }) }}
+    lldp_nb_tx_mode_ports: >-
+      {{ lldp_nb_tx_mode_ports | default({}) | combine({
+        item.item: item.stdout
+        | regex_findall('(LLDP_NB_TX_MODE_P[1-2])\\s+(\\w*)', '\\1', '\\2')
+        | selectattr('1', 'ne', 'ALL')
+        | map(attribute='0')
+        | list
+      }) }}
   loop: "{{ mlx_current_settings.results }}"
   loop_control:
     label: "{{ item.item }}"

@@ -16,7 +16,6 @@
 #   ansible-playbook -i tests/inventory -i tests/inventory-mock-groups tests/filter.yml
 
 from ansible import errors
-import jinja2
 import re
 
 # Pattern to match a hostname with numerical ending
@@ -41,7 +40,8 @@ def hostlist_expression(hosts):
 
         ['dev-foo-[00,04-05,3]', 'dev-compute-[000-001]', 'my-random-host']
 
-    NB: This does not guranteed to return parts in the same order as `scontrol hostlist`, but its output should return the same hosts when passed to `scontrol hostnames`.
+    NB: This does not guranteed to return parts in the same order as `scontrol hostlist`,
+    but its output should return the same hosts when passed to `scontrol hostnames`.
     """
 
     results = {}

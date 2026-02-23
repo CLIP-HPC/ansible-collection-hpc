@@ -1,20 +1,21 @@
 ---
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v6.0.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: https://github.com/ansible/ansible-lint
-    rev: v25.1.1
+    rev: v25.9.2
     hooks:
       - id: ansible-lint
+        language_version: python3.12
         additional_dependencies:
           - ansible
           - jmespath
   - repo: https://github.com/psf/black
-    rev: 23.7.0
+    rev: 25.9.0
     hooks:
       - id: black
   - repo: https://github.com/shellcheck-py/shellcheck-py

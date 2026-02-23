@@ -8,48 +8,48 @@
 - name: Retrieve MLX device
   become: true
   ansible.builtin.command: "/usr/bin/mst status"
-  register: mst_status
+  register: rocev2_mst_status
   changed_when: false
 
 - name: Store MLX devies
   ansible.builtin.set_fact:
-    mlx_devices: '{{ mst_status.stdout | regex_findall("^\s*(/dev/mst/\S+)", multiline=True) }}'
+    rocev2_mlx_devices: '{{ rocev2_mst_status.stdout | regex_findall("^\s*(/dev/mst/\S+)", multiline=True) }}'
 
 - name: Retrieve MLX firmware settings
   become: true
   ansible.builtin.command: "/usr/bin/mlxconfig -d {{ item }} q"
-  loop: "{{ mlx_devices }}"
-  register: mlx_current_settings
+  loop: "{{ rocev2_mlx_devices }}"
+  register: rocev2_mlx_current_settings
   changed_when: false
 
 
 - name: Store Current DCBX settings
   ansible.builtin.set_fact:
-    lldp_nb_dcbx_ports: >-
-      {{ lldp_nb_dcbx_ports | default({}) | combine({
+    rocev2_lldp_nb_dcbx_ports: >-
+      {{ rocev2_lldp_nb_dcbx_ports | default({}) | combine({
         item.item: item.stdout
         | regex_findall('(LLDP_NB_DCBX_P[1-2])\\s+(\\w*)', '\\1', '\\2')
         | selectattr('1', 'ne', 'True')
         | map(attribute='0')
         | list
       }) }}
-    lldp_nb_rx_mode_ports: >-
-      {{ lldp_nb_rx_mode_ports | default({}) | combine({
+    rocev2_lldp_nb_rx_mode_ports: >-
+      {{ rocev2_lldp_nb_rx_mode_ports | default({}) | combine({
         item.item: item.stdout
         | regex_findall('(LLDP_NB_RX_MODE_P[1-2])\\s+(\\w*)', '\\1', '\\2')
         | selectattr('1', 'ne', 'ALL')
         | map(attribute='0')
         | list
       }) }}
-    lldp_nb_tx_mode_ports: >-
-      {{ lldp_nb_tx_mode_ports | default({}) | combine({
+    rocev2_lldp_nb_tx_mode_ports: >-
+      {{ rocev2_lldp_nb_tx_mode_ports | default({}) | combine({
         item.item: item.stdout
         | regex_findall('(LLDP_NB_TX_MODE_P[1-2])\\s+(\\w*)', '\\1', '\\2')
         | selectattr('1', 'ne', 'ALL')
         | map(attribute='0')
         | list
       }) }}
-  loop: "{{ mlx_current_settings.results }}"
+  loop: "{{ rocev2_mlx_current_settings.results }}"
   loop_control:
     label: "{{ item.item }}"
 
@@ -58,7 +58,7 @@
   ansible.builtin.command: >
     /usr/bin/mlxconfig -d {{ pair.0.key }} -y s
     {{ pair.1 }}=1
-  loop: "{{ lldp_nb_dcbx_ports | dict2items | subelements('value', skip_missing=True) }}"
+  loop: "{{ rocev2_lldp_nb_dcbx_ports | dict2items | subelements('value', skip_missing=True) }}"
   loop_control:
     loop_var: pair
     label: "{{ pair.0.key }} / {{ pair.1 }} "
@@ -70,7 +70,7 @@
   ansible.builtin.command: >
     /usr/bin/mlxconfig -d {{ pair.0.key }} -y s
     {{ pair.1 }}=2
-  loop: "{{ lldp_nb_rx_mode_ports | dict2items | subelements('value', skip_missing=True) }}"
+  loop: "{{ rocev2_lldp_nb_rx_mode_ports | dict2items | subelements('value', skip_missing=True) }}"
   loop_control:
     loop_var: pair
     label: "{{ pair.0.key }} / {{ pair.1 }} "
@@ -82,7 +82,7 @@
   ansible.builtin.command: >
     /usr/bin/mlxconfig -d {{ pair.0.key }} -y s
     {{ pair.1 }}=2
-  loop: "{{ lldp_nb_tx_mode_ports | dict2items | subelements('value', skip_missing=True) }}"
+  loop: "{{ rocev2_lldp_nb_tx_mode_ports | dict2items | subelements('value', skip_missing=True) }}"
   loop_control:
     loop_var: pair
     label: "{{ pair.0.key }} / {{ pair.1 }} "

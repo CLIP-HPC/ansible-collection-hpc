@@ -19,15 +19,9 @@ collections:
 
 ## Roles
 
-Following roles are supported:
+Roles in this collection:
 
-- [certificate](roles/certificate): Install & configure host certificates
-- [container](roles/container): Install & configure podman for containers
-- [dns](roles/dns): Configure DNS records in infoblox
-- [firewalld](roles/firewalld): Install & configure firewalld
-- [ntp](roles/ntp): Install & configure NTP service
-- [promtail](roles/promtail): Install & configure promtail agent
-- [sssd](roles/sssd): Install & configure SSSD (active directory)
-- [sudoers](roles/sudoers): Configure sudoers list
-- [syslog](roles/syslog): Install & configure syslog
-- [user](roles/user): Configure user on host
+- [roles/doca](roles/doca): Installs and configures NVIDIA DOCA drivers for Mellanox NICs.
+- [roles/multirail](roles/multirail): Sets up NetworkManager multirail for dual-interface hosts.
+- [roles/rocev2](roles/rocev2): Tunes Mellanox NIC firmware for RoCEv2 with DSCP-based QoS.
+- [roles/slurm](roles/slurm): Deploys and configures a functional SLURM cluster.

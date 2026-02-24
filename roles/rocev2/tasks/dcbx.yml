@@ -1,21 +1,21 @@
 ---
-- name: Start mst
+- name: dcbx | Start mst
   become: true
   ansible.builtin.command: "/usr/bin/mst start"
   changed_when: false
   failed_when: false
 
-- name: Retrieve MLX device
+- name: dcbx | Retrieve MLX device
   become: true
   ansible.builtin.command: "/usr/bin/mst status"
   register: rocev2_mst_status
   changed_when: false
 
-- name: Store MLX devies
+- name: dcbx | Store MLX devies
   ansible.builtin.set_fact:
     rocev2_mlx_devices: '{{ rocev2_mst_status.stdout | regex_findall("^\s*(/dev/mst/\S+)", multiline=True) }}'
 
-- name: Retrieve MLX firmware settings
+- name: dcbx | Retrieve MLX firmware settings
   become: true
   ansible.builtin.command: "/usr/bin/mlxconfig -d {{ item }} q"
   loop: "{{ rocev2_mlx_devices }}"
@@ -23,7 +23,7 @@
   changed_when: false
 
 
-- name: Store Current DCBX settings
+- name: dcbx | Store Current DCBX settings
   ansible.builtin.set_fact:
     rocev2_lldp_nb_dcbx_ports: >-
       {{ rocev2_lldp_nb_dcbx_ports | default({}) | combine({
@@ -53,7 +53,7 @@
   loop_control:
     label: "{{ item.item }}"
 
-- name: Enable LLDP DCBX on all ports
+- name: dcbx | Enable LLDP DCBX on all ports
   become: true
   ansible.builtin.command: >
     /usr/bin/mlxconfig -d {{ pair.0.key }} -y s
@@ -65,7 +65,7 @@
   changed_when: true
   notify: Reboot server
 
-- name: Enable LLDP DCBX RX on all ports
+- name: dcbx | Enable LLDP DCBX RX on all ports
   become: true
   ansible.builtin.command: >
     /usr/bin/mlxconfig -d {{ pair.0.key }} -y s
@@ -77,7 +77,7 @@
   changed_when: true
   notify: Reboot server
 
-- name: Enable LLDP DCBX TX on all ports
+- name: dcbx | Enable LLDP DCBX TX on all ports
   become: true
   ansible.builtin.command: >
     /usr/bin/mlxconfig -d {{ pair.0.key }} -y s
@@ -89,5 +89,5 @@
   changed_when: true
   notify: Reboot server
 
-- name: Flush handlers
+- name: dcbx | Flush handlers
   ansible.builtin.meta: flush_handlers

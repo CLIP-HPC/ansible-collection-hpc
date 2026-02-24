@@ -70,7 +70,7 @@
   ansible.builtin.import_tasks: powersave.yml
   when: slurm_power_save | default(false) | bool
 
-- name: Add QOS to Cluster
+- name: control | Add QOS to Cluster
   ansible.builtin.include_tasks: qos.yml
   tags:
     - qos

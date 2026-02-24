@@ -8,4 +8,4 @@ collections:
     version: ">=6.0.0"
 roles:
   - name: geerlingguy.mysql
-    version: ">=5.0.2"
+    version: "6.3.1"

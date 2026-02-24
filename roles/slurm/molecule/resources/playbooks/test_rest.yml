@@ -48,6 +48,7 @@
           - slurm_ping_json.errors | length == 0
           - slurm_ping_json.pings[0].pinged == 'UP'
         fail_msg: "slurmrestd ping failed or reported down"
+      when: ansible_distribution != "RedHat" or ansible_distribution_major_version != "10"
 
     - name: Query slurmrestd jobs
       ansible.builtin.uri:

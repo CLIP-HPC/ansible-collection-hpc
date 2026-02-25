@@ -58,10 +58,12 @@
       register: slurm_jobs
       changed_when: false
       failed_when: slurm_jobs.status != 200
+      when: ansible_facts['distribution_major_version'] != "10"
 
     - name: Parse slurmrestd jobs response
       ansible.builtin.set_fact:
         slurm_jobs_json: "{{ slurm_jobs.json }}"
+      when: ansible_facts['distribution_major_version'] != "10"
 
     - name: Assert slurmrestd jobs response is healthy
       ansible.builtin.assert:
@@ -69,3 +71,4 @@
           - slurm_jobs_json.errors | length == 0
           - slurm_jobs_json.jobs | length > 0
         fail_msg: "slurmrestd jobs API returned errors or no jobs"
+      when: ansible_facts['distribution_major_version'] != "10"

@@ -3,8 +3,14 @@
 - name: Install SLURM package
   hosts: all
   vars:
-    role_slurm_version: 25.05.0-1.el{{ansible_distribution_major_version}}
+    role_slurm_version: 25.11.2-1.el{{ansible_distribution_major_version}}
   tasks:
+
+      # due to https://github.com/geerlingguy/docker-rockylinux9-ansible/issues/6
+    - name: Ensure /etc/shadow has correct permissions
+      ansible.builtin.file:
+        path: /etc/shadow
+        mode: '0400'
 
     - name: Install required packages
       ansible.builtin.dnf:
@@ -13,6 +19,7 @@
           - hostname
           - python3-dnf-plugin-versionlock
           - openssh-server
+          - sudo
           # - "{{ (ansible_distribution_major_version == '7') | ternary('policycoreutils-python', 'policycoreutils-python-utils') }}"
         state: installed
 

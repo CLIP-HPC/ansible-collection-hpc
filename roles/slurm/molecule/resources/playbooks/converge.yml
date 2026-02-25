@@ -11,9 +11,9 @@
           database: "{{ inventory_hostname in groups['cluster_db'] }}"
           control: "{{ inventory_hostname in groups['cluster_control'] }}"
           batch: "{{ inventory_hostname in groups['cluster_batch'] }}"
-          slurmd: "{{ inventory_hostname not in (groups['cluster_db'] + groups['cluster_control']) }}"
+          slurmd: "{{ inventory_hostname in (groups['cluster_batch'] + groups['cluster_login']) }}"
           rest: "{{ inventory_hostname in groups['cluster_control'] }}"
-          runtime: true
+          runtime: "{{ inventory_hostname not in (groups['new'] | default([])) }}"
         slurm_db_host: "{{ groups['cluster_db'] | first }}"
         slurm_control_host: "{{ groups['cluster_control'] | first }}"
         slurm_login_only_nodes: cluster_login

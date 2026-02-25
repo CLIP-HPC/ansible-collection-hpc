@@ -67,9 +67,15 @@ options:
 """
 
 EXAMPLES = """
-- name: create slurm user
+- name: Manage slurm user
   hosts: slurm
-  slurm: entity=user state=present name={{user}} account={{slurm_account}}
+  tasks:
+    - name: Create slurm user
+      clip.hpc.slurm:
+        entity: user
+        state: present
+        name: "{{ user }}"
+        account: "{{ slurm_account }}"
 """
 
 RETURN = """

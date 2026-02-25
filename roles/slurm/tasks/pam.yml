@@ -17,7 +17,7 @@
     - pam
   ansible.builtin.lineinfile:
     path: "{{ item }}"
-    regexp: -session     optional      pam_systemd.so
+    regexp: '^\s*#?\s*-session\s+optional\s+pam_systemd\.so\s*$'
     line: "#-session     optional      pam_systemd.so"
   loop:
     - /etc/pam.d/system-auth
@@ -54,7 +54,7 @@
     - pam
   ansible.builtin.command:
     cmd: semodule -l | grep -q '^pam_slurm_adopt'
-  register: semodule_check
+  register: slurm_semodule_check
   failed_when: false
   changed_when: false
   when: ansible_selinux.status == "enabled"
@@ -62,7 +62,7 @@
 - name: pam | Configure SELinux Policy for SLURM adopt
   tags:
     - pam
-  when: ansible_selinux.status == "enabled" and semodule_check.rc != 0
+  when: ansible_selinux.status == "enabled" and slurm_semodule_check.rc != 0
   block:
     - name: pam | Create temporary directory for SELinux policy
       tags:
@@ -70,14 +70,14 @@
       ansible.builtin.tempfile:
         state: directory
         suffix: selinux
-      register: selinux_tempdir
+      register: slurm_selinux_tempdir
 
     - name: pam | Copy SELinux policy file
       tags:
         - pam
       ansible.builtin.copy:
         src: pam_slurm_adopt.te
-        dest: "{{ selinux_tempdir.path }}/pam_slurm_adopt.te"
+        dest: "{{ slurm_selinux_tempdir.path }}/pam_slurm_adopt.te"
         mode: '0644'
 
     - name: pam | Package SELinux policy module
@@ -85,21 +85,21 @@
         - pam
       ansible.builtin.command:
         cmd: "make -f /usr/share/selinux/devel/Makefile pam_slurm_adopt.pp"
-        creates: "{{ selinux_tempdir.path }}/pam_slurm_adopt.pp"
+        creates: "{{ slurm_selinux_tempdir.path }}/pam_slurm_adopt.pp"
       args:
-        chdir: "{{ selinux_tempdir.path }}"
+        chdir: "{{ slurm_selinux_tempdir.path }}"
 
     - name: pam | Install SELinux policy module
       tags:
         - pam
       ansible.builtin.command:
-        cmd: "semodule -i {{ selinux_tempdir.path }}/pam_slurm_adopt.pp"
-      register: semodule_install
-      changed_when: semodule_install.rc == 0
+        cmd: "semodule -i {{ slurm_selinux_tempdir.path }}/pam_slurm_adopt.pp"
+      register: slurm_semodule_install
+      changed_when: slurm_semodule_install.rc == 0
 
     - name: pam | Cleanup temporary directory
       tags:
         - pam
       ansible.builtin.file:
-        path: "{{ selinux_tempdir.path }}"
+        path: "{{ slurm_selinux_tempdir.path }}"
         state: absent

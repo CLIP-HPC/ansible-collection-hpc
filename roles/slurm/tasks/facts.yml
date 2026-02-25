@@ -4,7 +4,7 @@
   # slurm.conf
   ansible.builtin.command: scontrol show config
   changed_when: false
-  register: _scontrol_config
+  register: slurm_scontrol_config
 
 - name: facts | Create facts directory
   ansible.builtin.file:
@@ -17,9 +17,9 @@
 - name: facts | Template slurm configuration facts
   ansible.builtin.copy:
     dest: /etc/ansible/facts.d/slurm.fact
-    content: "{{ _scontrol_config.stdout_lines | clip.hpc.config2dict | to_nice_json }}"
+    content: "{{ slurm_scontrol_config.stdout_lines | clip.hpc.config2dict | to_nice_json }}"
     owner: slurm
     group: slurm
     mode: ug=rw,o=r # any user can run scontrol show config anyway
-  register: _template_facts
+  register: slurm_template_facts
   notify: Reload facts

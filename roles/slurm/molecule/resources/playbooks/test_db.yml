@@ -1,0 +1,15 @@
+---
+- name: Test SLURM DB services
+  hosts: cluster_db
+  become: true
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Check if slurmdbd service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - "'slurmdbd.service' in services"
+          - services['slurmdbd.service'].state == 'running'
+          - services['slurmdbd.service'].status == 'enabled'
+        fail_msg: "Slurmdbd service is not running and enabled"

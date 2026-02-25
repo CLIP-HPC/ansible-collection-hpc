@@ -1,0 +1,97 @@
+---
+- name: Test some services on all nodes
+  hosts:
+    - cluster_batch
+    - cluster_login
+    - cluster_control
+    - cluster_db
+  become: true
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Check if munge service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - "'munge.service' in services"
+          - services['munge.service'].state == 'running'
+          - services['munge.service'].status == 'enabled'
+        fail_msg: "Munge service is not running and enabled"
+
+
+- name: Import Compute test playbook
+  ansible.builtin.import_playbook: test_compute.yml
+
+- name: Import DB test playbook
+  ansible.builtin.import_playbook: test_db.yml
+
+- name: Import Runtime test playbook
+  ansible.builtin.import_playbook: test_runtime.yml
+  vars:
+    expected_sinfo: |-
+      compute1*,up,infinite,1,idle,cluster-compute1-0
+      compute2,up,infinite,1,unk*,cluster-compute2-1
+      compute2,up,infinite,2,idle,cluster-compute1-0,cluster-compute2-0
+
+- name: Import REST API test playbook
+  ansible.builtin.import_playbook: test_rest.yml
+
+- name: Add new host(s) to cluster
+  hosts: new
+  tasks:
+    - name: Add new host(s) to group for slurm partition
+      ansible.builtin.add_host:
+        name: "{{ item }}"
+        groups: cluster_batch
+      loop: "{{ groups['new'] }}"
+      run_once: true
+    - name: Include slurm role
+      tags: always
+      ansible.builtin.include_role:
+        name: "slurm"
+      vars:
+        slurm_enable:
+          database: "{{ inventory_hostname in groups['cluster_db'] }}"
+          control: "{{ inventory_hostname in groups['cluster_control'] }}"
+          batch: "{{ inventory_hostname in groups['cluster_batch'] }}"
+          slurmd: "{{ inventory_hostname in (groups['cluster_batch'] + groups['cluster_login']) }}"
+          rest: "{{ inventory_hostname in groups['cluster_control'] }}"
+          runtime: true
+        slurm_munge_key: "X+NfDwhSNSYCEvONXGig3AG4Ld/6RY4mv4O7QnRkiNs="
+        slurm_control_host: "{{ groups['cluster_control'] | first }}"
+        slurm_ssh_access: [admins]
+        slurm_nodegroups:
+          - name: compute1
+            ram_mb: 2048
+            features:
+              - special
+          - name: compute2
+            ram_mb: 2048
+            features:
+              - special
+        slurm_partitions:
+          - name: compute1
+            qos: [short]
+            default: "YES"
+            nodegroups:
+              - compute1
+            partition_params:
+              AllowQoS: 'short'
+          - name: compute2
+            default: "NO"
+            partition_params:
+              AllowQoS: 'short'
+            nodegroups:
+              - compute1
+              - compute2
+
+
+- name: Import Compute test playbook
+  ansible.builtin.import_playbook: test_compute.yml
+
+- name: Import Runtime test playbook
+  ansible.builtin.import_playbook: test_runtime.yml
+  vars:
+    expected_sinfo: |-
+      compute1*,up,infinite,1,idle,cluster-compute1-0
+      compute2,up,infinite,3,idle,cluster-compute1-0,cluster-compute2-[0-1]

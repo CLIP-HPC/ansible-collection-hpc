@@ -91,7 +91,7 @@
 
 - name: Configure SLURM slurmd nodes
   ansible.builtin.include_tasks: slurmd.yml
-  when: slurm_enable.slurmd | default(false) | bool
+  when: slurm_enable.slurmd | default(false) | bool and slurm_enable.runtime | default(false) | bool
   tags:
     - slurmd
 
@@ -103,15 +103,14 @@
   when: slurm_enable.batch | bool
 
 
-- name: Add QOS to Cluster
-  ansible.builtin.include_tasks: qos.yml
-  when: slurm_enable.control | default(false) | bool
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
   tags:
-    - qos
+    - always
 
 - name: Create facts
   ansible.builtin.import_tasks: facts.yml
   tags:
     - always
     - facts
-  when: not slurm_enable.database | default(false) | bool
+  when: not slurm_enable.database | default(false) | bool and slurm_enable.runtime | default(false) | bool

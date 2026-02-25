@@ -6,7 +6,7 @@
 - name: install | Build host-specific list of required slurm packages
   tags: install
   ansible.builtin.set_fact:
-    slurm_pkglist: "{{ slurm_pkglist | default([]) + item.value }}"
+    slurm_pkglist: "{{ (slurm_pkglist | default([])) + (item.value | default([])) }}"
   loop: "{{ slurm_slurm_packages | dict2items }}"
   when: slurm_enable is defined and slurm_enable.get(item.key, false) | bool
 

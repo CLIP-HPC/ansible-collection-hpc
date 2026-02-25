@@ -1,6 +1,10 @@
 ---
-- name: Slurm role tests
-  hosts: all
+- name: Test some services on all nodes
+  hosts:
+    - cluster_batch
+    - cluster_login
+    - cluster_control
+    - cluster_db
   become: true
   tasks:
     - name: Gather service facts
@@ -9,11 +13,25 @@
     - name: Check if munge service is running and enabled
       ansible.builtin.assert:
         that:
-          - "'munge' in services"
-          - services['munge'].state == 'running'
-          - services['munge'].enabled == true
+          - "'munge.service' in services"
+          - services['munge.service'].state == 'running'
+          - services['munge.service'].status == 'enabled'
         fail_msg: "Munge service is not running and enabled"
 
-    - name: Import tasks for slurmrestd service check
-      ansible.builtin.include_tasks: rest.yml
-      when: slurm_enabled.rest | bool | default(false)
+
+- name: Import Compute test playbook
+  ansible.builtin.import_playbook: test_compute.yml
+
+- name: Import DB test playbook
+  ansible.builtin.import_playbook: test_db.yml
+
+- name: Import Runtime test playbook
+  ansible.builtin.import_playbook: test_runtime.yml
+  vars:
+    expected_sinfo: |-
+      compute1*,up,infinite,1,idle,cluster-compute1-0
+      compute2,up,infinite,2,idle,cluster-compute1-0,cluster-compute2-0
+
+
+- name: Import REST API test playbook
+  ansible.builtin.import_playbook: test_rest.yml

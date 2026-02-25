@@ -42,7 +42,7 @@
   vars:
     interface_info: "{{ hostvars[inventory_hostname]['ansible_' + multirail_interfaces | first] }}"
   community.general.nmcli:
-    conn_name: "{{ __nmcli_connection_prefix }} {{ multirail_interfaces | first }}"
+    conn_name: "{{ multirail_nmcli_connection_prefix }} {{ multirail_interfaces | first }}"
     state: present
     routes4_extended:
       - ip: "0.0.0.0/0"
@@ -57,7 +57,7 @@
   vars:
     interface_info: "{{ hostvars[inventory_hostname]['ansible_' + multirail_interfaces | last] }}"
   community.general.nmcli:
-    conn_name: "{{ __nmcli_connection_prefix }} {{ multirail_interfaces | last }}"
+    conn_name: "{{ multirail_nmcli_connection_prefix }} {{ multirail_interfaces | last }}"
     state: present
     routes4_extended:
       - ip: "0.0.0.0/0"

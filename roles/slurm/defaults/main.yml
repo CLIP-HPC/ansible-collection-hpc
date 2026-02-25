@@ -46,7 +46,6 @@ slurm_default_config:
 
   AccountingStorageHost: "{{ slurm_db_host }}"
   AccountingStorageType: "accounting_storage/slurmdbd"
-  AccountingStorageUser: "{{ slurm_dbd_mysql_username }}"
 
   JobAcctGatherType: "jobacct_gather/cgroup"
 

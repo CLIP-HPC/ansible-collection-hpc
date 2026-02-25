@@ -1,0 +1,73 @@
+---
+- name: Test SLURM compute services
+  hosts: cluster_batch
+  become: true
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+
+    - name: Assert slurm config directory does not exist
+      ansible.builtin.stat:
+        path: /etc/slurm
+      register: slurm_conf_dir
+
+    - name: Verify slurm config directory is absent
+      ansible.builtin.assert:
+        that:
+          - not slurm_conf_dir.stat.exists
+          - not slurm_conf_dir.stat.isreg | default(false)
+        fail_msg: "Unexpected slurm configuration directory or file found in /etc/slurm"
+
+    - name: Assert job container directory exists
+      ansible.builtin.stat:
+        path: "/mnt/{{ ansible_hostname }}"
+      register: job_container_dir
+
+    - name: Verify job container directory is present
+      ansible.builtin.assert:
+        that:
+          - job_container_dir.stat.exists
+          - job_container_dir.stat.isdir
+        fail_msg: "Job container directory /mnt/{{ ansible_hostname }} is missing"
+
+
+    - name: Verify slurmd service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - "'slurmd.service' in services"
+          - services['slurmd.service'].state == 'running'
+          - services['slurmd.service'].status == 'enabled'
+        fail_msg: "Slurmd service is not running and enabled"
+
+    - name: Check pam_slurm_adopt is configured for sshd
+      ansible.builtin.command: grep pam_slurm_adopt.so /etc/pam.d/sshd
+      register: pam_adopt
+      changed_when: false
+
+    - name: Assert pam_slurm_adopt is present in sshd
+      ansible.builtin.assert:
+        that: pam_adopt.rc == 0
+        fail_msg: "pam_slurm_adopt.so is not configured in /etc/pam.d/sshd"
+
+    - name: Ensure pam_systemd is not present in system-auth
+      ansible.builtin.command: egrep "^-session\s*(optional|required)\s*pam_systemd\.so" /etc/pam.d/system-auth
+      register: pam_system_auth
+      changed_when: false
+      failed_when: pam_system_auth.rc == 0
+
+    - name: Ensure pam_systemd is not present in password-auth
+      ansible.builtin.command: egrep "^-session\s*(optional|required)\s*pam_systemd\.so" /etc/pam.d/password-auth
+      register: pam_password_auth
+      changed_when: false
+      failed_when: pam_password_auth.rc == 0
+
+    - name: Check ssh access for admins group
+      ansible.builtin.command: egrep "^\+:admins:ALL$" /etc/security/access.conf
+      register: pam_access
+      changed_when: false
+
+    - name: Assert ssh access rule for admins group exists
+      ansible.builtin.assert:
+        that: pam_access.rc == 0
+        fail_msg: "Missing admins ssh access rule in /etc/security/access.conf"

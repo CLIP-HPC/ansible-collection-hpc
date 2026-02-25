@@ -1,69 +1,94 @@
 ---
-- name: Import install-kernel-devel.yml
-  ansible.builtin.include_tasks: install-kernel-devel.yml
+- name: install | Get installed kernels
+  ansible.builtin.command: dnf list --installed kernel
+  register: doca_ofed_dnf_kernels
+  changed_when: false
 
-- include_tasks: repo.yml
+- name: install | Determine running kernel
+  ansible.builtin.command: uname -r # e.g. 4.18.0-513.18.1.el8_9.x86_64
+  register: doca_ofed_loaded_kernel
+  changed_when: false
+
+
+- name: install | Check current kernel is newest installed
+  ansible.builtin.assert:
+    that: _ofed_kernel_current == doca_ofed_dnf_kernels_newest
+    fail_msg: "Kernel {{ doca_ofed_loaded_kernel.stdout }} is loaded but newer {{ doca_ofed_dnf_kernels_newest }} is installed: consider rebooting?"
+  vars:
+    _ofed_kernel_current: >-
+      {{ doca_ofed_loaded_kernel.stdout | regex_replace('\.(?:.(?!\.))+$', '') | regex_replace('\.(?:.(?!\.))+$', '') }}
+    doca_ofed_dnf_kernels_newest: >-
+      {{ doca_ofed_dnf_kernels.stdout_lines[2:]
+         | map('split')
+         | map(attribute=1)
+         | map('regex_replace', '\\.(?:.(?!\\.))+$', '')
+         | community.general.version_sort
+         | last }}
+    # dnf line format e.g. "kernel.x86_64  4.18.0-513.18.1.el8_9   @baseos  "
+
+- name: install | Install matching kernel-devel package
+  ansible.builtin.dnf:
+    name: "kernel-devel-{{ doca_ofed_loaded_kernel.stdout | trim }}"
+
+- name: install | Include repo.yml
+  ansible.builtin.include_tasks: repo.yml
   when: doca_use_upstream_repo | bool
 
-- name: Install doca-extra package
+- name: install | Install doca-extra package
   ansible.builtin.dnf:
     name: doca-extra
 
-- name: Check if DNF doca-kernel repo already exists
+- name: install | Check if DNF doca-kernel repo already exists
   ansible.builtin.command: /usr/bin/dnf repolist doca-kernel-"{{ ansible_kernel }}"
   register: _doca_kernel_repo_check
   failed_when: false
   changed_when: false
 
-- name: Install DOCA Kernel repo
+- name: install | Install DOCA Kernel repo
   when: "'doca-kernel-' not in _doca_kernel_repo_check.stdout"
   block:
-    - name: Build DOCA kernel modules
-      ansible.builtin.shell:
+    - name: install | Build DOCA kernel modules
+      ansible.builtin.command:
         cmd: /opt/mellanox/doca/tools/doca-kernel-support
       register: _doca_kernel_build
+      changed_when: true
 
-    - name: Find generated doca-kernel-repo
+    - name: install | Find generated doca-kernel-repo
       ansible.builtin.shell: 'find /tmp/DOCA.* -name doca-kernel-repo-*'
       register: _doca_kernel_repo # e.g. /tmp/DOCA.WVMchs2QWo/doca-kernel-repo-24.10.1.1.4.0-1.kver.5.14.0.427.31.1.el9.4.x86.64.x86_64.rpm
       changed_when: false
 
-    - name: Create dnf cache
+    - name: install | Create dnf cache
       ansible.builtin.command: dnf makecache
+      changed_when: false
 
-    - name: Install DOCA repository package
+    - name: install | Install DOCA repository package
       ansible.builtin.dnf:
         name: "{{ _doca_kernel_repo.stdout }}"
         disable_gpg_check: true
 
-- name: Install DOCA packages
+- name: install | Install DOCA packages
   ansible.builtin.dnf:
     name: "{{ doca_profile }}"
   register: _doca_install
+  notify: Reboot machine
 
-- name: Cleanup DOCA build directories
+- name: install | Cleanup DOCA build directories
   ansible.builtin.file:
     state: absent
     path: "{{ (_doca_kernel_repo.stdout | split('/'))[:3] | join('/') }}" # leading / means 1st element of split list is ''
   when: "not (_doca_kernel_build.skipped | default(false) | bool)"
 
-- name: Update initramfs
+- name: install | Update initramfs
   ansible.builtin.command:
     cmd: dracut -f
   register: _doca_dracut
   failed_when: _doca_dracut.stderr != '' # appears rc is always 0
   when: "not (_doca_kernel_build.skipped | default(false) | bool)"
+  changed_when: true
 
-- name: Reboot
-  ansible.builtin.reboot:
-    post_reboot_delay: 30
-  when: _doca_install.changed
-
-- name: Wait for hosts to be reachable
-  wait_for_connection:
-    sleep: 15
-  when: _doca_install.changed
-
+- name: install | Notify handlers
+  ansible.builtin.meta: flush_handlers
 
 # - name: Load the new driver
 #   ansible.builtin.command: /etc/init.d/openibd restart

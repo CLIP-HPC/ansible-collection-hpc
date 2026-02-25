@@ -1,5 +1,5 @@
 ---
-- name: Enable RoCE ECN packages
+- name: install | Enable RoCE ECN packages
   become: true
   ansible.posix.sysctl:
     name: "net.ipv4.tcp_ecn"

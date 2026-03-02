@@ -9,7 +9,7 @@ namespace: clip
 name: hpc
 
 # The version of the collection. Must be compatible with semantic versioning
-version: 3.0.0
+version: 3.0.1
 
 # The path to the Markdown (.md) readme file. This path is relative to the root of the collection
 readme: README.md
@@ -17,9 +17,9 @@ readme: README.md
 # A list of the collection's content authors. Can be just the name or in the format 'Full Name <email> (url)
 # @nicks:irc/im.site#channel'
 authors:
-  - Erich Birngrbuer <erich.birngruber@gmi.oeaw.ac.at>
+  - Erich Birngruber <erich.birngruber@gmi.oeaw.ac.at>
   - Uemit Seren <uemit.seren@gmi.oeaw.ac.at>
-  - Leon SchwarzaeuglSchwarzäugl <leon.schwarzaeugl@gmi.oeaw.ac.at>
+  - Leon Schwarzaeugl <leon.schwarzaeugl@imba.oeaw.ac.at>
 
 
 ### OPTIONAL but strongly recommended

@@ -6,3 +6,6 @@ __pycache__
 *.pyc
 junit.xml
 .ansible
+.direnv
+.envrc
+/*.tar.gz

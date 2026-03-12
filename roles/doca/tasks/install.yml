@@ -1,29 +1,31 @@
 ---
-- name: install | Get installed kernels
-  ansible.builtin.command: dnf list --installed kernel
-  register: doca_ofed_dnf_kernels
-  changed_when: false
 
 - name: install | Determine running kernel
   ansible.builtin.command: uname -r # e.g. 4.18.0-513.18.1.el8_9.x86_64
   register: doca_ofed_loaded_kernel
   changed_when: false
 
+- name: install | Determine newest installed kernel
+  ansible.builtin.shell: |
+    set -o pipefail
+    dnf list --installed kernel \
+      | awk '$1 ~ /^kernel\./ {print $2}' \
+      | sed -E 's/\.[^.]+$//' \
+      | sort -V \
+      | tail -n 1
+  args:
+    executable: /bin/bash
+  register: doca_ofed_dnf_kernels_newest
+  changed_when: false
+
 
 - name: install | Check current kernel is newest installed
   ansible.builtin.assert:
-    that: _ofed_kernel_current == doca_ofed_dnf_kernels_newest
-    fail_msg: "Kernel {{ doca_ofed_loaded_kernel.stdout }} is loaded but newer {{ doca_ofed_dnf_kernels_newest }} is installed: consider rebooting?"
+    that: _ofed_kernel_current == doca_ofed_dnf_kernels_newest.stdout
+    fail_msg: "Kernel {{ doca_ofed_loaded_kernel.stdout }} is loaded but newer {{ doca_ofed_dnf_kernels_newest.stdout }} is installed: consider rebooting?"
   vars:
     _ofed_kernel_current: >-
       {{ doca_ofed_loaded_kernel.stdout | regex_replace('\.(?:.(?!\.))+$', '') | regex_replace('\.(?:.(?!\.))+$', '') }}
-    doca_ofed_dnf_kernels_newest: >-
-      {{ doca_ofed_dnf_kernels.stdout_lines[2:]
-         | map('split')
-         | map(attribute=1)
-         | map('regex_replace', '\\.(?:.(?!\\.))+$', '')
-         | community.general.version_sort
-         | last }}
     # dnf line format e.g. "kernel.x86_64  4.18.0-513.18.1.el8_9   @baseos  "
 
 - name: install | Install matching kernel-devel package

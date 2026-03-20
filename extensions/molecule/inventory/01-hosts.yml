@@ -1,0 +1,40 @@
+---
+slurm_new:
+  hosts:
+    slurm-cluster-compute2-1:
+slurm:
+  hosts:
+    slurm-cluster-login-0:
+      container_hostname: "slurm-cluster-login-0"
+    slurm-cluster-control-0:
+      container_hostname: "slurm-cluster-control-0"
+    slurm-cluster-db-0:
+      container_hostname: "slurm-cluster-db-0"
+    slurm-cluster-compute1-0:
+      container_hostname: "slurm-cluster-compute1-0"
+    slurm-cluster-compute2-0:
+      container_hostname: "slurm-cluster-compute2-0"
+    slurm-cluster-compute2-1:
+      container_hostname: "slurm-cluster-compute2-1"
+  vars:
+    container_network: slurm-network
+cluster_login:
+  hosts:
+    slurm-cluster-login-0:
+cluster_control:
+  hosts:
+    slurm-cluster-control-0:
+cluster_db:
+  hosts:
+    slurm-cluster-db-0:
+cluster_batch:
+  hosts:
+    slurm-cluster-compute1-0:
+    slurm-cluster-compute2-0:
+cluster_compute1:
+  hosts:
+    slurm-cluster-compute1-0:
+cluster_compute2:
+  hosts:
+    slurm-cluster-compute2-0:
+    slurm-cluster-compute2-1:

@@ -1,0 +1,84 @@
+---
+- name: Create containers from inventory
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Validate slurm group exists and has hosts
+      ansible.builtin.assert:
+        that:
+          - groups['slurm'] | length > 0
+        fail_msg: "No hosts found in slurm group - constructed plugin may not be working"
+
+    - name: Fail if CONTAINER_IMAGE is not set
+      ansible.builtin.fail:
+        msg: CONTAINER_IMAGE environment variable is not set
+      when: hostvars[item]['container_image'] | default('') | trim | length == 0
+      loop: "{{ groups['slurm'] }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Build deduplicated list of custom podman networks
+      ansible.builtin.set_fact:
+        custom_networks: >-
+          {{
+            groups['slurm']
+            | map('extract', hostvars)
+            | selectattr('container_network', 'defined')
+            | map(attribute='container_network')
+            | reject('in', ['bridge', 'none', 'host', 'ns', 'private', 'slirp4netns'])
+            | unique
+            | list
+          }}
+
+    - name: Discover local podman networks
+      containers.podman.podman_network_info:
+        name: "{{ item }}"
+      loop: "{{ custom_networks }}"
+      loop_control:
+        label: "{{ item }}"
+      register: podman_network
+      failed_when: false
+
+    - name: Create podman network dedicated to this scenario
+      containers.podman.podman_network:
+        name: "{{ item.item }}"
+      when:
+        - item.networks | default([]) | length == 0
+      loop: "{{ podman_network.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+
+    - name: Create containers for slurm hosts
+      containers.podman.podman_container:
+        name: "{{ item }}"
+        image: "{{ hostvars[item]['container_image'] }}"
+        command: "{{ hostvars[item]['container_command'] | default(omit) }}"
+        hostname: "{{ hostvars[item]['container_hostname'] | default(omit) }}"
+        privileged: "{{ hostvars[item]['container_privileged'] | default(omit) }}"
+        volumes: "{{ hostvars[item]['container_volumes'] | default(omit) }}"
+        capabilities: "{{ hostvars[item]['container_capabilities'] | default(omit) }}"
+        systemd: "{{ hostvars[item]['container_systemd'] | default(omit) }}"
+        log_driver: "{{ hostvars[item]['container_log_driver'] | default('json-file') }}"
+        env: "{{ hostvars[item]['container_env'] | default(omit) }}"
+        platform: "{{ hostvars[item]['container_platform'] | default(omit) }}"
+        network: "{{ hostvars[item]['container_network'] | default(omit) }}"
+        state: started
+      register: result
+      loop: "{{ groups['slurm'] }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Display container log and fail
+      ansible.builtin.fail:
+        msg: |
+          Container failed to start. Logs:
+          {{ container_logs | default('Unable to retrieve logs') }}
+      vars:
+        container_logs: "{{ lookup('pipe', 'podman logs ' + item.container.Name | quote, errors='ignore') }}"
+        exit_code: "{{ item.container.State.ExitCode }}"
+        running: "{{ item.container.State.Running }}"
+      when: (exit_code | int) != 0 or not (running | bool)
+      loop: "{{ result.results }}"
+      loop_control:
+        label: "{{ item.container.Name }}"

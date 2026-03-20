@@ -1,3 +1,5 @@
+.venv/
+.direnv/
 .cache
 tests/output
 .vscode
@@ -7,5 +9,4 @@ __pycache__
 junit.xml
 .ansible
 .direnv
-.envrc
 /*.tar.gz

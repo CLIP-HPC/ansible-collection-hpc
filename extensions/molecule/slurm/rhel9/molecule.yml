@@ -1,0 +1,29 @@
+---
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - side_effect
+    - cleanup
+    - destroy
+ansible:
+  executor:
+    args:
+      ansible_playbook:
+        - --inventory=${MOLECULE_PROJECT_DIRECTORY}/extensions/molecule/inventory/
+  playbooks:
+    create: ../playbooks/create.yml
+    prepare: ../playbooks/prepare.yml
+    destroy: ../playbooks/destroy.yml
+    converge: ../playbooks/converge.yml
+    verify: ../playbooks/verify.yml
+    side_effect: ../playbooks/add_single_node.yml
+  env:
+    CONTAINER_IMAGE: quay.io/almalinuxorg/9-init:9.7

@@ -63,8 +63,8 @@
     name: "slurmd"
     state: restarted
   retries: 5
-  register: slurmd_restart
-  until: slurmd_restart is success
+  register: slurm_slurmd_restart
+  until: slurm_slurmd_restart is success
   delay: 30
   when:
     - slurm_service_started | bool

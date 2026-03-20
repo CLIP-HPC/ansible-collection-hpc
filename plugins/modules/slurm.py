@@ -18,9 +18,10 @@ description:
 options:
     state:
         description:
-            - The action to take, either add/modify, delete, or list.
+            - The action to take, either add/modify or delete.
             - Equivalent to the first argument to sacctmgr.
-        choices: ['present', 'absent', 'list']
+            - If not specified, defaults to listing (querying) entities.
+        choices: ['present', 'absent']
         type: str
     entity:
         description:
@@ -59,11 +60,6 @@ options:
     defaultqos:
         description: DefaultQOS of account, user or cluster
         type: str
-    '*':
-        description:
-            - Other arguments are the same as to sacctmgr, except all are lower-case.
-            - Rather than WithClusters or WithAssoc, if you specify "parent=", "account=", or "cluster=" they will be inferred.
-        required: false
 """
 
 EXAMPLES = """
@@ -528,7 +524,7 @@ class SAcctMgr(object):
     def __init__(self):
         self.module = AnsibleModule(
             argument_spec=dict(
-                state=dict(type="str", choices=["present", "absent", "list"]),
+                state=dict(type="str", choices=["present", "absent"]),
                 entity=dict(required=True, choices=list(ENTITIES.keys())),
                 name=dict(required=True, type="str"),
                 priority=dict(type="str"),
@@ -610,9 +606,8 @@ class SAcctMgr(object):
     def main(self):
         parser = ENTITIES[self.entity]
         editable = parser.editable()
-        self.state = self.params.pop("state", None) or (
-            "present" if editable else "list"
-        )
+        state = self.params.pop("state", None)
+        self.state = state or "list"
         if not editable and self.state != "list":
             self.fail("cannot set state=%s for %s" % (self.state, self.entity))
         parser.format(self)

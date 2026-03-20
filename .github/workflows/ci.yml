@@ -7,9 +7,9 @@ on:
   # schedule:
   #   - cron: '0 6 * * *'
   workflow_dispatch:
-
 jobs:
- ci:
+  ci:
     uses: vbc-it/github-action-workflows/.github/workflows/ansible-collection.yml@main
     with:
       platform: self-hosted
+      molecule_env_file: ansible.env

@@ -1,0 +1,22 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: vagrant
+  provider:
+    name: ${VAGRANT_PROVIDER:-libvirt}
+platforms:
+  - name: alma9.7-vagrant
+    box: ${VAGRANT_ALMA9_BOX:-almalinux/9}
+    cpus: 2
+    memory: 4096
+provisioner:
+  name: ansible
+  log: true
+verifier:
+  name: ansible
+ansible:
+  playbooks:
+    prepare: ../playbooks/prepare.yml
+    converge: ../playbooks/converge.yml
+    verify: ../playbooks/verify.yml

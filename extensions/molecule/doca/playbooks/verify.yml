@@ -1,0 +1,19 @@
+---
+- name: Test doca
+  hosts: all
+  become: true
+  tasks:
+    - name: Get DKMS status
+      ansible.builtin.command: dkms status
+      register: dkms_status
+      changed_when: false
+
+    - name: Assert mlnx-ofa_kernel DKMS module is installed
+      ansible.builtin.assert:
+        that:
+          - dkms_status.stdout is search('(?m)^mlnx-ofa_kernel/')
+          - dkms_status.stdout is search('(?m)^mlnx-ofa_kernel/[^,]+,\\s*[^,]+,\\s*[^:]+:\\s*installed\\b')
+        fail_msg: |
+          mlnx-ofa_kernel is not installed via DKMS.
+          dkms status output was:
+          {{ dkms_status.stdout }}

@@ -1,0 +1,34 @@
+---
+- name: Install OS dependencies
+  hosts: all
+  become: true
+  handlers:
+    - name: Reboot machine
+      ansible.builtin.reboot:
+        reboot_timeout: 300
+  tasks:
+      # due to https://github.com/geerlingguy/docker-rockylinux9-ansible/issues/6
+    - name: Ensure /etc/shadow has correct permissions
+      ansible.builtin.file:
+        path: /etc/shadow
+        mode: '0400'
+
+    - name: Install required packages
+      ansible.builtin.dnf:
+        name:
+          - epel-release
+          - hostname
+          - python3-dnf-plugin-versionlock
+          - openssh-server
+          - sudo
+          - net-tools
+          - iputils
+          # - "{{ (ansible_distribution_major_version == '7') | ternary('policycoreutils-python', 'policycoreutils-python-utils') }}"
+        state: installed
+
+    - name: Update all packages and reboot if needed
+      ansible.builtin.dnf:
+        name: '*'
+        state: latest # noqa package-latest
+      register: update_result
+      notify: Reboot machine

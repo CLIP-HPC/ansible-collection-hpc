@@ -10,3 +10,4 @@ junit.xml
 .ansible
 .direnv
 /*.tar.gz
+.vagrant

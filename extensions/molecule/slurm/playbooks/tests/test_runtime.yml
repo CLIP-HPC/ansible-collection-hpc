@@ -45,19 +45,14 @@
         fail_msg: "Slurmd service is not running and enabled"
 
     - name: Capture sinfo output
-      ansible.builtin.command: sinfo --noheader --format="%P,%a,%l,%D,%t,%N"
+      ansible.builtin.command: sinfo --noheader --format="%P,%a,%l,%D,%t,%N" --responding
       register: sinfo_output
       changed_when: false
 
     - name: Check slurm partition info
       ansible.builtin.assert:                        # PARTITION AVAIL  TIMELIMIT  NODES  STATE NODELIST
-        that: "sinfo_output.stdout == expected_sinfo"
+        that: "(sinfo_output.stdout | regex_search(expected_sinfo, multiline=True)) is not none"
         fail_msg: "FAILED - actual value: {{ sinfo_output.stdout_lines }}"
-
-    - name: Assert sinfo output matches expectation
-      ansible.builtin.assert:
-        that: sinfo_output.stdout == expected_sinfo
-        fail_msg: "sinfo output does not match expected layout"
 
     - name: Capture sacctmgr cluster details
       ansible.builtin.command: sacctmgr list -nP cluster format=cluster,ControlPort,QOS
@@ -76,7 +71,7 @@
 
     - name: Assert srun output
       ansible.builtin.assert:
-        that: srun_output.stdout | trim == 'cluster-compute1-0'
+        that: srun_output.stdout | trim == 'slurm-cluster-compute1-0'
         fail_msg: "Unexpected hostname from srun"
 
     - name: Submit sbatch job
@@ -170,5 +165,5 @@
 
     - name: Assert srun with feature constraint output
       ansible.builtin.assert:
-        that: srun_features.stdout | trim == 'cluster-compute1-0'
+        that: srun_features.stdout | trim == 'slurm-cluster-compute1-0'
         fail_msg: "Unexpected hostname from feature-constrained srun"

@@ -30,6 +30,7 @@
           - job_container_dir.stat.exists
           - job_container_dir.stat.isdir
         fail_msg: "Job container directory /mnt/{{ ansible_hostname }} is missing"
+      when: slurm_config['JobContainerType'] | default('') != 'omit'
 
 
     - name: Verify slurmd service is running and enabled

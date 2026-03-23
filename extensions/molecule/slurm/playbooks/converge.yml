@@ -1,0 +1,8 @@
+---
+- name: Converge
+  hosts: slurm
+  tasks:
+    - name: Include slurm role
+      tags: always
+      ansible.builtin.include_role:
+        name: "clip.hpc.slurm"

@@ -1,0 +1,21 @@
+---
+- name: Add new host(s) to cluster
+  hosts: slurm_new
+  tasks:
+    - name: Add new host(s) to group for slurm partition
+      ansible.builtin.add_host:
+        name: "{{ inventory_hostname }}"
+        groups: cluster_batch
+
+    - name: Include slurm role
+      tags: always
+      ansible.builtin.include_role:
+        name: "clip.hpc.slurm"
+      vars:
+        slurm_enable:
+          batch: true
+          slurmd: true
+          runtime: true
+
+- name: Verify cluster with new host(s)
+  ansible.builtin.import_playbook: verify.yml

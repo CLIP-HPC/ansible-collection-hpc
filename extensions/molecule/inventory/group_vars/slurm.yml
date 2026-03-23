@@ -1,0 +1,77 @@
+ansible_connection: containers.podman.podman
+container_platform: linux/amd64
+container_privileged: true
+container_image: "{{ lookup('env', 'CONTAINER_IMAGE') }}"
+
+slurm_enable:
+  database: "{{ inventory_hostname in groups['cluster_db'] }}"
+  control: "{{ inventory_hostname in groups['cluster_control'] }}"
+  batch: "{{ inventory_hostname in groups['cluster_batch'] }}"
+  slurmd: "{{ inventory_hostname in (groups['cluster_batch'] + groups['cluster_login']) }}"
+  rest: "{{ inventory_hostname in groups['cluster_control'] }}"
+  runtime: "{{ inventory_hostname not in (groups['slurm_new'] | default([])) }}"
+slurm_db_host: "{{ groups['cluster_db'] | first }}"
+slurm_control_host: "{{ groups['cluster_control'] | first }}"
+slurm_login_only_nodes: cluster_login
+slurm_db_password: test
+slurm_nodegroups:
+  - name: compute1
+    ram_mb: 2048
+    features:
+      - special
+  - name: compute2
+    ram_mb: 2048
+    features:
+      - special
+slurm_partitions:
+  - name: compute1
+    qos: [short]
+    default: "YES"
+    nodegroups:
+      - compute1
+    partition_params:
+      AllowQoS: 'short'
+  - name: compute2
+    default: "NO"
+    partition_params:
+      AllowQoS: 'short'
+    nodegroups:
+      - compute1
+      - compute2
+slurm_cluster_name: cluster
+slurm_qos:
+  - name: short
+    priority: 4
+    maxwall: "08:00:00"
+    grptres: cpu=12,mem=10G
+    maxtres: cpu=5,mem=5G
+    maxtresperuser: cpu=5,mem=5G
+slurm_munge_key: "X+NfDwhSNSYCEvONXGig3AG4Ld/6RY4mv4O7QnRkiNs="
+slurm_adopt_selinux: false
+slurm_ssh_access: [admins]
+slurm_db_data_dir: /srv/slurm_db
+slurm_default_partition_mem: 100
+slurm_job_container_base_path: /mnt
+slurm_job_container_shared_storage: true
+slurm_config:
+  AccountingStoreFlags: [job_comment, job_env, job_script]
+  # on ARM MacBooks with Rosetta we need to disable this
+  JobContainerType: "{{ lookup('env', 'DISABLE_SLURM_JOB_CONTAINER') | ternary('omit', 'job_container/tmpfs') }}"
+slurm_dbd_archive_dir: /tmp/archive
+slurm_dbd_archive_events: true
+slurm_dbd_archive_jobs: true
+slurm_dbd_archive_resvs: true
+slurm_dbd_archive_steps: false
+slurm_dbd_archive_suspend: false
+slurm_dbd_archive_txn: false
+slurm_dbd_archive_usage: false
+slurm_dbd_purge_events: 1month
+slurm_dbd_purge_jobs: 12month
+slurm_dbd_purge_resvs: 1month
+slurm_dbd_purge_steps: 1month
+slurm_dbd_purge_suspend: 1month
+slurm_dbd_purge_txn: 12month
+slurm_dbd_purge_usage: 24month
+slurm_rest_enable: true
+slurm_rest_jwt_key: "X+NfDwhSNSYCEvONXGig3AG4Ld/6RY4mv4O7QnRkiNs="
+slurm_disable_token_creation: true

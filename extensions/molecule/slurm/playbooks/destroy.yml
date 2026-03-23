@@ -1,0 +1,42 @@
+---
+- name: Destroy container instances
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Get info for all containers
+      containers.podman.podman_container_info:
+        name: "{{ item }}"
+      loop: "{{ groups['slurm'] }}"
+      register: podman_infos
+
+    - name: Kill container if running
+      containers.podman.podman_container:
+        name: "{{ item.item }}"
+        state: absent
+        timeout: 2
+      loop: "{{ podman_infos.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when:
+        - item.containers | length > 0
+
+    - name: Build deduplicated list of custom podman networks
+      ansible.builtin.set_fact:
+        custom_networks: >-
+          {{
+            groups['slurm']
+            | map('extract', hostvars)
+            | selectattr('container_network', 'defined')
+            | map(attribute='container_network')
+            | reject('in', ['bridge', 'none', 'host', 'ns', 'private', 'slirp4netns'])
+            | unique
+            | list
+          }}
+
+    - name: Delete custom podman networks dedicated to this scenario
+      containers.podman.podman_network:
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ custom_networks }}"
+      loop_control:
+        label: "{{ item }}"

@@ -1,0 +1,40 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert BeeGFS services are running and enabled
+      ansible.builtin.assert:
+        that:
+          - "item + '.service' in ansible_facts.services"
+          - "ansible_facts.services[item + '.service'].state == 'running'"
+          - "ansible_facts.services[item + '.service'].status == 'enabled'"
+      loop:
+        - beegfs-meta
+        - beegfs-mgmtd
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Check BeeGFS mount path exists
+      ansible.builtin.stat:
+        path: /mnt/beegfs
+      register: beegfs_mount_path
+
+    - name: Assert BeeGFS mount path exists
+      ansible.builtin.assert:
+        that:
+          - beegfs_mount_path.stat.exists
+
+    - name: Get filesystem type for /mnt/beegfs
+      ansible.builtin.command: findmnt -n -o FSTYPE --target /mnt/beegfs
+      register: beegfs_mount_fstype
+      changed_when: false
+
+    - name: Assert /mnt/beegfs filesystem is beegfs
+      ansible.builtin.assert:
+        that:
+          - beegfs_mount_fstype.rc == 0
+          - beegfs_mount_fstype.stdout == 'beegfs'

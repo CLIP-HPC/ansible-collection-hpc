@@ -1,0 +1,213 @@
+---
+- name: Check if BeeGFS auth secret is set
+  ansible.builtin.assert:
+    that:
+      - beegfs_auth_secret is defined
+      - beegfs_auth_secret != None
+    fail_msg: "beegfs_auth_secret must be set to a non-empty value"
+  tags: always
+
+- name: Check if Beegfs Server ID is set
+  ansible.builtin.assert:
+    that:
+      - beegfs_node_num_id is defined
+      - beegfs_node_num_id != None
+    fail_msg: "beegfs_node_num_id must be set to a non-empty value"
+  when: beegfs_enable.oss | default(false) | bool or beegfs_enable.meta | default(false) | bool
+  tags: always
+
+- name: Configure BeeGFS repos
+  ansible.builtin.import_tasks: repos.yml
+  when: beegfs_add_repos | bool
+  tags: ["beegfs", "repos"]
+
+- name: Stop and delete server and client service
+  when: (beegfs_force_format | bool) or
+        (beegfs_package_action | lower == "latest")
+  become: true
+  block:
+    - name: Unmount beegfs file system
+      ansible.posix.mount:
+        name: "{{ item.path }}"
+        state: absent
+      loop: "{{ beegfs_client_mounts | default([]) }}"
+      when: beegfs_enable.client | default(false) | bool
+
+
+    - name: Probe installed services
+      ansible.builtin.service_facts:
+
+    - name: Stop BeeGFS server and client services
+      ansible.builtin.service:
+        name: "{{ item.name }}"
+        state: stopped
+      when:
+        - item.name in ansible_facts.services
+        - item.enable | bool
+      loop:
+        - { name: "beegfs-client.service", enable: "{{ beegfs_enable.client | default(false) }}" }
+        - { name: "beegfs-mgmtd.service", enable: "{{ beegfs_enable.mgmt | default(false) }}" }
+        - { name: "beegfs-meta.service", enable: "{{ beegfs_enable.meta | default(false) }}" }
+        - { name: "beegfs-mon.service", enable: "{{ beegfs_enable.mon | default(false) }}" }
+
+    - name: Stop BeeGFS storage services
+      vars:
+        service_name: "beegfs-storage@{{ item.key }}.service"
+      ansible.builtin.service:
+        name: "{{ service_name }}"
+        state: stopped
+      loop: "{{ beegfs_oss | dict2items }}"
+      when: service_name in ansible_facts.services
+
+    - name: Ensure meta device is not currently mounted
+      ansible.posix.mount:
+        path: "{{ beegfs_meta_path }}"
+        state: unmounted
+      when:
+        - beegfs_enable.meta | default(false) | bool
+        - beegfs_meta_dev is defined
+        - beegfs_meta_dev != None
+
+    - name: Remove other beegfs folders
+      ansible.builtin.file:
+        path: "{{ item.name }}"
+        state: absent
+      when: item.enable | bool
+      loop:
+        - { name: "{{ beegfs_meta_path }}", enable: "{{ beegfs_enable.meta | default(false) }}" }
+        - { name: "{{ beegfs_mgmt_path }}", enable: "{{ beegfs_enable.mgmt | default(false) }}" }
+
+    - name: Remove Beegfs Storage config directories
+      ansible.builtin.file:
+        path: "/etc/beegfs/{{ item.key }}.d/"
+        state: absent
+      loop: "{{ beegfs_oss | dict2items }}"
+
+- name: Create BeeGFS config directories
+  ansible.builtin.file:
+    path: "/etc/beegfs"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  become: true
+  tags: always
+
+- name: Create BeeGFS auth secret file
+  ansible.builtin.copy:
+    content: "{{ beegfs_auth_secret | b64decode }}"
+    dest: /etc/beegfs/conn.auth
+    mode: "0600"
+    owner: root
+    group: root
+  become: true
+  tags: always
+  notify:
+    - Restart BeeGFS mgmt service
+    - Restart BeeGFS meta service
+    - Restart BeeGFS mon service
+    - Restart BeeGFS storage service
+
+- name: Import install.yml
+  ansible.builtin.import_tasks: install.yml
+
+- name: Configure RDMA
+  ansible.builtin.import_tasks: rdma.yml
+  when: beegfs_rdma | bool
+  tags: ["beegfs", "rdma"]
+
+- name: Configure MGMT node
+  ansible.builtin.import_tasks: mgmt.yml
+  when: beegfs_enable.mgmt | default(false) | bool
+  tags: ["beegfs", "mgmt"]
+
+- name: Configure MON node
+  ansible.builtin.import_tasks: mon.yml
+  when: beegfs_enable.mon | default(false) | bool
+  tags: ["beegfs", "mon"]
+
+- name: Configure META node
+  ansible.builtin.import_tasks: meta.yml
+  when: beegfs_enable.meta | default(false) | bool
+  tags: ["beegfs", "meta"]
+
+- name: Configure OSS node
+  ansible.builtin.include_tasks: oss.yml
+  when: beegfs_enable.oss | default(false) | bool
+  tags: ["beegfs", "oss"]
+  args:
+    apply:
+      tags: ["beegfs", "oss"]
+  vars:
+    oss_devices: "{{ oss_item.value.devices }}"
+    oss_port: "{{ oss_item.key }}"
+    interfaces: "{{ oss_item.value.interfaces | default(oss_interfaces) }}"
+    oss_num_id: "{{ (beegfs_node_num_id | int) + (oss_index + 1) * beegfs_target_id_multiplier / 10 }}"
+  loop: "{{ beegfs_oss | dict2items }}"
+  loop_control:
+    loop_var: oss_item
+    index_var: oss_index
+
+- name: Configure tunings
+  ansible.builtin.import_tasks: tuning.yml
+  when: beegfs_enable.tuning | default(false) | bool
+  tags: ["beegfs", "tuning"]
+
+- name: Create connInterfacesFile
+  ansible.builtin.template:
+    src: connInterfacesFile.j2
+    dest: /etc/beegfs/connInterfacesFile
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+
+
+- name: Create connRDMAInterfacesFile
+  ansible.builtin.template:
+    src: connInterfacesFile.j2
+    dest: /etc/beegfs/connRDMAInterfacesFile
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+  tags: always
+
+- name: Start and enable BeeGFS server services
+  ansible.builtin.service:
+    name: "{{ item.name }}"
+    enabled: true
+    state: "{{ item.state | default(omit) }}"
+  become: true
+  when: item.enable | bool
+  tags: always
+  loop:
+    - { name: beegfs-mgmtd, enable: "{{ beegfs_enable.mgmt | default(false) }}", state: started }
+    - { name: beegfs-meta, enable: "{{ beegfs_enable.meta | default(false) }}", state: started }
+    - { name: beegfs-mon, enable: "{{ beegfs_enable.mon | default(false) }}", state: started }
+    - { name: beegfs-oss-tuning, enable: "{{ beegfs_enable.tuning | default(false) }}" }
+
+- name: Start and enable BeeGFS storage services
+  ansible.builtin.service:
+    name: "beegfs-storage@{{ item.key }}"
+    enabled: true
+    state: started
+  become: true
+  tags: always
+  when: beegfs_enable.oss | default(false) | bool
+  loop: "{{ beegfs_oss | dict2items }}"
+
+- name: Configure BeeGFS clients
+  ansible.builtin.import_tasks: client.yml
+  tags: ["beegfs", "client"]
+  when: beegfs_enable.client | bool
+
+
+- name: Configure aliases
+  ansible.builtin.import_tasks: alias.yml
+  tags: ["beegfs", "alias"]
+
+...

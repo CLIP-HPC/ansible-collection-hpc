@@ -1,0 +1,27 @@
+---
+- name: Converge
+  hosts: all
+  roles:
+    - role: clip.hpc.beegfs
+      beegfs_enable:
+        mon: false
+        mgmt: "{{ inventory_hostname in groups['cluster_beegfs_mgmt'] }}"
+        meta: "{{ inventory_hostname in groups['cluster_beegfs_mds'] }}"
+        oss: "{{ inventory_hostname in groups['cluster_beegfs_oss'] }}"
+        tuning: "{{ inventory_hostname in groups['cluster_beegfs_oss'] }}"
+        client: "{{ inventory_hostname in groups['cluster_beegfs_client'] }}"
+      beegfs_oss:
+        8003:
+          devices: "{{ ['/dev/vdb'] if 'kvm' in ansible_facts['virtualization_type'] else ['/dev/sdb'] }}"
+      beegfs_client_mounts:
+        - path: "/mnt/beegfs"
+          port: 8004
+      beegfs_oss_max_sectors_kb: 128
+      beegfs_auth_secret: X6IGuCpALmIy72AJbiozZ8/i+bV5Lpj7qOgCmvNZRZiMi0JkspcJwKVFR+Q9XfPVr4Bmg1An28CjtIbQM28a1+ZyDpwOUq4qVgx+/zy/AacNGiZ3zw7PVM4QDWjg0G5eQxiTidAMiuZO0IZ644ZKaTdoT3IOl0SiCkOBP5aS4VU= # yamllint disable-line rule:line-length
+      beegfs_disable_tls: true
+      beegfs_meta_max_sectors_kb: 128
+      beegfs_mgmt_host: "{{ groups['cluster_beegfs_mgmt'] | first }}"
+      beegfs_fstype: "xfs"
+      beegfs_force_format: false
+      beegfs_interfaces: "{{ ansible_facts['interfaces'] | reject('equalto', 'lo') | list }}"
+      beegfs_rdma: false

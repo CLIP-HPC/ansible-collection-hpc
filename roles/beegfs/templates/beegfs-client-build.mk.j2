@@ -1,0 +1,35 @@
+# BeeGFS client module DKMS build configuration
+# This file is only used when building via DKMS.
+# The module needs to be rebuilt after this file has been changed.
+
+# If using thirdparty OFED specify the path to the installation here.
+# Examples:
+{% if beegfs_ofed_installed %}
+OFED_INCLUDE_PATH=/usr/src/ofa_kernel/default/include
+{% else %}
+#OFED_INCLUDE_PATH=/usr/src/ofa_kernel/default/include
+{% endif %}
+#OFED_INCLUDE_PATH=/usr/src/openib/include
+# To disable RDMA support, define BEEGFS_NO_RDMA
+{% if beegfs_rdma | bool %}
+#BEEGFS_NO_RDMA=1
+{% else %}
+BEEGFS_NO_RDMA=1
+{% endif %}
+# If building nvidia-fs support, specify path to nvfs-dma.h.
+# This directory must also have config-host.h, which is created
+# by the nvidia-fs configure script.
+# Example:
+{% if beegfs_nvfs_include_path %}
+NVFS_INCLUDE_PATH={{ beegfs_nvfs_include_path }}
+{% else %}
+#NVFS_INCLUDE_PATH=/usr/src/nvidia-fs-2.13.5
+{% endif %}
+# If building nvidia-fs support, specify path to NVIDIA driver
+# source.
+# Example:
+{% if beegfs_nvidia_include_path %}
+NVIDIA_INCLUDE_PATH={{ beegfs_nvidia_include_path }}
+{% else %}
+#NVIDIA_INCLUDE_PATH=/usr/src/nvidia-520.61.05/nvidia
+{% endif %}

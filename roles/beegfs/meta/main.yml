@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: beegfs
+  author: Uemit Seren <uemit.seren@gmi.oeaw.ac.at>
+  description: >
+    This role provisions an exisiting cluster to support Beegfs
+    management, metadata, object storage server and client roles.
+  company: clip
+  license: Apache2
+  min_ansible_version: "2.14"
+  platforms:
+    - name: EL
+      versions:
+        - "10"
+  galaxy_tags:
+    - cloud
+    - storage
+    - beegfs
+
+dependencies: []

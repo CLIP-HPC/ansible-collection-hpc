@@ -1,0 +1,19 @@
+---
+beegfs_packages:
+  mgmt:
+    - beegfs-mgmtd
+  mon:
+    - beegfs-mon
+  meta:
+    - beegfs-meta
+    - libbeegfs-ib
+  oss:
+    - beegfs-storage
+    - libbeegfs-ib
+  client:
+    - dkms
+    - beegfs-client-dkms
+    - beegfs-tools
+    - beegfs-utils
+
+beegfs_meta_dev_label: "beegfs-meta"

@@ -1,0 +1,41 @@
+---
+- name: Restart BeeGFS mgmt service
+  ansible.builtin.service:
+    name: beegfs-mgmtd
+    daemon_reload: true
+    state: restarted
+  become: true
+  when: beegfs_enable.mgmt | default(false) | bool
+
+- name: Restart BeeGFS meta service
+  ansible.builtin.service:
+    name: beegfs-meta
+    daemon_reload: true
+    state: restarted
+  become: true
+  when: beegfs_enable.meta | default(false) | bool
+
+- name: Restart BeeGFS storage service
+  ansible.builtin.service:
+    name: "beegfs-storage@{{ item.key }}"
+    daemon_reload: true
+    state: restarted
+  become: true
+  loop: "{{ beegfs_oss | dict2items }}"
+  when: beegfs_enable.oss | default(false) | bool
+
+- name: Restart BeeGFS mon service
+  ansible.builtin.service:
+    name: beegfs-mon
+    daemon_reload: true
+    state: restarted
+  become: true
+  when: beegfs_enable.mon | default(false) | bool
+
+- name: Restart BeeGFS tuning service
+  ansible.builtin.service:
+    name: beegfs-oss-tuning
+    daemon_reload: true
+    state: restarted
+  become: true
+...

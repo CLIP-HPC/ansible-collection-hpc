@@ -1,0 +1,31 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: vagrant
+  provider:
+    name: ${VAGRANT_PROVIDER:-libvirt}
+platforms:
+  - name: alma10.1-vagrant
+    box: ${VAGRANT_ALMA10_BOX:-almalinux/10}
+    cpus: 2
+    memory: 4096
+    instance_raw_config_args:
+      - 'vm.disk :disk, name: "mySmallDisk", size: "10GB"'
+    provider_raw_config_args:
+      - "${VAGRANT_PROVIDER_ARGS:-storage :file, size: '10G'}"
+    groups:
+      - cluster_beegfs_mgmt
+      - cluster_beegfs_mds
+      - cluster_beegfs_oss
+      - cluster_beegfs_client
+provisioner:
+  name: ansible
+  log: true
+verifier:
+  name: ansible
+ansible:
+  playbooks:
+    prepare: ../playbooks/prepare.yml
+    converge: ../playbooks/converge.yml
+    verify: ../playbooks/verify.yml

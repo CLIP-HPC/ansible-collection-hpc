@@ -1,0 +1,87 @@
+---
+
+- name: Check for ofed_info
+  ansible.builtin.command: "ofed_info -s"
+  register: beegfs_ofed_info
+  failed_when: false
+  changed_when: false
+  tags: install
+
+- name: Determine if ofed is in use
+  ansible.builtin.set_fact:
+    beegfs_ofed_installed: "{{ beegfs_ofed_info.rc == 0 }}"
+  tags: install
+
+- name: NVFS detection
+  when: not beegfs_disable_nvfs_detection | bool
+  block:
+    - name: Check for NVFS include path
+      ansible.builtin.shell: "find /usr/src/nvidia-* -name nvfs-dma.h"
+      register: beegfs_nvfs_include_path_result
+      failed_when: beegfs_nvfs_include_path_result.rc > 1
+      changed_when: false
+      tags: install
+
+    - name: Set NVFS include path
+      ansible.builtin.set_fact:
+        beegfs_nvfs_include_path: "{{ beegfs_nvfs_include_path_result.stdout | trim | dirname }}"
+      when: beegfs_nvfs_include_path_result.rc == 0
+      tags: install
+
+- name: Run configure to generate config-host.h in the NVFS include directory
+  ansible.builtin.command:
+    cmd: ./configure
+    creates: "{{ beegfs_nvfs_include_path }}/config-host.h"
+  args:
+    chdir: "{{ beegfs_nvfs_include_path }}"
+  when: beegfs_nvfs_include_path != None
+  tags: install
+
+
+- name: Check for NVIDIA include path
+  ansible.builtin.shell: "find /usr/src/nvidia-*/nvidia/ -name nv-p2p.h"
+  register: beegfs_nvidia_include_path_result
+  failed_when: beegfs_nvidia_include_path_result.rc > 1
+  changed_when: false
+  tags: install
+
+- name: Set NVIDIA include path
+  ansible.builtin.set_fact:
+    beegfs_nvidia_include_path: "{{ beegfs_nvidia_include_path_result.stdout | trim | dirname }}"
+  when: beegfs_nvidia_include_path_result.rc == 0
+  tags: install
+
+- name: Generate beegfs-client-build.mk
+  become: true
+  ansible.builtin.template:
+    dest: /etc/beegfs/beegfs-client-build.mk
+    src: beegfs-client-build.mk.j2
+    mode: "0644"
+  when: beegfs_enable.client | bool
+  tags: install
+
+
+- name: install | Build host-specific list of required beegfs packages
+  become: true
+  tags: install
+  ansible.builtin.set_fact:
+    beegfs_pkglist: "{{ beegfs_pkglist | default([]) + [item.value] }}"
+  loop: "{{ beegfs_packages | dict2items }}"
+  when: (beegfs_enable.get(item.key, false))
+
+- name: install | Install required beegfs packages
+  become: true
+  tags: install
+  ansible.builtin.dnf:
+    name: "{{ beegfs_pkglist | reject('eq', '') | flatten }}"
+    state: "{{ beegfs_package_action }}"
+    install_weak_deps: false # avoids getting recommended packages
+  when: beegfs_pkglist | length > 0
+
+- name: install | Install RDMA packages
+  become: true
+  tags: install
+  ansible.builtin.package:
+    name: "{{ beegfs_distro_vars[ansible_os_family]['rdma_dev_pkgs'] }}"
+    state: "{{ beegfs_package_action }}"
+  when: beegfs_rdma | bool

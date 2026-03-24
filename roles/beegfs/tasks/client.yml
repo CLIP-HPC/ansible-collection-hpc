@@ -1,0 +1,132 @@
+---
+
+
+- name: Make of copy of BeeGFS client config file if it doesn't exist
+  become: true
+  ansible.builtin.copy:
+    mode: "0644"
+    remote_src: true
+    src: /etc/beegfs/beegfs-client.conf
+    dest: /etc/beegfs/beegfs-client-{{ item.port }}.conf
+    force: false
+  loop: "{{ beegfs_client_mounts | default([]) }}"
+  when: beegfs_client_mounts | length > 1
+
+
+- name: Configure sysMgmtHost for BeeGFS client
+  become: true
+  vars:
+    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ beegfs_client_config_file }}
+    regexp: ^sysMgmtdHost
+    line: sysMgmtdHost = {{ beegfs_mgmt_host }}
+  loop: "{{ beegfs_client_mounts | default([]) }}"
+
+
+- name: Configure Port for BeeGFS Client
+  become: true
+  vars:
+    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ beegfs_client_config_file }}
+    regexp: ^connClientPort
+    line: connClientPort                = {{ item.port }}
+  loop: "{{ beegfs_client_mounts | default([]) }}"
+
+- name: Configure connInterfacesFile for BeeGFS client
+  become: true
+  vars:
+    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ beegfs_client_config_file }}
+    regexp: "^connInterfacesFile"
+    line: connInterfacesFile            = /etc/beegfs/connInterfacesFile
+  loop: "{{ beegfs_client_mounts | default([]) }}"
+
+
+- name: Configure connRDMAInterfacesFile for BeeGFS client
+  become: true
+  vars:
+    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ beegfs_client_config_file }}
+    regexp: "^connRDMAInterfacesFile"
+    line: connRDMAInterfacesFile        = /etc/beegfs/connRDMAInterfacesFile
+  loop: "{{ beegfs_client_mounts | default([]) }}"
+
+- name: Configure quotaEnabled for BeeGFS client
+  become: true
+  vars:
+    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ beegfs_client_config_file }}
+    regexp: ^quotaEnabled
+    line: quotaEnabled                  = {{ (beegfs_enable_quota | bool) | ternary('true', 'false') }}
+  loop: "{{ beegfs_client_mounts | default([]) }}"
+
+
+- name: Configure RMDA buffer size for BeeGFS client
+  become: true
+  vars:
+    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ beegfs_client_config_file }}
+    regexp: ^connRDMABufSize
+    line: connRDMABufSize               = {{ beegfs_conn_rdma_buf_size }}
+  loop: "{{ beegfs_client_mounts | default([]) }}"
+  when: beegfs_conn_rdma_buf_size | default(false, true)
+
+- name: Configure RMDA buffer number for BeeGFS client
+  become: true
+  vars:
+    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ beegfs_client_config_file }}
+    regexp: ^connRDMABufNum
+    line: connRDMABufNum                = {{ beegfs_conn_rdma_buf_num }}
+  loop: "{{ beegfs_client_mounts | default([]) }}"
+  when: beegfs_conn_rdma_buf_num | default(false, true)
+
+- name: Configure connMaxInternodeNum for BeeGFS client
+  become: true
+  vars:
+    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/beegfs/{{ beegfs_client_config_file }}
+    regexp: "^connMaxInternodeNum"
+    line: connMaxInternodeNum           = {{ beegfs_conn_client_max_internode_num }}
+    backrefs: true
+  when: beegfs_conn_client_max_internode_num | default(false, true)
+  loop: "{{ beegfs_client_mounts | default([]) }}"
+
+
+- name: Make sure to load beegfs module after reboot
+  become: true
+  ansible.builtin.copy:
+    mode: "0644"
+    dest: /etc/modules-load.d/beegfs-client-dkms.conf
+    content: |
+      # Load the BeeGFS client module at boot
+      beegfs
+
+- name: Load beegfs module
+  become: true
+  community.general.modprobe:
+    name: beegfs
+    state: present
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Mount beegfs storage
+  become: true
+  vars:
+    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+  ansible.posix.mount:
+    fstype: beegfs
+    name: "{{ item.path }}"
+    opts: rw,relatime,cfgFile=/etc/beegfs/{{ beegfs_client_config_file }},_netdev
+    src: beegfs_nodev
+    state: mounted
+  loop: "{{ beegfs_client_mounts | default([]) }}"

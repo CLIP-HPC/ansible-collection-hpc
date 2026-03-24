@@ -1,0 +1,130 @@
+---
+- name: Create a list of devices that are mounted
+  ansible.builtin.set_fact:
+    beegfs_mounted_devs: "{{ ansible_mounts | map(attribute='device') | list }}"
+
+- name: Create storage config dirs
+  ansible.builtin.file:
+    path: "/etc/beegfs/{{ oss_port }}.d/"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  become: true
+
+- name: Create connInterfacesFile
+  vars:
+    beegfs_interfaces: "{{ interfaces }}"
+  ansible.builtin.template:
+    src: connInterfacesFile.j2
+    dest: /etc/beegfs/{{ oss_port }}.d/connInterfacesFile
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+
+- name: Add template beegfs-storage conf
+  ansible.builtin.copy:
+    src: "/etc/beegfs/beegfs-storage.conf"
+    dest: "/etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf"
+    remote_src: true
+    force: false
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+  notify: Restart BeeGFS storage service
+
+- name: Set Storage Port
+  ansible.builtin.lineinfile:
+    path: "/etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf"
+    regexp: '^connStoragePort'
+    line: "connStoragePort = {{ oss_port }}"
+  become: true
+  notify: Restart BeeGFS storage service
+
+- name: Specify connInterfacesFile
+  ansible.builtin.lineinfile:
+    path: "/etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf"
+    regexp: "^connInterfacesFile"
+    line: "connInterfacesFile           = /etc/beegfs/{{ oss_port }}.d/connInterfacesFile"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  notify: Restart BeeGFS storage service
+
+- name: Prepare storage devices
+  ansible.builtin.include_tasks: fs.yml
+  vars:
+    oss_path: "{{ beegfs_oss_labels_mount_paths[oss_dev].mount_path }}"
+    oss_dev_label: "{{ beegfs_oss_labels_mount_paths[oss_dev].label }}"
+  tags: ["beegfs", "oss", "fs"]
+  args:
+    apply:
+      tags: ["beegfs", "oss", "fs"]
+  loop: "{{ oss_devices }}"
+  loop_control:
+    loop_var: oss_dev
+    index_var: oss_idx
+
+
+- name: Run storage service setup script
+  vars:
+    oss_path: "{{ beegfs_oss_labels_mount_paths[oss_dev].mount_path }}"
+    oss_replace: "{{ '-r' if oss_idx == 0 else '' }}"
+  loop: "{{ oss_devices }}"
+  loop_control:
+    index_var: oss_idx
+    loop_var: oss_dev
+  ansible.builtin.command: |
+    /opt/beegfs/sbin/beegfs-setup-storage -f \
+    -p {{ oss_path }}  \
+    {{ oss_replace }} \
+    -m {{ beegfs_mgmt_host }} \
+    -c /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf \
+    -s {{ beegfs_oss_labels_mount_paths[oss_dev].oss_storage_id | int }} \
+    -i {{ beegfs_oss_labels_mount_paths[oss_dev].oss_target_id | int }} \
+  args:
+    creates: "{{ oss_path }}/targetNumID"
+  become: true
+  notify: Restart BeeGFS storage service
+
+
+- name: Configure tuneNumWorkers settings for BeeGFS storage server
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
+    regexp: "^tuneNumWorkers"
+    line: "tuneNumWorkers               = {{ beegfs_oss_tune_num_workers }}"
+  become: true
+  when: beegfs_oss_tune_num_workers | default(false, true)
+  notify: Restart BeeGFS storage service
+
+
+- name: Configure connMaxInternodeNum for BeeGFS storage server
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
+    regexp: "^connMaxInternodeNum"
+    line: connMaxInternodeNum           = {{ beegfs_conn_oss_max_internode_num }}
+    backrefs: true
+  when: beegfs_conn_oss_max_internode_num | default(false, true)
+  notify: Restart BeeGFS storage service
+
+- name: Configure RMDA buffer size for BeeGFS server
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
+    regexp: ^connRDMABufSize
+    line: connRDMABufSize               = {{ beegfs_conn_rdma_buf_size }}
+  when: beegfs_conn_rdma_buf_size | default(false, true)
+
+- name: Configure RMDA buffer number for BeeGFS server
+  become: true
+  vars:
+    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
+    regexp: ^connRDMABufNum
+    line: connRDMABufNum                = {{ beegfs_conn_rdma_buf_num }}
+  when: beegfs_conn_rdma_buf_num | default(false, true)

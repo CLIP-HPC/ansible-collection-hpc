@@ -1,0 +1,26 @@
+---
+
+- name: Disable TLS authentication (Development)
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-mgmtd.toml
+    insertafter: "^# tls-disable ="
+    regexp: "^tls-disable ="
+    line: "tls-disable = {{ beegfs_disable_tls | lower }}"
+  become: true
+  notify: Restart BeeGFS mgmt service
+
+- name: Adapt database file location
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-mgmtd.toml
+    regexp: "^db-file ="
+    line: "db-file = '{{ beegfs_mgmt_path }}/mgmtd.sqlite'"
+    insertafter: "^# db-file ="
+  become: true
+  notify: Restart BeeGFS mgmt service
+
+- name: Run management service setup script
+  ansible.builtin.command: "/opt/beegfs/sbin/beegfs-mgmtd --init"
+  args:
+    creates: "{{ beegfs_mgmt_path }}/mgmtd.sqlite"
+  become: true
+  notify: Restart BeeGFS mgmt service

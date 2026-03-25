@@ -1,0 +1,91 @@
+---
+- name: Unmount beegfs file system
+  become: true
+  ansible.posix.mount:
+    name: "{{ item.path }}"
+    state: absent
+  loop: "{{ beegfs_client_mounts | default([]) }}"
+  when: beegfs_enable.client | default(false) | bool
+
+- name: Probe installed services
+  ansible.builtin.service_facts:
+
+- name: Stop BeeGFS server and client services
+  become: true
+  ansible.builtin.service:
+    name: "{{ item.name }}"
+    state: stopped
+  when:
+    - item.name in ansible_facts.services
+    - item.enable | bool
+  loop:
+    - { name: "beegfs-client.service", enable: "{{ beegfs_enable.client | default(false) }}" }
+    - { name: "beegfs-mgmtd.service", enable: "{{ beegfs_enable.mgmt | default(false) }}" }
+    - { name: "beegfs-meta.service", enable: "{{ beegfs_enable.meta | default(false) }}" }
+    - { name: "beegfs-mon.service", enable: "{{ beegfs_enable.mon | default(false) }}" }
+    - { name: beegfs-oss-tuning, enable: "{{ beegfs_enable.tuning | default(false) }}" }
+
+- name: Stop BeeGFS storage services
+  become: true
+  vars:
+    service_name: "beegfs-storage@{{ item.key }}.service"
+  ansible.builtin.service:
+    name: "{{ service_name }}"
+    state: stopped
+  loop: "{{ beegfs_oss | dict2items }}"
+  when: service_name in ansible_facts.services
+
+- name: Ensure meta device is not currently mounted
+  become: true
+  ansible.posix.mount:
+    path: "{{ beegfs_meta_path }}"
+    state: absent
+  when:
+    - beegfs_enable.meta | default(false) | bool
+    - beegfs_meta_dev is defined
+    - beegfs_meta_dev != None
+
+- name: Wipe metadata filesystem
+  become: true
+  ansible.builtin.command: wipefs -a {{ beegfs_meta_dev }}
+  changed_when: true
+
+- name: Remove other beegfs folders
+  become: true
+  ansible.builtin.file:
+    path: "{{ item.name }}"
+    state: absent
+  when: item.enable | bool
+  loop:
+    - { name: "{{ beegfs_meta_path }}", enable: "{{ beegfs_enable.meta | default(false) }}" }
+    - { name: "{{ beegfs_mgmt_path }}", enable: "{{ beegfs_enable.mgmt | default(false) }}" }
+
+- name: Remove Beegfs Storage config directories
+  become: true
+  ansible.builtin.file:
+    path: "/etc/beegfs/{{ item.key }}.d/"
+    state: absent
+  loop: "{{ beegfs_oss | dict2items }}"
+
+- name: Unmount BeeGFS oss paths if mounted
+  become: true
+  vars:
+    oss_path: "{{ beegfs_oss_labels_mount_paths[item.1].mount_path }}"
+  ansible.posix.mount:
+    path: "{{ oss_path }}"
+    state: absent
+  loop: "{{ beegfs_oss | dict2items | subelements('value.devices') }}"
+  loop_control:
+    label: "{{ item.1 }}"
+  when:
+    - beegfs_enable.oss | default(false) | bool
+
+- name: Wipe BeeGFS oss filesystems
+  become: true
+  ansible.builtin.command: wipefs -a {{ item.1 }}
+  loop: "{{ beegfs_oss | dict2items | subelements('value.devices') }}"
+  changed_when: true
+  loop_control:
+    label: "{{ item.1 }}"
+  when:
+    - beegfs_enable.oss | default(false) | bool

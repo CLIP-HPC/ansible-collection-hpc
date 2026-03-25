@@ -1,0 +1,24 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  become: true
+  handlers:
+    - name: Reboot machine
+      ansible.builtin.reboot:
+        reboot_timeout: 300
+  tasks:
+    - name: Install EPEL repository
+      ansible.builtin.dnf:
+        name:
+          - epel-release
+          - sudo
+        state: present
+      become: true
+
+    - name: Update all packages and reboot if needed
+      ansible.builtin.dnf:
+        name: '*'
+        state: latest # noqa package-latest
+      register: update_result
+      notify: Reboot machine

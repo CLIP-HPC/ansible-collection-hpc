@@ -1,0 +1,39 @@
+---
+- name: Calculate and store BeeGFS node number
+  ansible.builtin.set_fact:
+    beegfs_node_num_id: "{{ (beegfs_node_num_id | int) * (beegfs_target_id_multiplier | int) | int }}"
+  tags: always
+
+- name: Determine storage ids
+  vars:
+    oss_storage_id: "{{ (beegfs_node_num_id | int) + (ix + 1) * beegfs_target_id_multiplier / 10 }}"
+  ansible.builtin.set_fact:
+    beegfs_oss_id_map: "{{ beegfs_oss_id_map | default({}) | combine({item.key: oss_storage_id | int}) }}"
+  loop: "{{ beegfs_oss | dict2items }}"
+  loop_control:
+    index_var: ix
+  tags: always
+
+- name: Determine mount paths and labels for OSS
+  vars:
+    oss_path: "{{ beegfs_oss_path_prefix }}/oss-data-{{ ix }}"
+    oss_dev_label: "ST-{{ item.0.key }}-{{ ix % (item.0.value.devices | length) }}"
+    oss_target_id: "{{ beegfs_oss_id_map[item.0.key] + (ix % (item.0.value.devices | length) + 1)  }}"
+  ansible.builtin.set_fact:
+    # yamllint disable rule:line-length
+    beegfs_oss_labels_mount_paths: "{{ beegfs_oss_labels_mount_paths | default({}) | combine({item.1: {'oss_storage_id': beegfs_oss_id_map[item.0.key], 'oss_target_id': (oss_target_id | int), 'mount_path': oss_path, 'label': oss_dev_label}}) }}"
+  loop: "{{ beegfs_oss | dict2items | subelements('value.devices') }}"
+  loop_control:
+    index_var: ix
+  tags: always
+
+- name: Create BeeGFS cluster
+  ansible.builtin.include_tasks: create.yml
+  when: beegfs_state | lower == "present"
+  tags: always
+
+- name: Destroy BeegFS cluster
+  ansible.builtin.include_tasks: destroy.yml
+  when: beegfs_state | lower == "absent"
+  tags: always
+...

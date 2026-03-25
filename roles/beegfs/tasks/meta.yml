@@ -1,0 +1,107 @@
+---
+
+- name: Create directory for BeeGFS metadata
+  ansible.builtin.file:
+    path: "{{ beegfs_meta_path }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  become: true
+  notify: Restart BeeGFS meta service
+
+- name: Prepare metadata block storage
+  become: true
+  when:
+    - beegfs_meta_dev is defined
+    - beegfs_meta_dev != None
+  block:
+    - name: Format filesystem
+      vars:
+        meta_fstype: "{{ beegfs_meta_fstype | default(beegfs_fstype) }}"
+      community.general.filesystem:
+        dev: "{{ beegfs_meta_dev }}"
+        fstype: "{{ meta_fstype }}"
+        opts: "{{ beegfs_meta_filesystem_opts }} -L {{ beegfs_meta_dev_label }}"
+        force: "{{ beegfs_force_format }}"
+      notify: Restart BeeGFS meta service
+
+    - name: Mount filesystem
+      vars:
+        meta_fstype: "{{ beegfs_meta_fstype | default(beegfs_fstype) }}"
+      ansible.posix.mount:
+        src: "/dev/disk/by-label/{{ beegfs_meta_dev_label }}"
+        path: "{{ beegfs_meta_path }}"
+        fstype: "{{ meta_fstype }}"
+        opts: "{{ beegfs_meta_mount_opts }}"
+        state: mounted
+      notify: Restart BeeGFS meta service
+
+- name: Run metadata service setup script
+  vars:
+    beegfs_meta_node_id: "{{ (beegfs_node_num_id | int + 1 * beegfs_target_id_multiplier / 10) | int }}"
+  ansible.builtin.command: >
+    /opt/beegfs/sbin/beegfs-setup-meta -f  -p {{ beegfs_meta_path }} -m {{ beegfs_mgmt_host }}
+    "-s {{ beegfs_meta_node_id | int }}"
+  args:
+    creates: "{{ beegfs_meta_path }}/nodeNumID"
+  become: true
+  notify: Restart BeeGFS meta service
+
+- name: Specify connInterfacesFile for BeeGFS metadata server
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-meta.conf
+    regexp: "^connInterfacesFile"
+    line: "connInterfacesFile           = /etc/beegfs/connInterfacesFile"
+  become: true
+  notify: Restart BeeGFS meta service
+
+- name: Modify tuneTargetChooser settings for
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-meta.conf
+    regexp: "^tuneTargetChooser"
+    line: "tuneTargetChooser            = {{ beegfs_meta_tune_target_chooser }}"
+  become: true
+  notify: Restart BeeGFS meta service
+
+- name: Configure tuneNumWorkers settings for BeeGFS metadata server
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-meta.conf
+    regexp: "^tuneNumWorkers"
+    line: "tuneNumWorkers               = {{ beegfs_meta_tune_num_workers }}"
+  become: true
+  when: beegfs_meta_tune_num_workers | default(false, true)
+  notify: Restart BeeGFS meta service
+
+
+- name: Configure connMaxInternodeNum for BeeGFS metadata server
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-meta.conf
+    regexp: "^connMaxInternodeNum"
+    line: connMaxInternodeNum           = {{ beegfs_conn_meta_max_internode_num }}
+    backrefs: true
+  when: beegfs_conn_meta_max_internode_num | default(false, true)
+  notify: Restart BeeGFS meta service
+
+
+- name: Configure RMDA buffer size for BeeGFS metadata server
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-meta.conf
+    regexp: ^connRDMABufSize
+    line: connRDMABufSize               = {{ beegfs_conn_rdma_buf_size }}
+  when: beegfs_conn_rdma_buf_size | default(false, true)
+  notify: Restart BeeGFS meta service
+
+
+- name: Configure RMDA buffer number for BeeGFS metadata server
+  become: true
+  vars:
+    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-meta.conf
+    regexp: ^connRDMABufNum
+    line: connRDMABufNum                = {{ beegfs_conn_rdma_buf_num }}
+  when: beegfs_conn_rdma_buf_num | default(false, true)
+  notify: Restart BeeGFS meta service

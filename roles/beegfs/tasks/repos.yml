@@ -1,0 +1,23 @@
+---
+- name: Ensure the BeeGFS package repo is defined
+  ansible.builtin.get_url:
+    url: "{{ beegfs_repo_url }}"
+    dest: "{{ beegfs_repo_file }}"
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+
+- name: Add apt key for debian family machines
+  ansible.builtin.apt_key:
+    state: present
+    url: "{{ beegfs_repo_key }}"
+  when: ansible_os_family == "Debian"
+  become: true
+
+- name: Add rpm key for redhat family machines
+  ansible.builtin.rpm_key:
+    state: present
+    key: "{{ beegfs_repo_key }}"
+  when: ansible_os_family == "RedHat"
+  become: true

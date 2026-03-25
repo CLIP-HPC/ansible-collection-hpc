@@ -1,0 +1,69 @@
+---
+
+- name: Set Aliases
+  become: true
+  delegate_to: "{{ beegfs_mgmt_host }}"
+  environment:
+    BEEGFS_TLS_DISABLE: "true"
+  block:
+    - name: Create alias for BeeGFS management server
+      vars:
+        alias: "{{ beegfs_mgmt_host }}-mgmt"
+      ansible.builtin.command: >
+        /usr/sbin/beegfs node set-alias mg:1 {{ beegfs_mgmt_host }}-mgmt
+      when: beegfs_enable.mgmt | default(false) | bool
+      register: beegfs_mgmt_alias
+      changed_when: beegfs_mgmt_alias.stderr == "Alias set to " + alias
+      failed_when: beegfs_mgmt_alias.rc != 0 and 'already in use by a node' not in beegfs_mgmt_alias.stderr
+
+    - name: Create aliases BeeGFS metadata server
+      vars:
+        alias: "{{ inventory_hostname }}-meta"
+      ansible.builtin.command: >
+        /usr/sbin/beegfs node set-alias m:{{ (beegfs_node_num_id | int + 1 * beegfs_target_id_multiplier / 10) | int }} {{ inventory_hostname }}-meta
+      when: beegfs_enable.meta | default(false) | bool
+      register: beegfs_meta_alias
+      changed_when: beegfs_meta_alias.stderr == "Alias set to " + alias
+      failed_when: beegfs_meta_alias.rc != 0 and 'already in use by a node' not in beegfs_meta_alias.stderr
+
+
+    - name: Create aliases BeeGFS metadata targets
+      vars:
+        meta_target_id: "{{ beegfs_node_num_id | int + 1 * beegfs_target_id_multiplier / 10 }}"
+        alias: "{{ inventory_hostname }}-meta-{{ beegfs_meta_dev | replace('/dev/', '') }}"
+      ansible.builtin.command: >
+        /usr/sbin/beegfs target set-alias m:{{ meta_target_id | int }} {{ alias }}
+      when: beegfs_enable.meta | default(false) | bool
+      register: beegfs_meta_target_alias
+      changed_when: beegfs_meta_target_alias.stderr == "Alias set to " + alias
+      failed_when: beegfs_meta_target_alias.rc != 0 and 'already in use by a target' not in beegfs_meta_target_alias.stderr
+
+    - name: Create aliases BeeGFS storage server
+      vars:
+        oss_num_id: "{{ beegfs_node_num_id | int + (oss_index + 1) * beegfs_target_id_multiplier / 10 }}"
+        alias: "{{ inventory_hostname }}-oss-{{ oss_item.key }}"
+      ansible.builtin.command: >
+        /usr/sbin/beegfs node set-alias s:{{ oss_num_id | int | string }} {{ alias }}
+      when: beegfs_enable.oss | default(false) | bool
+      register: beegfs_oss_alias
+      changed_when: beegfs_oss_alias.stderr == "Alias set to " + alias
+      failed_when: beegfs_oss_alias.rc != 0 and 'already in use by a node' not in beegfs_oss_alias.stderr
+      loop: "{{ beegfs_oss | dict2items }}"
+      loop_control:
+        loop_var: oss_item
+        index_var: oss_index
+
+
+    - name: Create aliases BeeGFS storage targets
+      vars:
+        alias: "{{ inventory_hostname }}-{{ beegfs_oss_labels_mount_paths[oss_item.1].label }}"
+      ansible.builtin.command: >
+        /usr/sbin/beegfs target set-alias s:{{ beegfs_oss_labels_mount_paths[oss_item.1].oss_target_id | int | string }} {{ alias }}
+      when: beegfs_enable.oss | default(false) | bool
+      register: beegfs_oss_target_alias
+      changed_when: beegfs_oss_target_alias.stderr == "Alias set to " + alias
+      failed_when: beegfs_oss_target_alias.rc != 0 and 'already in use by a target' not in beegfs_oss_target_alias.stderr
+      loop: "{{ beegfs_oss | dict2items | subelements('value.devices') }}"
+      loop_control:
+        loop_var: oss_item
+        index_var: oss_index

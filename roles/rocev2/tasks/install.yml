@@ -1,4 +1,10 @@
 ---
+- name: install | Install mft package
+  ansible.builtin.package:
+    name: "mft"
+    state: present
+  become: true
+
 - name: install | Enable RoCE ECN packages
   become: true
   ansible.posix.sysctl:

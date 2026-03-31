@@ -1,4 +1,13 @@
 ---
+- name: Create BeeGFS config directories
+  ansible.builtin.file:
+    path: "/etc/beegfs"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  become: true
+  tags: always
 
 - name: Check for ofed_info
   ansible.builtin.command: "ofed_info -s"

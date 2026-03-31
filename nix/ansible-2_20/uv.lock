@@ -23,7 +23,7 @@ wheels = [
 [[package]]
 name = "ansible-2-20"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 
 [package.dev-dependencies]
 api = [

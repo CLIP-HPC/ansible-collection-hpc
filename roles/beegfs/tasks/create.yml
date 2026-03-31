@@ -83,15 +83,8 @@
         state: absent
       loop: "{{ beegfs_oss | dict2items }}"
 
-- name: Create BeeGFS config directories
-  ansible.builtin.file:
-    path: "/etc/beegfs"
-    state: directory
-    mode: "0755"
-    owner: root
-    group: root
-  become: true
-  tags: always
+- name: Import install.yml
+  ansible.builtin.import_tasks: install.yml
 
 - name: Create BeeGFS auth secret file
   ansible.builtin.copy:
@@ -107,9 +100,6 @@
     - Restart BeeGFS meta service
     - Restart BeeGFS mon service
     - Restart BeeGFS storage service
-
-- name: Import install.yml
-  ansible.builtin.import_tasks: install.yml
 
 - name: Configure RDMA
   ansible.builtin.import_tasks: rdma.yml

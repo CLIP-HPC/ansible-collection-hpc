@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-TOS=106
+TOS=104
 
 for ibdev in /sys/class/infiniband/mlx5_*; do
     # Configure TOS for RDMA-CM QPs

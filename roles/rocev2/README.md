@@ -1,6 +1,6 @@
 # clip.hpc.rocev2 Role
 
-This role configured NVIDIA NIC firmwware swettings to trust DSCP and configure TOS 106 to use for RDMA traffic
+This role configured NVIDIA NIC firmwware swettings to trust DSCP and configure TOS 104 to use for RDMA traffic
 
 
 ## Example Playbook

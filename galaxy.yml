@@ -47,7 +47,7 @@ dependencies:
   ansible.posix: ">=1.6.2"
   community.general: ">=12.3.0"
   ansible.utils: ">=6.0.0"
-  community.mysql: ">=4.1.0"
+  community.mysql: "<5.0.0"
 
 # The URL of the originating SCM repository
 repository: https://github.com/CLIP-HPC/ansible-collection-hpc

@@ -5,10 +5,13 @@ slurm_slurm_packages:
     - "slurm-example-configs"
     - "s-nail"
   batch:
-    - "slurm"
-    - "slurm-pam_slurm"
-    - "slurm-libpmi"
-    - "selinux-policy-devel"
+    "{{
+      ['slurm',
+        'slurm-pam_slurm',
+        'slurm-libpmi',
+        'selinux-policy-devel'] +
+      (['slurm-pam-slurm-adopt-selinux'] if (slurm_adopt_selinux | bool) else [])
+    }}"
   runtime:
     - "slurm"
     - "slurm-slurmd"

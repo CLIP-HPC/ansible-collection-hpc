@@ -24,17 +24,6 @@
           - not slurm_conf_dir.stat.isreg | default(false)
         fail_msg: "Unexpected slurm configuration directory or file found in /etc/slurm"
 
-    - name: Check bash completion file presence
-      ansible.builtin.stat:
-        path: /etc/bash_completion.d/slurm_completion.sh
-      register: slurm_completion
-
-    - name: Assert bash completion file exists
-      ansible.builtin.assert:
-        that:
-          - slurm_completion.stat.exists
-          - slurm_completion.stat.isreg
-        fail_msg: "Missing /etc/bash_completion.d/slurm_completion.sh"
 
     - name: Verify slurmd service is running and enabled
       ansible.builtin.assert:

@@ -2,6 +2,11 @@
 # See the slurmdbd.conf man page for more information.
 
 
+# General settings
+{% if slurm_dbd_max_query_time_range is defined %}
+MaxQueryTimeRange={{ slurm_dbd_max_query_time_range }}
+{% endif %}
+
 # Purging & Archival
 {% if slurm_dbd_archive_dir is defined %}
 ArchiveDir={{ slurm_dbd_archive_dir }}
@@ -63,7 +68,7 @@ AuthAltParameters={{ slurm_auth_alt_parameters }}
 {% endif %}
 
 # SlurmDBD info
-DbdHost={{ hostvars[slurm_db_host]['ansible_hostname'] }}
+DbdHost={{ ansible_facts['hostname'] }}
 DbdPort={{ slurm_dbd_port }}
 SlurmUser=slurm
 #MessageTimeout=300

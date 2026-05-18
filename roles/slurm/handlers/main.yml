@@ -8,7 +8,7 @@
   when:
     - slurm_db_host is defined
     - slurm_service_started | bool
-    - slurm_db_host in play_hosts
+    - slurm_db_host in ansible_play_batch
   listen: Restart slurmdbd service
 
 
@@ -20,7 +20,7 @@
   when:
     - slurm_db_host is defined
     - slurm_service_started | bool
-    - slurm_db_host in play_hosts
+    - slurm_db_host in ansible_play_batch
   listen: Restart slurmdbd service
 
 - name: Restart slurmctld
@@ -32,7 +32,7 @@
   when:
     - slurm_service_started | bool
     - not (slurm_reconfigure | bool)
-    - slurm_control_host in play_hosts
+    - slurm_control_host in ansible_play_batch
   listen: Restart slurmctld service
 
 - name: Check slurmctld actually restarted
@@ -43,7 +43,7 @@
   run_once: true
   when:
     - slurm_service_started | bool
-    - slurm_control_host in play_hosts
+    - slurm_control_host in ansible_play_batch
   listen: Restart slurmctld service
 
 
@@ -56,7 +56,7 @@
   run_once: true
   when:
     - not (slurm_reconfigure | bool)
-    - slurm_control_host in play_hosts
+    - slurm_control_host in ansible_play_batch
 
 - name: Restart slurmd service
   ansible.builtin.service:
@@ -80,7 +80,7 @@
   changed_when: true
   when:
     - slurm_service_started | bool
-    - slurm_control_host in play_hosts
+    - slurm_control_host in ansible_play_batch
 
 
 - name: Reload facts

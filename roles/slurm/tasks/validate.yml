@@ -2,9 +2,8 @@
 ---
 - name: validate | Check required variables
   tags:
+    - always
     - validate
-    - install
-    - variables
   ansible.builtin.assert:
     that:
       - slurm_cluster_name is defined
@@ -13,13 +12,26 @@
       - slurm_munge_key != ''
       - not (slurm_rest_enable | bool) or (slurm_rest_jwt_key is defined and slurm_rest_jwt_key and slurm_rest_jwt_key != '')
     fail_msg: slurm role variables not correctly defined, see detail above
+
+- name: validate | Check lua JobSubmitPlugins has script configured
+  tags:
+    - always
+    - validate
+  ansible.builtin.assert:
+    that:
+      - "'lua' not in _slurm_job_submit_plugins or slurm_job_submit_script | default('', true) | length > 0"
+    fail_msg: >-
+      JobSubmitPlugins includes 'lua' but slurm_job_submit_script is not set.
+      Set slurm_job_submit_script to a template path or source file path for /etc/slurm/job_submit.lua.
+  vars:
+    _slurm_job_submit_plugins: "{{ (slurm_default_config | combine(slurm_config)).get('JobSubmitPlugins', []) }}"
   delegate_to: localhost
   run_once: true
 
 - name: validate | Check no host appears in more than one nodegroup
   tags:
+    - always
     - validate
-    - install
   ansible.builtin.assert:
     that: "{{ _slurm_check_hosts.values() | select('greaterthan', 1) | length == 0 }}"
     fail_msg: |
@@ -33,8 +45,8 @@
 
 - name: validate | Validate slurm_nodegroups
   tags:
+    - always
     - validate
-    - install
   ansible.utils.validate:
     criteria: "{{ lookup('file', 'nodegroup.schema') }}"
     engine: 'ansible.utils.jsonschema'

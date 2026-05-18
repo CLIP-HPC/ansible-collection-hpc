@@ -49,7 +49,7 @@ slurm_default_config:
 
   JobAcctGatherType: "jobacct_gather/cgroup"
 
-  JobContainerType: job_container/tmpfs
+  NamespaceType: namespace/tmpfs
 
   RebootProgram: /usr/sbin/reboot
 
@@ -96,6 +96,11 @@ slurm_ram_multiplier: 0.95
 
 slurm_power_save: false
 
-slurm_job_submit_script:
+slurm_job_submit_script: ''
+slurm_job_submit_script_symlink: false
 
 slurm_job_submit_plugins: []
+
+# AcctGather settings rendered into /etc/slurm/acct_gather.conf when
+# AcctGatherEnergyType or AcctGatherInterconnectType is configured.
+slurm_acct_gather_options: {}

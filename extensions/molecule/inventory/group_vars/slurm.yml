@@ -56,7 +56,7 @@ slurm_job_container_shared_storage: true
 slurm_config:
   AccountingStoreFlags: [job_comment, job_env, job_script]
   # on ARM MacBooks with Rosetta we need to disable this
-  JobContainerType: "{{ lookup('env', 'DISABLE_SLURM_JOB_CONTAINER') | ternary('omit', 'job_container/tmpfs') }}"
+  NamespaceType: "{{ lookup('env', 'DISABLE_SLURM_JOB_CONTAINER') | ternary('omit', 'namespace/tmpfs') }}"
 slurm_dbd_archive_dir: /tmp/archive
 slurm_dbd_archive_events: true
 slurm_dbd_archive_jobs: true

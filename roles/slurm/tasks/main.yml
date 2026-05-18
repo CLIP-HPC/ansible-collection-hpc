@@ -3,7 +3,7 @@
   ansible.builtin.include_tasks: validate.yml
   when: slurm_enable.runtime | default(false) | bool
   tags:
-    - install
+    - always
     - validate
 
 
@@ -17,7 +17,7 @@
   ansible.builtin.include_role:
     name: geerlingguy.mysql
   vars:
-    mysql_innodb_buffer_pool_size: "{{ (hostvars[slurm_db_host].ansible_memtotal_mb / 2) | int }}M"
+    mysql_innodb_buffer_pool_size: "{{ (ansible_facts['memtotal_mb'] / 2) | int }}M"
     mysql_innodb_lock_wait_timeout: 900
     mysql_root_password: "{{ slurm_db_root_password | default(omit) }}"
     mysql_datadir: "{{ slurm_db_data_dir | default(omit) }}"

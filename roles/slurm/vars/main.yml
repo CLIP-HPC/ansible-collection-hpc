@@ -4,6 +4,7 @@ slurm_slurm_packages:
     - "slurm-slurmctld"
     - "slurm-example-configs"
     - "s-nail"
+    - "lua" # used to compoile check job_submit.lua
   batch:
     "{{
       ['slurm',

@@ -22,6 +22,42 @@
     mode: "0644" # perms/ownership based off src from ohpc package
     owner: root
     group: root
+    backup: true
+
+- name: control | Configure job_submit.lua
+  tags:
+    - control
+    - reconfigure
+  when: slurm_job_submit_script | default('', true) | length > 0
+  block:
+    - name: control | Template job_submit.lua
+      ansible.builtin.template:
+        src: "{{ slurm_job_submit_script }}"
+        dest: /etc/slurm/job_submit.lua
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      when: not slurm_job_submit_script_symlink | bool
+      notify:
+        - Reconfigure slurmctld
+
+    - name: control | Symlink job_submit.lua
+      ansible.builtin.file:
+        src: "{{ slurm_job_submit_script }}"
+        dest: /etc/slurm/job_submit.lua
+        state: link
+        force: true
+      when: slurm_job_submit_script_symlink | bool
+      notify:
+        - Reconfigure slurmctld
+
+    - name: control | Validate job_submit.lua compiles
+      ansible.builtin.command:
+        cmd: /usr/bin/luac -p /etc/slurm/job_submit.lua
+      register: slurm_luac_check
+      changed_when: false
+      failed_when: slurm_luac_check.rc != 0
 
 - name: control | Template slurm.conf
   tags:
@@ -33,11 +69,33 @@
     owner: root
     group: root
     mode: "0644"
+    backup: true
   notify:
     - Restart slurmctld service
     - Reconfigure slurmctld
   register: slurm_conf
   # NB uses restart rather than reload as number of nodes might have changed
+
+- name: control | Template acct_gather.conf
+  tags:
+    - control
+    - reconfigure
+  ansible.builtin.template:
+    src: acct_gather.conf.j2
+    dest: /etc/slurm/acct_gather.conf
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify:
+    - Reconfigure slurmctld
+  register: slurm_acct_gather_conf
+  when: >-
+    ((slurm_default_config | combine(slurm_config)).get('AcctGatherEnergyType')
+    not in [None, '', 'omit'])
+    or
+    ((slurm_default_config | combine(slurm_config)).get('AcctGatherInterconnectType')
+    not in [None, '', 'omit'])
 
 - name: control | Create gres.conf
   tags:
@@ -49,6 +107,7 @@
     mode: "0600"
     owner: slurm
     group: slurm
+    backup: true
   notify:
     - Restart slurmctld service
     - Reconfigure slurmctld
@@ -65,6 +124,7 @@
     mode: "0644" # perms/ownership based off src from ohpc package
     owner: root
     group: root
+    backup: true
 
 - name: control | Configure powersaving
   ansible.builtin.import_tasks: powersave.yml

@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+{% for k, v in slurm_acct_gather_options | default({}) | items %}
+{%   if v != "omit" %}{# allow removing items using setting key: null #}
+{{ k }}={{ v | join(',') if (v is sequence and v is not string) else v }}
+{%   endif %}
+{% endfor %}

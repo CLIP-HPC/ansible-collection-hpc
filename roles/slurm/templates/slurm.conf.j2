@@ -10,7 +10,7 @@ ClusterName={{ slurm_cluster_name }}
 {%  endif %}
 {% endfor %}
 
-{% set jobsubmitplugins = ((['lua'] if slurm_job_submit_script | default('', true) | length > 0 else [])) + (slurm_config.get('JobSubmitPlugins', []) | unique) %}
+{% set jobsubmitplugins = ((['lua'] if slurm_job_submit_script | default('', true) | length > 0 else []) + slurm_config.get('JobSubmitPlugins', [])) | unique %}
 {% if jobsubmitplugins | length > 0 %}
 JobSubmitPlugins={{ jobsubmitplugins | join(',') }}
 {% endif %}
@@ -31,17 +31,33 @@ NodeName={{ node }}
 {%  set inventory_group_hosts = groups.get(inventory_group_name, []) %}
 {%      if inventory_group_hosts | length > 0 %}
 {%          set play_group_hosts = inventory_group_hosts | intersect (ansible_play_batch) %}
-{%          set first_host = play_group_hosts | first | mandatory('Inventory group "' ~ inventory_group_name ~ '" contains no hosts in this play - was --limit used?') %}
+{%          set _guard = play_group_hosts | first | mandatory('Inventory group "' ~ inventory_group_name ~ '" contains no hosts in this play - was --limit used?') %}
+{%          set ns = namespace(first_host=_guard, found_topo=false) %}
+{%          for h in play_group_hosts %}
+{%            if not ns.found_topo %}
+{%              set _topo = hostvars[h].get('ansible_facts', {}).get('ansible_local', {}).get('slurmd_topology', {}) %}
+{%              if _topo is mapping and _topo | length > 0 %}
+{%                set ns.first_host = h %}
+{%                set ns.found_topo = true %}
+{%              endif %}
+{%            endif %}
+{%          endfor %}
+{%          set first_host = ns.first_host %}
 {%          set first_host_hv = hostvars[first_host] %}
-{%          set ram_mb = (first_host_hv['ansible_facts']['memory_mb']['real']['total'] * (nodegroup.ram_multiplier | default(slurm_ram_multiplier))) | int %}
+{%          set slurmd_topo = first_host_hv.get('ansible_facts', {}).get('ansible_local', {}).get('slurmd_topology', {}) %}
+{%          set slurmd_topo = slurmd_topo if slurmd_topo is mapping else {} %}{# guard: fact may be a raw string if the interpreter was missing on a previous run #}
+{%          set ram_mb = slurmd_topo.get('RealMemory', first_host_hv['ansible_facts']['memory_mb']['real']['total']) | int %}
+{%          set mem_spec_limit = (ram_mb * nodegroup.get('mem_spec_percent', slurm_mem_spec_percent | default(0))) | int %}
 {%          set hostlists = (inventory_group_hosts | clip.hpc.hostlist_expression) %}{# hosts in inventory group aren't necessarily a single hostlist expression #}
+# Node config source ({{ first_host }}): {{ slurmd_topo | ternary('slurmd_topology facts', 'fallback to ansible_facts') }}
 NodeName={{ hostlists | join(',') }} {{ '' -}}
     Features={{ (['nodegroup_' ~ nodegroup.name] + nodegroup.features | default([]) ) | join(',') }} {{ '' -}}
     State=UNKNOWN {{ '' -}}
     RealMemory={{ nodegroup.ram_mb | default(ram_mb) }} {{ '' -}}
-    Sockets={{ first_host_hv['ansible_facts']['processor_count'] }} {{ '' -}}
-    CoresPerSocket={{ first_host_hv['ansible_facts']['processor_cores'] }} {{ '' -}}
-    ThreadsPerCore={{ first_host_hv['ansible_facts']['processor_threads_per_core'] }} {{ '' -}}
+    {%- if mem_spec_limit %}MemSpecLimit={{ mem_spec_limit }}{% endif %} {{ '' -}}
+    Sockets={{ slurmd_topo.get('SocketsPerBoard', first_host_hv['ansible_facts']['processor_count']) }} {{ '' -}}
+    CoresPerSocket={{ slurmd_topo.get('CoresPerSocket', first_host_hv['ansible_facts']['processor_cores']) }} {{ '' -}}
+    ThreadsPerCore={{ slurmd_topo.get('ThreadsPerCore', first_host_hv['ansible_facts']['processor_threads_per_core']) }} {{ '' -}}
     {{ nodegroup.node_params | default({}) | clip.hpc.dict2parameters }} {{ '' -}}
     {% if 'gres' in nodegroup %}Gres={{ ','.join(nodegroup.gres | map(attribute='conf')) }}{% endif %}
 
@@ -56,7 +72,7 @@ NodeName=nonesuch
 # PARTITIONS
 {% for partition in slurm_partitions %}
 PartitionName={{partition.name}} {{ '' -}}
-    Default={{ partition.get('default', 'YES') }} {{ '' -}}
+    Default={{ partition.get('default', 'NO') }} {{ '' -}}
     MaxTime={{ partition.get('maxtime', slurm_job_maxtime | default('UNLIMITED')) }} {{ '' -}}
     State=UP  {{ '' -}}
     Nodes={{ partition.get('nodegroups', [partition.name]) | map('regex_replace', '^', 'nodegroup_') | join(',') }} {{ '' -}}

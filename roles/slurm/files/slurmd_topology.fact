@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+"""Ansible local facts: gather Slurm node hardware topology via ``slurmd -C``.
+
+Runs ``slurmd -C --parameters=numa_node_as_socket`` and exposes the parsed
+key/value pairs as Ansible local facts under ``ansible_local.slurmd_topology``.
+
+When ``numa_node_as_socket`` is active, ``SocketsPerBoard`` reflects the number
+of NUMA nodes (rather than physical sockets), which is what Slurm uses for
+resource accounting.  The template falls back to standard Ansible facts when
+this script returns an empty dict (e.g. before slurmd is installed).
+"""
+
+import json
+import subprocess
+import sys
+
+SLURMD_BIN = "/usr/sbin/slurmd"
+
+# Keys whose values should be coerced to integers
+INT_KEYS = frozenset(
+    {"CPUs", "Boards", "SocketsPerBoard", "CoresPerSocket", "ThreadsPerCore", "RealMemory"}
+)
+
+
+def main() -> None:
+    try:
+        result = subprocess.run(
+            [SLURMD_BIN, "-C", "--parameters=numa_node_as_socket"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except FileNotFoundError:
+        # slurmd is not installed yet – return empty facts so the template can
+        # fall back to standard Ansible facts.
+        print(json.dumps({}))
+        sys.exit(0)
+    except Exception as exc:  # noqa: BLE001
+        print(json.dumps({"error": str(exc)}))
+        sys.exit(0)
+
+    if result.returncode != 0:
+        print(json.dumps({"error": (result.stderr or result.stdout).strip()}))
+        sys.exit(0)
+
+    facts: dict = {}
+    for line in result.stdout.splitlines():
+        # The first line begins with NodeName= and contains all hardware tokens.
+        if line.startswith("NodeName="):
+            for token in line.split():
+                if "=" in token:
+                    key, _, value = token.partition("=")
+                    if key in INT_KEYS:
+                        try:
+                            value = int(value)  # type: ignore[assignment]
+                        except ValueError:
+                            pass
+                    facts[key] = value
+            break  # Only the first line carries hardware details
+
+    print(json.dumps(facts))
+
+
+if __name__ == "__main__":
+    main()

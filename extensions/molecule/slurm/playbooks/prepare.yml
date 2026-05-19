@@ -18,6 +18,7 @@
           - epel-release
           - hostname
           - python3-dnf-plugin-versionlock
+          - python-unversioned-command
           - openssh-server
           - sudo
           - net-tools

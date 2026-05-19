@@ -36,3 +36,32 @@
   tags: install
   ansible.builtin.dnf:
     name: "{{ slurm_packages }}"
+
+- name: install | Create facts directory
+  tags: install
+  when: slurm_enable.slurmd | bool
+  ansible.builtin.file:
+    path: /etc/ansible/facts.d/
+    state: directory
+    owner: root
+    group: root
+    mode: ugo=rwX
+
+- name: install | Deploy slurmd topology facts script
+  tags: install
+  when: slurm_enable.slurmd | bool
+  ansible.builtin.copy:
+    src: slurmd_topology.fact
+    dest: /etc/ansible/facts.d/slurmd_topology.fact
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: install | Refresh local Ansible facts on slurmd nodes
+  tags: install
+  when: slurm_enable.slurmd | bool
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!min"
+      - local

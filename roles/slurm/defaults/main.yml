@@ -91,8 +91,10 @@ slurm_dbd_conf_debug_flags: ""
 slurm_db_data_dir:
 slurm_db_root_password: "{{ slurm_db_password }}"
 
-# Auto detection
-slurm_ram_multiplier: 0.95
+# ratio of the node's total memory that should be reserved for the system
+# and not included in the memory available for scheduling. Value is a percentage (1 = 100%).
+# Default is 0 (no memory reserved).
+slurm_mem_spec_percent: 0
 
 slurm_power_save: false
 

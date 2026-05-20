@@ -39,7 +39,7 @@
 
 - name: install | Create facts directory
   tags: install
-  when: slurm_enable.slurmd | bool
+  when: slurm_enable.get('slurmd', false) | bool
   ansible.builtin.file:
     path: /etc/ansible/facts.d/
     state: directory
@@ -49,7 +49,7 @@
 
 - name: install | Deploy slurmd topology facts script
   tags: install
-  when: slurm_enable.slurmd | bool
+  when: slurm_enable.get('slurmd', false) | bool
   ansible.builtin.copy:
     src: slurmd_topology.fact
     dest: /etc/ansible/facts.d/slurmd_topology.fact
@@ -59,7 +59,7 @@
 
 - name: install | Refresh local Ansible facts on slurmd nodes
   tags: install
-  when: slurm_enable.slurmd | bool
+  when: slurm_enable.get('slurmd', false) | bool
   ansible.builtin.setup:
     gather_subset:
       - "!all"

@@ -41,6 +41,14 @@
           - services['slurmd.service'].status == 'enabled'
         fail_msg: "Slurmd service is not running and enabled"
 
+    - name: Verify systemd-logind is masked, disabled, and stopped
+      ansible.builtin.assert:
+        that:
+          - "'systemd-logind.service' in services"
+          - services['systemd-logind.service'].status == 'masked'
+          - services['systemd-logind.service'].state == 'stopped'
+        fail_msg: "systemd-logind.service is not masked/disabled/stopped"
+
     - name: Check pam_slurm_adopt is configured for sshd
       ansible.builtin.command: grep pam_slurm_adopt.so /etc/pam.d/sshd
       register: pam_adopt
@@ -50,18 +58,6 @@
       ansible.builtin.assert:
         that: pam_adopt.rc == 0
         fail_msg: "pam_slurm_adopt.so is not configured in /etc/pam.d/sshd"
-
-    - name: Ensure pam_systemd is not present in system-auth
-      ansible.builtin.command: egrep "^-session\s*(optional|required)\s*pam_systemd\.so" /etc/pam.d/system-auth
-      register: pam_system_auth
-      changed_when: false
-      failed_when: pam_system_auth.rc == 0
-
-    - name: Ensure pam_systemd is not present in password-auth
-      ansible.builtin.command: egrep "^-session\s*(optional|required)\s*pam_systemd\.so" /etc/pam.d/password-auth
-      register: pam_password_auth
-      changed_when: false
-      failed_when: pam_password_auth.rc == 0
 
     - name: Check ssh access for admins group
       ansible.builtin.command: egrep "^\+:admins:ALL$" /etc/security/access.conf

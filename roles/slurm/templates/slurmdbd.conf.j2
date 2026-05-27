@@ -20,6 +20,12 @@ ArchiveEvents={{ slurm_dbd_archive_events }}
 {% if slurm_dbd_archive_jobs is defined %}
 ArchiveJobs={{ slurm_dbd_archive_jobs }}
 {% endif %}
+{% if slurm_dbd_archive_job_script is defined %}
+ArchiveJobScript={{ slurm_dbd_archive_job_script }}
+{% endif %}
+{% if slurm_dbd_archive_job_env is defined %}
+ArchiveJobEnv={{ slurm_dbd_archive_job_env }}
+{% endif %}
 {% if slurm_dbd_archive_resvs is defined %}
 ArchiveResvs={{ slurm_dbd_archive_resvs }}
 {% endif %}
@@ -41,6 +47,12 @@ PurgeEventAfter={{ slurm_dbd_purge_events }}
 {% endif %}
 {% if slurm_dbd_purge_jobs is defined %}
 PurgeJobAfter={{ slurm_dbd_purge_jobs }}
+{% endif %}
+{% if slurm_dbd_purge_job_script is defined %}
+PurgeJobScriptAfter={{ slurm_dbd_purge_job_script }}
+{% endif %}
+{% if slurm_dbd_purge_job_env is defined %}
+PurgeJobEnvAfter={{ slurm_dbd_purge_job_env }}
 {% endif %}
 {% if slurm_dbd_purge_resvs is defined %}
 PurgeResvAfter={{ slurm_dbd_purge_resvs }}

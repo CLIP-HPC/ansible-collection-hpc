@@ -9,7 +9,7 @@ namespace: clip
 name: hpc
 
 # The version of the collection. Must be compatible with semantic versioning
-version: 3.4.0
+version: 3.5.0
 
 # The path to the Markdown (.md) readme file. This path is relative to the root of the collection
 readme: README.md
@@ -65,5 +65,22 @@ issues: https://github.com/CLIP-HPC/ansible-collection-hpc/issues
 # artifact. A pattern is matched from the relative path of the file or directory of the collection directory. This
 # uses 'fnmatch' to match the files or directories. Some directories and files like 'galaxy.yml', '*.pyc', '*.retry',
 # and '.git' are always filtered
-build_ignore: []
+build_ignore:
+  - .git
+  - .github
+  - .gitignore
+  - .vscode
+  - .idea
+  - .venv
+  - venv
+  - .tox
+  - .pytest_cache
+  - __pycache__
+  - "*.pyc"
+  - dist
+  - build
+  - "*.tar.gz"
+  - tmp
+  - logs
+  - "*.log"
 ...

@@ -9,7 +9,10 @@ on:
   workflow_dispatch:
 jobs:
   ci:
-    uses: vbc-it/github-action-workflows/.github/workflows/ansible-collection.yml@main
+    uses: vbc-it/github-action-workflows/.github/workflows/ansible-collection.yml@v1.0.0
+    secrets:
+      automationhub_token: ${{ secrets.AAP_HUB_API_TOKEN }}
     with:
       platform: self-hosted
       molecule_env_file: ansible.env
+      publish_to_automationhub: true

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "ansible-coder",
+  "instructions": [
+    "AGENTS.md",
+    ".opencode/rules/*.md",
+    ".opencode/rules/**/*.md",
+    ".agency/rules/global/*.md",
+    ".agency/rules/team/ansible/*.md"
+  ],
+  "skills": {
+    "paths": [
+      ".opencode/skills",
+      ".opencode/skill",
+      ".agency/skills"
+    ]
+  },
+  "agent": {
+    "ansible-coder": {
+      "mode": "primary",
+      "model": "anthropic/claude-sonnet-4-20250514",
+      "description": "Develops Ansible collections, standalone roles, operations/playbook repositories, inventories, and execution environments.",
+      "prompt": "{file:.agency/agents/stack/ansible-coder.md}",
+      "permission": {
+        "edit": "allow",
+        "bash": "ask"
+      }
+    },
+    "ansible-reviewer": {
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-20250514",
+      "description": "Reviews Ansible changes for safety, idempotency, repository fit, blast radius, and validation gaps.",
+      "prompt": "{file:.agency/agents/universal/reviewer.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": "ask"
+      }
+    },
+    "infra-docs-writer": {
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-20250514",
+      "description": "Writes and updates RFC Confluence pages and internal infrastructure documentation. Invoke with an RFC number after changes are complete to document what was done.",
+      "prompt": "{file:.agency/agents/stack/infra-docs-writer.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    }
+  }
+}

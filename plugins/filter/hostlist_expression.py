@@ -112,3 +112,10 @@ def hostlist_expression(hosts):
     return [
         "{}[{}]".format(k, _group_numbers(v)) for k, v in results.items()
     ] + unmatchable
+
+
+class FilterModule(object):
+    def filters(self):
+        return {
+            "hostlist_expression": hostlist_expression,
+        }

@@ -47,3 +47,10 @@ def dict2parameters(d):
     """Convert a dict into a str in 'k1=v1 k2=v2 ...' format"""
     parts = ["%s=%s" % (k, v) for k, v in d.items()]
     return " ".join(parts)
+
+
+class FilterModule(object):
+    def filters(self):
+        return {
+            "dict2parameters": dict2parameters,
+        }

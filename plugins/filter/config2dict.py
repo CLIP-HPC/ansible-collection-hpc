@@ -91,3 +91,10 @@ def config2dict(lines):
                 v = True
             cfg[k] = v
     return cfg
+
+
+class FilterModule(object):
+    def filters(self):
+        return {
+            "config2dict": config2dict,
+        }

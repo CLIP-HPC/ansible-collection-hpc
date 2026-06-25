@@ -57,3 +57,10 @@ def error(condition, msg):
 
     if not condition:
         raise errors.AnsibleFilterError(msg)
+
+
+class FilterModule(object):
+    def filters(self):
+        return {
+            "error": error,
+        }

@@ -21,7 +21,27 @@
   loop: "{{ rocev2_mlx_devices }}"
   register: rocev2_mlx_current_settings
   changed_when: false
+  failed_when: false
 
+- name: dcbx | Report MLX devices without configurable firmware
+  ansible.builtin.debug:
+    msg: >-
+      Skipping {{ item.item }}: mlxconfig query failed (rc={{ item.rc }}: {{ item.stdout | trim }}),
+      likely a non-NIC device (e.g. a GPU-attached chip) rather than a discrete NIC.
+  loop: "{{ rocev2_mlx_current_settings.results | rejectattr('rc', 'equalto', 0) | list }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: dcbx | Store MLX devices with configurable firmware
+  ansible.builtin.set_fact:
+    rocev2_mlx_configurable_settings: "{{ rocev2_mlx_current_settings.results | selectattr('rc', 'equalto', 0) | list }}"
+
+- name: dcbx | Fail if no MLX devices support configuration
+  ansible.builtin.fail:
+    msg: >-
+      None of the {{ rocev2_mlx_devices | length }} MST device(s) found support mlxconfig queries.
+      Expected at least one discrete NIC to be configurable.
+  when: rocev2_mlx_configurable_settings | length == 0
 
 - name: dcbx | Store Current DCBX settings
   ansible.builtin.set_fact:
@@ -49,7 +69,7 @@
         | map(attribute='0')
         | list
       }) }}
-  loop: "{{ rocev2_mlx_current_settings.results }}"
+  loop: "{{ rocev2_mlx_configurable_settings }}"
   loop_control:
     label: "{{ item.item }}"
 

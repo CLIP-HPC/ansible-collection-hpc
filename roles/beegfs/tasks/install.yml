@@ -48,7 +48,7 @@
 
 
 - name: Check for NVIDIA include path
-  ansible.builtin.shell: "find /usr/src/nvidia-*/nvidia/ -name nv-p2p.h"
+  ansible.builtin.shell: "find /usr/src -type f -name nv-p2p.h -printf '%h\n' -quit"
   register: beegfs_nvidia_include_path_result
   failed_when: beegfs_nvidia_include_path_result.rc > 1
   changed_when: false
@@ -56,7 +56,7 @@
 
 - name: Set NVIDIA include path
   ansible.builtin.set_fact:
-    beegfs_nvidia_include_path: "{{ beegfs_nvidia_include_path_result.stdout | trim | dirname }}"
+    beegfs_nvidia_include_path: "{{ beegfs_nvidia_include_path_result.stdout | trim }}"
   when: beegfs_nvidia_include_path_result.rc == 0
   tags: install
 

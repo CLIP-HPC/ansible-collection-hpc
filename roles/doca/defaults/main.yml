@@ -1,6 +1,6 @@
 ---
 # defaults file for clip.hpc.doca
-doca_version: '3.3.0' # 2.9 is LTS, last to support ConnectX-4, 3 years for bug fixes and CVE updates
+doca_version: '3.4.0' # 2.9 is LTS, last to support ConnectX-4, 3 years for bug fixes and CVE updates
 doca_profile: doca-ofed
 _doca_arch: "{{ (ansible_architecture == 'aarch64') | ternary('arm64-sbsa', 'x86_64') }}"
 doca_repo_url: "https://linux.mellanox.com/public/repo/doca/{{ doca_version }}/rhel{{ ansible_distribution_major_version }}/{{ _doca_arch }}/"

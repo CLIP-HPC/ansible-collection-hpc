@@ -17,7 +17,7 @@ Provision an existing cluster to support [BeeGFS](https://www.beegfs.io/) manage
 - `beegfs_node_num_id`: Numeric node ID used for target ID calculation.
 - `beegfs_oss`: Dict of object storage server configurations, keyed by name.
 - `beegfs_oss_path_prefix`: Filesystem path prefix for OSS mount points.
-- `beegfs_nvfs_gds_export_symbol_workaround`: Apply the workaround for [ThinkParQ/beegfs#123](https://github.com/ThinkParQ/beegfs/issues/123), where GPUDirect Storage (GDS) is reported as unsupported on kernels that restrict `symbol_get()` to GPL-exported symbols. Patches the BeeGFS client DKMS source to export its nvfs registration hooks with `EXPORT_SYMBOL_GPL` and rebuilds the module. Only takes effect when GDS/NVFS support is being built (`beegfs_nvfs_include_path` is set). If the beegfs module is already loaded, unmount all BeeGFS filesystems and reload the module (or reboot) for the change to take effect. Fixed upstream in BeeGFS >= 8.5. Default: `false`.
+- `beegfs_nvfs_gds_export_symbol_workaround`: Apply the workaround for [ThinkParQ/beegfs#123](https://github.com/ThinkParQ/beegfs/issues/123), where GPUDirect Storage (GDS) is reported as unsupported on kernels that restrict `symbol_get()` to GPL-exported symbols. Patches the BeeGFS client DKMS source to export its nvfs registration hooks with `EXPORT_SYMBOL_GPL` and rebuilds the module. Only takes effect when GDS/NVFS support is being built (`beegfs_nvfs_include_path` is set), so it is a no-op otherwise. If the beegfs module is already loaded, unmount all BeeGFS filesystems and reload the module (or reboot) for the change to take effect. Fixed upstream in BeeGFS >= 8.5. Default: `true`.
 
 ## Example Playbook
 

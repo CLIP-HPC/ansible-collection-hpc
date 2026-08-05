@@ -100,5 +100,5 @@
   when:
     - beegfs_enable.client | bool
     - beegfs_nvfs_gds_export_symbol_workaround | bool
-    - beegfs_nvfs_include_path
+    - (beegfs_nvfs_include_path | default('', true)) | length > 0
   tags: install

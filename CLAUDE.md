@@ -48,4 +48,5 @@ Skills from `.agency/skills/` can be referenced in prompts:
 @.agency/rules/global/git-conventions.md
 @.agency/rules/global/ci-cd.md
 @.agency/rules/global/organization-context.md
+@.agency/rules/global/agent-behavior.md
 @.agency/rules/team/ansible/*.md

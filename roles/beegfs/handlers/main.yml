@@ -38,4 +38,28 @@
     daemon_reload: true
     state: restarted
   become: true
+
+- name: Rebuild BeeGFS client DKMS module
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      dkms build -m {{ beegfs_client_dkms_name }} -v {{ beegfs_client_dkms_version }}
+      -k {{ ansible_kernel }} --force
+  changed_when: true
+
+- name: Reinstall BeeGFS client DKMS module
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      dkms install -m {{ beegfs_client_dkms_name }} -v {{ beegfs_client_dkms_version }}
+      -k {{ ansible_kernel }} --force
+  changed_when: true
+
+- name: Warn that a module reload is required to apply the GDS workaround
+  ansible.builtin.debug:
+    msg: >-
+      The BeeGFS client DKMS module was rebuilt with the GDS EXPORT_SYMBOL_GPL workaround
+      (https://github.com/ThinkParQ/beegfs/issues/123). If the beegfs module is already loaded,
+      unmount all BeeGFS filesystems and reload the module (or reboot) for the change to take
+      effect.
 ...

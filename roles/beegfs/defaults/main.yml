@@ -144,3 +144,11 @@ beegfs_conn_client_max_internode_num:
 beegfs_nvfs_include_path:
 beegfs_nvidia_include_path:
 beegfs_disable_nvfs_detection: false
+
+# Workaround for https://github.com/ThinkParQ/beegfs/issues/123: on kernels that restrict
+# symbol_get() to GPL-exported symbols, GPUDirect Storage (GDS) is reported as "Unsupported"
+# because the BeeGFS client module exports its nvfs registration hooks with EXPORT_SYMBOL
+# instead of EXPORT_SYMBOL_GPL. Fixed upstream in BeeGFS >= 8.5. Only takes effect when GDS/NVFS
+# support is being built (beegfs_nvfs_include_path is set). Requires unmounting and reloading the
+# beegfs module (or a reboot) to take effect if the module was already loaded.
+beegfs_nvfs_gds_export_symbol_workaround: false

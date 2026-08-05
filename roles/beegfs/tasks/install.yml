@@ -94,3 +94,11 @@
     name: "{{ beegfs_distro_vars[ansible_os_family]['rdma_dev_pkgs'] }}"
     state: "{{ beegfs_package_action }}"
   when: beegfs_rdma | bool
+
+- name: install | Apply BeeGFS client GDS EXPORT_SYMBOL workaround
+  ansible.builtin.include_tasks: gds_workaround.yml
+  when:
+    - beegfs_enable.client | bool
+    - beegfs_nvfs_gds_export_symbol_workaround | bool
+    - beegfs_nvfs_include_path
+  tags: install

@@ -1,0 +1,54 @@
+---
+# Workaround for https://github.com/ThinkParQ/beegfs/issues/123
+# See beegfs_nvfs_gds_export_symbol_workaround in defaults/main.yml for details.
+
+- name: Find BeeGFS client DKMS source directory
+  ansible.builtin.find:
+    paths: /usr/src
+    patterns: "beegfs-client-dkms-*"
+    file_type: directory
+  register: beegfs_client_dkms_src_find
+  tags: install
+
+- name: Fail if BeeGFS client DKMS source directory is not found
+  ansible.builtin.fail:
+    msg: >-
+      Could not find the BeeGFS client DKMS source under /usr/src. The GDS EXPORT_SYMBOL
+      workaround (https://github.com/ThinkParQ/beegfs/issues/123) requires the
+      beegfs-client-dkms package to already be installed.
+  when: beegfs_client_dkms_src_find.files | length == 0
+  tags: install
+
+- name: Set BeeGFS client DKMS source directory fact
+  ansible.builtin.set_fact:
+    beegfs_client_dkms_src_dir: "{{ beegfs_client_dkms_src_find.files | map(attribute='path') | sort | last }}"
+  tags: install
+
+- name: Read BeeGFS client DKMS module metadata
+  ansible.builtin.slurp:
+    src: "{{ beegfs_client_dkms_src_dir }}/dkms.conf"
+  register: beegfs_client_dkms_conf
+  tags: install
+
+- name: Parse BeeGFS client DKMS module name and version
+  vars:
+    beegfs_client_dkms_conf_content: "{{ beegfs_client_dkms_conf.content | b64decode }}"
+  ansible.builtin.set_fact:
+    beegfs_client_dkms_name: "{{ beegfs_client_dkms_conf_content | regex_search('PACKAGE_NAME=\"([^\"]+)\"', '\\1') | first }}"
+    beegfs_client_dkms_version: "{{ beegfs_client_dkms_conf_content | regex_search('PACKAGE_VERSION=\"([^\"]+)\"', '\\1') | first }}"
+  tags: install
+
+- name: Export BeeGFS nvfs registration hooks as GPL symbols (workaround for ThinkParQ/beegfs#123)
+  become: true
+  ansible.builtin.replace:
+    path: "{{ beegfs_client_dkms_src_dir }}/client_module/source/common/storage/Nvfs.c"
+    regexp: '^EXPORT_SYMBOL\((REGISTER_FUNC|UNREGISTER_FUNC)\);$'
+    replace: 'EXPORT_SYMBOL_GPL(\1);'
+  notify:
+    - Rebuild BeeGFS client DKMS module
+    - Reinstall BeeGFS client DKMS module
+    - Warn that a module reload is required to apply the GDS workaround
+  tags: install
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

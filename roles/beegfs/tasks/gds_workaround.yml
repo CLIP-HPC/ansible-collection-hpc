@@ -5,7 +5,7 @@
 - name: Find BeeGFS client DKMS source directory
   ansible.builtin.find:
     paths: /usr/src
-    patterns: "beegfs-client-dkms-*"
+    patterns: "beegfs-[0-9]*"
     file_type: directory
   register: beegfs_client_dkms_src_find
   tags: install
@@ -41,7 +41,7 @@
 - name: Export BeeGFS nvfs registration hooks as GPL symbols (workaround for ThinkParQ/beegfs#123)
   become: true
   ansible.builtin.replace:
-    path: "{{ beegfs_client_dkms_src_dir }}/client_module/source/common/storage/Nvfs.c"
+    path: "{{ beegfs_client_dkms_src_dir }}/source/common/storage/Nvfs.c"
     regexp: '^EXPORT_SYMBOL\((REGISTER_FUNC|UNREGISTER_FUNC)\);$'
     replace: 'EXPORT_SYMBOL_GPL(\1);'
   notify:

@@ -5,6 +5,11 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.5.2
+======
+- beegfs: Work around GDS EXPORT_SYMBOL issue in client module and enable the workaround by default
+- beegfs: Fix non-boolean when condition in GDS workaround check on ansible-core 2.19+
+
 v3.5.1
 ======
 - rocev2: Fix DCBX task to handle non-NIC devices and ensure at least one configurable NIC

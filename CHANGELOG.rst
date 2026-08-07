@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.5.3
+======
+- beegfs: Fix BeeGFS client DKMS source directory detection and Nvfs.c path in the GDS EXPORT_SYMBOL workaround
+
 v3.5.2
 ======
 - beegfs: Work around GDS EXPORT_SYMBOL issue in client module and enable the workaround by default

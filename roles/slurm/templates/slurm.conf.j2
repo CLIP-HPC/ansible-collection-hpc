@@ -30,19 +30,24 @@ NodeName={{ node }}
 {%  set inventory_group_name = slurm_cluster_name ~ '_' ~ nodegroup.name %}
 {%  set inventory_group_hosts = groups.get(inventory_group_name, []) %}
 {%      if inventory_group_hosts | length > 0 %}
-{%          set play_group_hosts = inventory_group_hosts | intersect (ansible_play_batch) %}
-{%          set _guard = play_group_hosts | first | mandatory('Inventory group "' ~ inventory_group_name ~ '" contains no hosts in this play - was --limit used?') %}
-{%          set ns = namespace(first_host=_guard, found_topo=false) %}
-{%          for h in play_group_hosts %}
+{%          set ns = namespace(first_host=none, fallback_host=none, found_topo=false) %}
+{%          for h in inventory_group_hosts %}
+{%            set _hf = hostvars[h].get('ansible_facts', {}) %}
+{%            if _hf.get('memory_mb') is mapping and ns.fallback_host is none %}
+{%              set ns.fallback_host = h %}{# has real gathered/cached facts #}
+{%            endif %}
 {%            if not ns.found_topo %}
-{%              set _topo = hostvars[h].get('ansible_facts', {}).get('ansible_local', {}).get('slurmd_topology', {}) %}
+{%              set _topo = _hf.get('ansible_local', {}).get('slurmd_topology', {}) %}
 {%              if _topo is mapping and _topo | length > 0 %}
 {%                set ns.first_host = h %}
 {%                set ns.found_topo = true %}
 {%              endif %}
 {%            endif %}
 {%          endfor %}
-{%          set first_host = ns.first_host %}
+{%          set _candidates = ([ns.first_host] if ns.first_host is not none else [])
+                             + ([ns.fallback_host] if ns.fallback_host is not none else []) %}
+{%          set first_host = _candidates | first | mandatory('No host in inventory group "' ~ inventory_group_name
+                               ~ '" has cached facts. Enable fact caching or run once without --limit.') %}
 {%          set first_host_hv = hostvars[first_host] %}
 {%          set slurmd_topo = first_host_hv.get('ansible_facts', {}).get('ansible_local', {}).get('slurmd_topology', {}) %}
 {%          set slurmd_topo = slurmd_topo if slurmd_topo is mapping else {} %}{# guard: fact may be a raw string if the interpreter was missing on a previous run #}

@@ -1,5 +1,16 @@
 ---
 
+- name: Deploy BeeGFS license file
+  ansible.builtin.copy:
+    content: "{{ beegfs_license_content }}"
+    dest: /etc/beegfs/license.pem
+    mode: "0600"
+    owner: root
+    group: root
+  become: true
+  no_log: true
+  when: beegfs_license_content | default('') | length > 0
+
 - name: Disable TLS authentication (Development)
   ansible.builtin.lineinfile:
     path: /etc/beegfs/beegfs-mgmtd.toml

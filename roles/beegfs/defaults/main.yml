@@ -74,6 +74,12 @@ beegfs_oss_tunable: "{{ beegfs_oss | dict2items | selectattr('value.devices', 'd
 beegfs_mgmt_path: "/data/beegfs/beegfs_mgmtd"
 beegfs_mgmt_host:  # Example: "{{ groups['cluster_beegfs_mgmt'] | first }}"
 
+# BeeGFS license file content (obtained from ThinkParQ, e.g. via licensing@thinkparq.com
+# or the self-service portal). Deployed to /etc/beegfs/license.pem only on the management
+# node, since licensing is enforced by the management service. Leave unset to run without
+# a license. https://doc.beegfs.io/latest/advanced_topics/licensing.html
+beegfs_license_content:
+
 # Metadata storage options
 beegfs_meta_path: "/data/beegfs/beegfs_meta"
 beegfs_meta_dev:  # /dev/sdb

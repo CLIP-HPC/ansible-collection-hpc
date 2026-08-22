@@ -10,13 +10,12 @@
     dest: /etc/beegfs/beegfs-client-{{ item.port }}.conf
     force: false
   loop: "{{ beegfs_client_mounts | default([]) }}"
-  when: beegfs_client_mounts | length > 1
 
 
 - name: Configure sysMgmtHost for BeeGFS client
   become: true
   vars:
-    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
   ansible.builtin.lineinfile:
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: ^sysMgmtdHost
@@ -27,7 +26,7 @@
 - name: Configure Port for BeeGFS Client
   become: true
   vars:
-    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
   ansible.builtin.lineinfile:
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: ^connClientPort
@@ -37,7 +36,7 @@
 - name: Configure connInterfacesFile for BeeGFS client
   become: true
   vars:
-    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
   ansible.builtin.lineinfile:
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: "^connInterfacesFile"
@@ -48,7 +47,7 @@
 - name: Configure connRDMAInterfacesFile for BeeGFS client
   become: true
   vars:
-    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
   ansible.builtin.lineinfile:
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: "^connRDMAInterfacesFile"
@@ -58,7 +57,7 @@
 - name: Configure quotaEnabled for BeeGFS client
   become: true
   vars:
-    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
   ansible.builtin.lineinfile:
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: ^quotaEnabled
@@ -69,7 +68,7 @@
 - name: Configure RMDA buffer size for BeeGFS client
   become: true
   vars:
-    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
   ansible.builtin.lineinfile:
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: ^connRDMABufSize
@@ -80,7 +79,7 @@
 - name: Configure RMDA buffer number for BeeGFS client
   become: true
   vars:
-    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
   ansible.builtin.lineinfile:
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: ^connRDMABufNum
@@ -91,7 +90,7 @@
 - name: Configure connMaxInternodeNum for BeeGFS client
   become: true
   vars:
-    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
   ansible.builtin.lineinfile:
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: "^connMaxInternodeNum"
@@ -122,7 +121,7 @@
 - name: Mount beegfs storage
   become: true
   vars:
-    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
+    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
   ansible.posix.mount:
     fstype: beegfs
     name: "{{ item.path }}"

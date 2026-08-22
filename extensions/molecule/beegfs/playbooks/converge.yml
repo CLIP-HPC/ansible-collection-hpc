@@ -16,6 +16,9 @@
       beegfs_client_mounts:
         - path: "/mnt/beegfs"
           port: 8004
+        - path: "/mnt/beegfs-second"
+          port: 8005
+          mgmt_host: "{{ groups['cluster_beegfs_mgmt'] | first }}"
       beegfs_oss_max_sectors_kb: 128
       beegfs_auth_secret: X6IGuCpALmIy72AJbiozZ8/i+bV5Lpj7qOgCmvNZRZiMi0JkspcJwKVFR+Q9XfPVr4Bmg1An28CjtIbQM28a1+ZyDpwOUq4qVgx+/zy/AacNGiZ3zw7PVM4QDWjg0G5eQxiTidAMiuZO0IZ644ZKaTdoT3IOl0SiCkOBP5aS4VU= # yamllint disable-line rule:line-length
       beegfs_disable_tls: true

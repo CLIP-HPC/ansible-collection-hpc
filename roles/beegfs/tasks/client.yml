@@ -20,7 +20,7 @@
   ansible.builtin.lineinfile:
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: ^sysMgmtdHost
-    line: sysMgmtdHost = {{ beegfs_mgmt_host }}
+    line: sysMgmtdHost = {{ item.mgmt_host | default(beegfs_mgmt_host) }}
   loop: "{{ beegfs_client_mounts | default([]) }}"
 
 

@@ -193,7 +193,7 @@
 - name: Configure BeeGFS clients
   ansible.builtin.import_tasks: client.yml
   tags: ["beegfs", "client"]
-  when: beegfs_enable.client | bool
+  when: beegfs_enable.client | default(false) | bool
 
 
 - name: Configure aliases

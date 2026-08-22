@@ -18,23 +18,35 @@
       loop_control:
         label: "{{ item }}"
 
-    - name: Check BeeGFS mount path exists
+    - name: Check BeeGFS mount paths exist
       ansible.builtin.stat:
-        path: /mnt/beegfs
+        path: "{{ item }}"
       register: beegfs_mount_path
+      loop:
+        - /mnt/beegfs
+        - /mnt/beegfs-second
 
-    - name: Assert BeeGFS mount path exists
+    - name: Assert BeeGFS mount paths exist
       ansible.builtin.assert:
         that:
-          - beegfs_mount_path.stat.exists
+          - item.stat.exists
+      loop: "{{ beegfs_mount_path.results }}"
+      loop_control:
+        label: "{{ item.item }}"
 
-    - name: Get filesystem type for /mnt/beegfs
-      ansible.builtin.command: findmnt -n -o FSTYPE --target /mnt/beegfs
+    - name: Get filesystem type for BeeGFS mount paths
+      ansible.builtin.command: findmnt -n -o FSTYPE --target {{ item }}
       register: beegfs_mount_fstype
       changed_when: false
+      loop:
+        - /mnt/beegfs
+        - /mnt/beegfs-second
 
-    - name: Assert /mnt/beegfs filesystem is beegfs
+    - name: Assert BeeGFS mount paths filesystem is beegfs
       ansible.builtin.assert:
         that:
-          - beegfs_mount_fstype.rc == 0
-          - beegfs_mount_fstype.stdout == 'beegfs'
+          - item.rc == 0
+          - item.stdout == 'beegfs'
+      loop: "{{ beegfs_mount_fstype.results }}"
+      loop_control:
+        label: "{{ item.item }}"

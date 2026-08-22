@@ -66,7 +66,7 @@
     dest: /etc/beegfs/beegfs-client-build.mk
     src: beegfs-client-build.mk.j2
     mode: "0644"
-  when: beegfs_enable.client | bool
+  when: beegfs_enable.client | default(false) | bool
   tags: install
 
 
@@ -98,6 +98,6 @@
 - name: install | Apply BeeGFS client GDS EXPORT_SYMBOL workaround
   ansible.builtin.include_tasks: gds_workaround.yml
   when:
-    - beegfs_enable.client | bool
+    - beegfs_enable.client | default(false) | bool
     - beegfs_nvfs_gds_export_symbol_workaround | bool
   tags: install

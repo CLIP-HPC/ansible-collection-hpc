@@ -121,8 +121,6 @@
 
 - name: Configure RMDA buffer number for BeeGFS server
   become: true
-  vars:
-    beegfs_client_config_file: "{{ (beegfs_client_mounts | length > 1) | ternary('beegfs-client-{{ item.port }}.conf', 'beegfs-client.conf') }}"
   ansible.builtin.lineinfile:
     path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
     regexp: ^connRDMABufNum

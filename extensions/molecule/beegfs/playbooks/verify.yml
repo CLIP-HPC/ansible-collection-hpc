@@ -24,7 +24,6 @@
       register: beegfs_mount_path
       loop:
         - /mnt/beegfs
-        - /mnt/beegfs-second
 
     - name: Assert BeeGFS mount paths exist
       ansible.builtin.assert:
@@ -40,7 +39,6 @@
       changed_when: false
       loop:
         - /mnt/beegfs
-        - /mnt/beegfs-second
 
     - name: Assert BeeGFS mount paths filesystem is beegfs
       ansible.builtin.assert:

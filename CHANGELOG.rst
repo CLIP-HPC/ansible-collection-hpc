@@ -5,11 +5,17 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.5.5
+======
+- beegfs: Add license file support to the management role, deploying it to ``/etc/beegfs/license.pem`` and reloading it via ``beegfs license --reload`` when the mgmt service is already running
+- beegfs: Finish multi-client-mount support cleanup, including the ``beegfs_client_mounts`` rename, per-mount client config files, and the documented per-mount ``mgmt_host`` override
+- beegfs: Fix a crash in the management role when no BeeGFS license is configured
+- beegfs: Remove the GDS EXPORT_SYMBOL workaround now that it is fixed upstream in BeeGFS >= 8.5
+
 v3.5.4
 ======
 - slurm: Fall back to any inventory-group host with cached facts for the slurm.conf topology lookup when ``--limit`` excludes the play batch
 - rocev2: Ensure the MLNX RoCE QoS service is enabled and started after install
-- beegfs: Remove the GDS EXPORT_SYMBOL workaround now that it is fixed upstream in BeeGFS >= 8.5
 
 v3.5.3
 ======

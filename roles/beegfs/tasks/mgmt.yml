@@ -9,7 +9,7 @@
     group: root
   become: true
   no_log: true
-  when: beegfs_license_content | default('') | length > 0
+  when: beegfs_license_content | default('', true) | length > 0
 
 - name: Disable TLS authentication (Development)
   ansible.builtin.lineinfile:

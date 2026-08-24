@@ -1,0 +1,63 @@
+---
+# Resolves devices for each beegfs_oss entry missing them, label-first: any
+# device already labeled ST-<port>-<index> (from a previous run) is pinned to
+# that slot regardless of its current name - device names are not stable
+# across reboots. Fresh NUMA/name-based discovery only fills slots that were
+# never labeled (first bootstrap, or genuinely new disks). Tracks
+# beegfs_oss_device_provisioned (device path -> bool) so fs.yml's format
+# guard can tell which devices are safe to skip.
+
+- name: Compute shared BeeGFS disk/NUMA facts
+  # include_tasks (dynamic), not import_tasks - see the comment on the
+  # equivalent call in resolve_meta_device.yml for why.
+  ansible.builtin.include_tasks: disk_facts.yml
+  when: beegfs_candidate_disk_names is not defined
+
+- name: Determine devices already claimed by statically configured beegfs_oss entries
+  ansible.builtin.set_fact:
+    beegfs_oss_claimed_disk_names: >-
+      {{
+        beegfs_oss | dict2items
+        | selectattr('value.devices', 'defined')
+        | map(attribute='value.devices') | flatten
+        | map('basename') | list
+      }}
+    beegfs_oss_device_provisioned: {}
+
+- name: Resolve devices for one beegfs_oss entry at a time, label-first
+  ansible.builtin.include_tasks: resolve_oss_port_devices.yml
+  loop: "{{ beegfs_oss | dict2items }}"
+  loop_control:
+    loop_var: oss_resolve_item
+    label: "port {{ oss_resolve_item.key }}"
+  when:
+    - oss_resolve_item.value.devices | default([]) | length == 0
+    - oss_resolve_item.value.numa_zone is defined
+    - oss_resolve_item.value.numa_zone is not none
+
+- name: Fail if a beegfs_oss entry has neither devices nor a numa_zone to discover them from
+  ansible.builtin.fail:
+    msg: >-
+      beegfs_oss port {{ item.key }} defines neither `devices` nor
+      `numa_zone` - set one of them so devices can be resolved.
+  loop: "{{ beegfs_oss | dict2items }}"
+  loop_control:
+    label: "port {{ item.key }}"
+  when:
+    - item.value.devices | default([]) | length == 0
+    - item.value.numa_zone is not defined or item.value.numa_zone is none
+
+- name: Fail if device discovery left a beegfs_oss entry with no devices
+  ansible.builtin.fail:
+    msg: >-
+      beegfs_oss port {{ item.key }} (numa_zone {{ item.value.numa_zone }})
+      has no devices after discovery. Candidate disks
+      ({{ beegfs_candidate_disk_names }}) either belong to a different NUMA
+      zone, are claimed by another beegfs_oss entry, or none exist.
+  loop: "{{ beegfs_oss | dict2items }}"
+  loop_control:
+    label: "port {{ item.key }}"
+  when:
+    - item.value.numa_zone is defined
+    - item.value.numa_zone is not none
+    - item.value.devices | default([]) | length == 0

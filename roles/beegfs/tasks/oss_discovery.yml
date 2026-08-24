@@ -1,0 +1,89 @@
+---
+# Fills in `devices` and/or `interfaces` for any beegfs_oss entry that omits
+# them, based on that entry's `numa_zone`. Entries that already specify
+# `devices`/`interfaces` are left untouched, so a deployment can mix
+# statically configured OSS ports with dynamically discovered ones on the
+# same host.
+
+- name: Determine whether any beegfs_oss entry needs device discovery
+  ansible.builtin.set_fact:
+    beegfs_oss_needs_device_discovery: >-
+      {{
+        beegfs_oss | dict2items | map(attribute='value')
+        | map(attribute='devices', default=[]) | map('length')
+        | select('equalto', 0) | list | length > 0
+      }}
+
+- name: Determine whether any beegfs_oss entry needs interface discovery
+  ansible.builtin.set_fact:
+    beegfs_oss_needs_nic_discovery: >-
+      {{
+        beegfs_oss | dict2items | map(attribute='value')
+        | map(attribute='interfaces', default=[]) | map('length')
+        | select('equalto', 0) | list | length > 0
+      }}
+
+- name: Resolve devices for beegfs_oss entries that don't specify them, label-first
+  ansible.builtin.import_tasks: resolve_oss_devices.yml
+  when: beegfs_oss_needs_device_discovery
+
+- name: Discover interfaces for beegfs_oss entries that don't specify them
+  when: beegfs_oss_needs_nic_discovery
+  block:
+    - name: Read NUMA node for each configured BeeGFS interface
+      ansible.builtin.slurp:
+        src: "/sys/class/net/{{ item }}/device/numa_node"
+      loop: "{{ beegfs_interfaces }}"
+      loop_control:
+        label: "{{ item }}"
+      register: beegfs_oss_nic_numa_raw
+      ignore_errors: true
+
+    - name: Initialize the NIC-to-NUMA-node map
+      ansible.builtin.set_fact:
+        beegfs_oss_nic_numa_map: {}
+
+    - name: Record NUMA node per interface, negative/missing normalized to 0
+      ansible.builtin.set_fact:
+        beegfs_oss_nic_numa_map: >-
+          {{
+            beegfs_oss_nic_numa_map | combine({
+              item.item: ([0, (0 if (item.failed or item.content is not defined) else (item.content | b64decode | trim | int))] | max)
+            })
+          }}
+      loop: "{{ beegfs_oss_nic_numa_raw.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Fill in interfaces for beegfs_oss entries that don't specify them, NUMA-local NIC(s) first
+      ansible.builtin.set_fact:
+        beegfs_oss: "{{ beegfs_oss | combine({item.key: (item.value | combine({'interfaces': local_nics + other_nics}))}) }}"
+      vars:
+        local_nic_names: >-
+          {{
+            beegfs_oss_nic_numa_map
+            | dict2items(key_name='nic', value_name='numa')
+            | selectattr('numa', 'equalto', item.value.numa_zone | int)
+            | map(attribute='nic') | list
+          }}
+        local_nics: "{{ beegfs_interfaces | select('in', local_nic_names) | list }}"
+        other_nics: "{{ beegfs_interfaces | reject('in', local_nics) | list }}"
+      loop: "{{ beegfs_oss | dict2items }}"
+      loop_control:
+        label: "port {{ item.key }}"
+      when:
+        - item.value.interfaces | default([]) | length == 0
+        - item.value.numa_zone is defined
+        - item.value.numa_zone is not none
+
+- name: Fail if the same device ended up assigned to more than one beegfs_oss entry
+  ansible.builtin.fail:
+    msg: >-
+      beegfs_oss assigns the same device(s) to more than one entry:
+      {{ beegfs_oss }}. This can happen when two entries share the same
+      numa_zone and both rely on device auto-discovery - give each zone at
+      most one beegfs_oss entry without an explicit `devices` list, or
+      configure devices statically to partition them yourself.
+  vars:
+    beegfs_oss_all_devices: "{{ beegfs_oss | dict2items | map(attribute='value.devices') | flatten }}"
+  when: (beegfs_oss_all_devices | unique | list | length) != (beegfs_oss_all_devices | length)

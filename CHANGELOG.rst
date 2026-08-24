@@ -7,8 +7,9 @@ clip.hpc Release Notes
 
 v3.5.6
 ======
-- beegfs: Add ``tune_bind_to_numa_zone`` per entry in ``beegfs_oss`` and ``beegfs_meta_tune_bind_to_numa_zone`` to configure ``tuneBindToNumaZone`` on the oss and meta services for NUMA systems, and fail early if the configured devices or preferred NIC do not match the configured NUMA zone
-- beegfs: Fix the OSS NUMA-zone validation resolving the wrong sysfs path for NVMe devices, which silently skipped the check instead of validating it
+- beegfs: Add ``numa_zone`` per entry in ``beegfs_oss`` and ``beegfs_meta_tune_bind_to_numa_zone`` to configure ``tuneBindToNumaZone`` on the oss and meta services for NUMA systems, and fail early if the resolved devices or preferred NIC do not match the configured NUMA zone
+- beegfs: Auto-discover ``devices``/``interfaces`` for any ``beegfs_oss`` entry that omits them, based on that entry's ``numa_zone`` and the new ``beegfs_disk_device_regex`` default, so OSS ports can be configured statically, dynamically, or a mix of both on the same host - fails early if the OS disk can't be resolved, if an entry has neither ``devices`` nor ``numa_zone``, or if discovery would assign the same device to more than one entry
+- beegfs: Make ``beegfs_meta_dev``/``beegfs_oss[*].devices`` auto-discovery label-first and reboot-safe - an already-formatted disk is identified by its persistent filesystem label (``beegfs_meta_dev_label``/``ST-<port>-<idx>``) rather than by its current, PCIe-probe-order-dependent device name, and the format tasks in ``meta.yml``/``fs.yml`` skip reformatting any device resolved this way unless ``beegfs_force_format`` is set. Fresh NUMA/name-based discovery now only ever runs for genuinely unprovisioned disks (first bootstrap). Also consolidates the disk/NUMA discovery previously duplicated between this role and its consumers into shared, importable task files (``disk_facts.yml``, ``resolve_meta_device.yml``)
 
 v3.5.5
 ======

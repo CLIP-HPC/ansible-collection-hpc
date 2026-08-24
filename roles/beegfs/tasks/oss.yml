@@ -1,8 +1,4 @@
 ---
-- name: Create a list of devices that are mounted
-  ansible.builtin.set_fact:
-    beegfs_mounted_devs: "{{ ansible_mounts | map(attribute='device') | list }}"
-
 - name: Create storage config dirs
   ansible.builtin.file:
     path: "/etc/beegfs/{{ oss_port }}.d/"
@@ -93,6 +89,7 @@
   vars:
     oss_path: "{{ beegfs_oss_labels_mount_paths[oss_dev].mount_path }}"
     oss_dev_label: "{{ beegfs_oss_labels_mount_paths[oss_dev].label }}"
+    oss_dev_already_provisioned: "{{ beegfs_oss_device_provisioned[oss_dev] | default(false) }}"
   tags: ["beegfs", "oss", "fs"]
   args:
     apply:

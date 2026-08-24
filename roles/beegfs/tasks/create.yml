@@ -133,7 +133,7 @@
     oss_port: "{{ oss_item.key }}"
     interfaces: "{{ oss_item.value.interfaces | default(oss_interfaces) }}"
     oss_num_id: "{{ (beegfs_node_num_id | int) + (oss_index + 1) * beegfs_target_id_multiplier / 10 }}"
-    oss_tune_bind_to_numa_zone: "{{ oss_item.value.tune_bind_to_numa_zone | default(omit) }}"
+    oss_tune_bind_to_numa_zone: "{{ oss_item.value.numa_zone | default(omit) }}"
   loop: "{{ beegfs_oss | dict2items }}"
   loop_control:
     loop_var: oss_item

@@ -1,4 +1,20 @@
 ---
+# Both imports below must run before "Determine mount paths and labels for
+# OSS" further down, since that task's subelements('value.devices') filter
+# requires every beegfs_oss entry to already have a `devices` list - entries
+# that rely on numa_zone auto-discovery don't have one until oss_discovery.yml
+# runs. Meta must resolve first, since OSS device discovery excludes whatever
+# beegfs_meta_dev resolves to from its candidate pool.
+- name: Resolve the metadata device (label-first, else NUMA/name discovery)
+  ansible.builtin.import_tasks: resolve_meta_device.yml
+  when: beegfs_enable.meta | default(false) | bool
+  tags: always
+
+- name: Discover devices/interfaces for beegfs_oss entries that don't specify them
+  ansible.builtin.import_tasks: oss_discovery.yml
+  when: beegfs_enable.oss | default(false) | bool
+  tags: always
+
 - name: Calculate and store BeeGFS node number
   ansible.builtin.set_fact:
     beegfs_node_num_id: "{{ (beegfs_node_num_id | int) * (beegfs_target_id_multiplier | int) | int }}"

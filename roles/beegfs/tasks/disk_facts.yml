@@ -1,0 +1,98 @@
+---
+# Single implementation of "which disks on this host are BeeGFS candidates,
+# and what NUMA zone is each one attached to." Callers (resolve_meta_device.yml,
+# resolve_oss_devices.yml) further filter beegfs_candidate_disk_names for their
+# own purposes (excluding the metadata device, disks claimed by other entries,
+# etc) - this file only computes the raw, shared facts. Import with:
+#   when: beegfs_candidate_disk_names is not defined
+# so it only runs its sysfs reads once per host per play, no matter how many
+# callers import it.
+
+- name: Assert facts required for BeeGFS disk discovery are present
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.devices is defined
+      - ansible_facts.mounts is defined
+    fail_msg: >-
+      ansible_facts.devices/mounts are missing. Ensure facts are gathered
+      before this role runs.
+
+- name: Determine whole-disk name(s) backing the OS
+  ansible.builtin.set_fact:
+    beegfs_os_whole_disks: >-
+      {{
+        ansible_facts.mounts
+        | selectattr('mount', 'in', ['/', '/boot/efi'])
+        | map(attribute='device')
+        | map('regex_replace', '^/dev/(nvme[0-9]+n[0-9]+)p[0-9]+$', '\1')
+        | map('regex_replace', '^/dev/([a-z]+)[0-9]+$', '\1')
+        | map('regex_replace', '^/dev/', '')
+        | unique | list
+      }}
+
+- name: Fail if the OS disk could not be matched to a whole block device
+  ansible.builtin.fail:
+    msg: >-
+      OS mount device(s) resolved to {{ beegfs_os_whole_disks }}, which do not
+      match any whole-disk key in ansible_facts.devices
+      ({{ ansible_facts.devices.keys() | list }}). This host's root/boot
+      filesystem is likely on LVM or software RAID, which the partition-suffix
+      regexes here do not resolve to a physical disk - refusing to continue
+      rather than risk treating the OS disk as a BeeGFS candidate.
+  when: >-
+    beegfs_os_whole_disks
+    | reject('in', ansible_facts.devices.keys() | list)
+    | list | length > 0
+
+- name: Determine candidate BeeGFS disks, excluding the OS disk
+  ansible.builtin.set_fact:
+    beegfs_candidate_disk_names: >-
+      {{
+        ansible_facts.devices
+        | dict2items | map(attribute='key')
+        | select('match', beegfs_disk_device_regex)
+        | reject('in', beegfs_os_whole_disks)
+        | sort | list
+      }}
+
+- name: Fail if no BeeGFS candidate disks were found
+  ansible.builtin.fail:
+    msg: >-
+      No candidate BeeGFS disks found after excluding the OS disk(s)
+      {{ beegfs_os_whole_disks }}. Check beegfs_disk_device_regex
+      ({{ beegfs_disk_device_regex }}) against this host's block devices.
+  when: beegfs_candidate_disk_names | length == 0
+
+- name: Read NUMA node for each candidate disk
+  ansible.builtin.slurp:
+    # /sys/block/<nvmeXnY>/device (and its /sys/class/block alias) is a
+    # symlink to the NVMe *controller* node (nvmeX), not to its PCI
+    # function, so numa_node isn't there - it's one more "device" hop up, at
+    # the controller's own device symlink.
+    src: >-
+      {{
+        ('/sys/class/nvme/' + (item | regex_replace('n[0-9]+$', '')) + '/device/numa_node')
+        if (item is match('^nvme[0-9]+n[0-9]+$'))
+        else ('/sys/class/block/' + item + '/device/numa_node')
+      }}
+  loop: "{{ beegfs_candidate_disk_names }}"
+  loop_control:
+    label: "{{ item }}"
+  register: beegfs_disk_numa_raw
+  ignore_errors: true
+
+- name: Initialize the disk-to-NUMA-node map
+  ansible.builtin.set_fact:
+    beegfs_disk_numa_map: {}
+
+- name: Record NUMA node per disk, negative/missing normalized to 0
+  ansible.builtin.set_fact:
+    beegfs_disk_numa_map: >-
+      {{
+        beegfs_disk_numa_map | combine({
+          item.item: ([0, (0 if (item.failed or item.content is not defined) else (item.content | b64decode | trim | int))] | max)
+        })
+      }}
+  loop: "{{ beegfs_disk_numa_raw.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"

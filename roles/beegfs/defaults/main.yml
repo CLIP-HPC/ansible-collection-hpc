@@ -67,10 +67,29 @@ beegfs_fstype: "xfs"
 # Storage server options
 beegfs_oss_path_prefix: "/data/beegfs/beegfs_oss"
 # Dict of object storage server configurations, keyed by port. Each entry supports:
-#   devices: list of block devices for this OSS (required)
-#   interfaces: list of network interfaces in order of preference, overriding beegfs_interfaces (optional)
-#   tune_bind_to_numa_zone: NUMA zone to bind this OSS to, see beegfs_meta_tune_bind_to_numa_zone below (optional)
+#   numa_zone: NUMA zone this OSS is local to (optional). Configures tuneBindToNumaZone
+#     for this OSS, and is required to auto-discover devices/interfaces (below).
+#   devices: list of block devices for this OSS (optional). If omitted, devices are
+#     auto-discovered from disks matching beegfs_disk_device_regex that are attached to
+#     `numa_zone` (excluding the OS disk, beegfs_meta_dev, and any device explicitly
+#     claimed by another beegfs_oss entry) - numa_zone is required in that case.
+#   interfaces: list of network interfaces in order of preference, overriding
+#     beegfs_interfaces (optional). If omitted and `numa_zone` is set, this is
+#     beegfs_interfaces reordered so the NIC(s) local to `numa_zone` come first.
+# This lets a deployment either configure OSS ports/devices/interfaces statically, or
+# rely on NUMA-zone-based auto-discovery, or mix both on the same host.
 beegfs_oss: {}
+# Regex matching candidate whole-disk device names eligible for BeeGFS OSS
+# auto-discovery. Only used for beegfs_oss entries that omit `devices`.
+beegfs_disk_device_regex: '^(nvme[0-9]+n[0-9]+|vd[a-z]|sd[a-z])$'
+# Device path -> bool, populated by resolve_oss_devices.yml: true if that
+# device was resolved from an existing ST-<port>-<idx> filesystem label
+# (already provisioned in a previous run), false if freshly discovered.
+# fs.yml's format guard uses this to skip reformatting already-provisioned
+# disks even if their current device name changed (e.g. after a reboot).
+# Always defined as {} so looking up an unresolved device stays a safe
+# dict-key-miss rather than a subscript on an undefined variable.
+beegfs_oss_device_provisioned: {}
 # yamllint disable rule:line-length
 beegfs_oss_tunable: "{{ beegfs_oss | dict2items | selectattr('value.devices', 'defined') | map(attribute='value.devices') | flatten | map('relpath', '/dev/') | list }}"
 
@@ -86,6 +105,10 @@ beegfs_license_content:
 
 # Metadata storage options
 beegfs_meta_path: "/data/beegfs/beegfs_meta"
+# If left unset and beegfs_enable.meta is true, resolved automatically via
+# resolve_meta_device.yml: label-first (see README's "Reboot-safe device
+# resolution"), falling back to fresh NUMA/name-based discovery only for a
+# genuinely unprovisioned host.
 beegfs_meta_dev:  # /dev/sdb
 beegfs_meta_fstype:  # Example: "ext4"
 beegfs_meta_filesystem_opts: "-i 2048 -I 512 -J size=400 -O dir_index,filetype"
@@ -154,7 +177,7 @@ beegfs_conn_client_max_internode_num:
 # Set to the NUMA zone number that is local to beegfs_meta_dev and the preferred
 # network interface. Leave unset on single-NUMA-zone systems. There is only a single
 # global setting since only one metadata device/service is supported per host.
-# For OSS, set tune_bind_to_numa_zone per entry in beegfs_oss instead, since a host
+# For OSS, set numa_zone per entry in beegfs_oss instead, since a host
 # can run multiple OSS services bound to different NUMA zones.
 # https://doc.beegfs.io/latest/advanced_topics/storage_tuning.html
 # https://doc.beegfs.io/latest/advanced_topics/metadata_tuning.html

@@ -24,6 +24,14 @@
         fstype: "{{ meta_fstype }}"
         opts: "{{ beegfs_meta_filesystem_opts }} -L {{ beegfs_meta_dev_label }}"
         force: "{{ beegfs_force_format }}"
+      # beegfs_meta_already_provisioned (set by resolve_meta_device.yml) means
+      # beegfs_meta_dev was resolved from its existing filesystem label, i.e.
+      # this disk was already formatted in a previous run - skip reformatting
+      # it even though its current device name may differ from last time
+      # (device names aren't stable across reboots). Undefined (a statically
+      # configured beegfs_meta_dev that never went through label resolution)
+      # is treated as "not provisioned", preserving prior behavior.
+      when: (not (beegfs_meta_already_provisioned | default(false) | bool)) or (beegfs_force_format | bool)
       notify: Restart BeeGFS meta service
 
     - name: Mount filesystem

@@ -103,3 +103,14 @@
     line: connRDMABufNum                = {{ beegfs_conn_rdma_buf_num }}
   when: beegfs_conn_rdma_buf_num | default(false, true)
   notify: Restart BeeGFS meta service
+
+- name: Configure tuneBindToNumaZone for BeeGFS metadata server
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-meta.conf
+    regexp: ^tuneBindToNumaZone
+    line: tuneBindToNumaZone           = {{ beegfs_meta_tune_bind_to_numa_zone }}
+  when:
+    - beegfs_meta_tune_bind_to_numa_zone is defined
+    - beegfs_meta_tune_bind_to_numa_zone is not none
+  notify: Restart BeeGFS meta service

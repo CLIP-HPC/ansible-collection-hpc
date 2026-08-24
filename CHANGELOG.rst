@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.5.6
+======
+- beegfs: Add ``beegfs_oss_tune_bind_to_numa_zone`` and ``beegfs_meta_tune_bind_to_numa_zone`` to configure ``tuneBindToNumaZone`` on the oss and meta services for NUMA systems
+
 v3.5.5
 ======
 - beegfs: Add license file support to the management role, deploying it to ``/etc/beegfs/license.pem`` and reloading it via ``beegfs license --reload`` when the mgmt service is already running

@@ -126,3 +126,14 @@
     regexp: ^connRDMABufNum
     line: connRDMABufNum                = {{ beegfs_conn_rdma_buf_num }}
   when: beegfs_conn_rdma_buf_num | default(false, true)
+
+- name: Configure tuneBindToNumaZone for BeeGFS storage server
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
+    regexp: ^tuneBindToNumaZone
+    line: tuneBindToNumaZone           = {{ beegfs_oss_tune_bind_to_numa_zone }}
+  when:
+    - beegfs_oss_tune_bind_to_numa_zone is defined
+    - beegfs_oss_tune_bind_to_numa_zone is not none
+  notify: Restart BeeGFS storage service

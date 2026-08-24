@@ -146,6 +146,14 @@ beegfs_conn_meta_max_internode_num:
 beegfs_conn_oss_max_internode_num:
 beegfs_conn_client_max_internode_num:
 
+# NUMA zone to bind the service (and its worker threads) to on NUMA systems.
+# Set to the NUMA zone number that is local to the service's storage/metadata
+# device and network interface. Leave unset on single-NUMA-zone systems.
+# https://doc.beegfs.io/latest/advanced_topics/storage_tuning.html
+# https://doc.beegfs.io/latest/advanced_topics/metadata_tuning.html
+beegfs_meta_tune_bind_to_numa_zone:
+beegfs_oss_tune_bind_to_numa_zone:
+
 
 beegfs_nvfs_include_path:
 beegfs_nvidia_include_path:

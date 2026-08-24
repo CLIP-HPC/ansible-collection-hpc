@@ -5,6 +5,11 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.6.0
+======
+- slurm: Add dynamic node support (``slurm_dynamic_nodes``, per-nodegroup ``dynamic`` key): dynamic nodegroups are omitted from ``slurm.conf`` and their slurmd self-registers with the controller via ``-Z --conf``, so compute nodes booting via ansible-init no longer require a controller reconfigure first
+- slurm: Render ``MaxNodeCount`` (``slurm_max_node_count``, default 1024) and ``TreeWidth=65533`` when any nodegroup is dynamic
+
 v3.5.5
 ======
 - beegfs: Add license file support to the management role, deploying it to ``/etc/beegfs/license.pem`` and reloading it via ``beegfs license --reload`` when the mgmt service is already running

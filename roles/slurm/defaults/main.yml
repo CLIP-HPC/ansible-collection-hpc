@@ -11,6 +11,13 @@ slurm_enable:
 
 slurm_reconfigure: false
 slurm_spool_dir: /var/spool/slurmd
+
+# Dynamic nodes (https://slurm.schedmd.com/dynamic_nodes.html): nodegroups
+# marked dynamic are not rendered into slurm.conf; their slurmd registers
+# itself with the controller at startup (slurmd -Z). Overridable per
+# nodegroup with the `dynamic` key.
+slurm_dynamic_nodes: false
+slurm_max_node_count: 1024
 slurm_state_save_location: /var/spool/slurm
 
 

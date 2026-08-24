@@ -7,7 +7,8 @@ clip.hpc Release Notes
 
 v3.5.6
 ======
-- beegfs: Add ``beegfs_oss_tune_bind_to_numa_zone`` and ``beegfs_meta_tune_bind_to_numa_zone`` to configure ``tuneBindToNumaZone`` on the oss and meta services for NUMA systems
+- beegfs: Add ``tune_bind_to_numa_zone`` per entry in ``beegfs_oss`` and ``beegfs_meta_tune_bind_to_numa_zone`` to configure ``tuneBindToNumaZone`` on the oss and meta services for NUMA systems, and fail early if the configured devices or preferred NIC do not match the configured NUMA zone
+- beegfs: Fix the OSS NUMA-zone validation resolving the wrong sysfs path for NVMe devices, which silently skipped the check instead of validating it
 
 v3.5.5
 ======

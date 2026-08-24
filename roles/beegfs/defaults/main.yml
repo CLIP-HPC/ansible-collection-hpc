@@ -66,6 +66,10 @@ beegfs_fstype: "xfs"
 
 # Storage server options
 beegfs_oss_path_prefix: "/data/beegfs/beegfs_oss"
+# Dict of object storage server configurations, keyed by port. Each entry supports:
+#   devices: list of block devices for this OSS (required)
+#   interfaces: list of network interfaces in order of preference, overriding beegfs_interfaces (optional)
+#   tune_bind_to_numa_zone: NUMA zone to bind this OSS to, see beegfs_meta_tune_bind_to_numa_zone below (optional)
 beegfs_oss: {}
 # yamllint disable rule:line-length
 beegfs_oss_tunable: "{{ beegfs_oss | dict2items | selectattr('value.devices', 'defined') | map(attribute='value.devices') | flatten | map('relpath', '/dev/') | list }}"
@@ -146,13 +150,15 @@ beegfs_conn_meta_max_internode_num:
 beegfs_conn_oss_max_internode_num:
 beegfs_conn_client_max_internode_num:
 
-# NUMA zone to bind the service (and its worker threads) to on NUMA systems.
-# Set to the NUMA zone number that is local to the service's storage/metadata
-# device and network interface. Leave unset on single-NUMA-zone systems.
+# NUMA zone to bind the meta service (and its worker threads) to on NUMA systems.
+# Set to the NUMA zone number that is local to beegfs_meta_dev and the preferred
+# network interface. Leave unset on single-NUMA-zone systems. There is only a single
+# global setting since only one metadata device/service is supported per host.
+# For OSS, set tune_bind_to_numa_zone per entry in beegfs_oss instead, since a host
+# can run multiple OSS services bound to different NUMA zones.
 # https://doc.beegfs.io/latest/advanced_topics/storage_tuning.html
 # https://doc.beegfs.io/latest/advanced_topics/metadata_tuning.html
 beegfs_meta_tune_bind_to_numa_zone:
-beegfs_oss_tune_bind_to_numa_zone:
 
 
 beegfs_nvfs_include_path:

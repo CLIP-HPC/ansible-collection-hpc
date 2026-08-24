@@ -15,7 +15,11 @@ Provision an existing cluster to support [BeeGFS](https://www.beegfs.io/) manage
 - `beegfs_interfaces`: List of network interfaces in order of preference. Leaving empty means InfiniBand and RDMA-enabled devices are preferred. Default: `[]`.
 - `beegfs_target_id_multiplier`: Multiplier applied to node ID when computing target IDs. Default: `100`.
 - `beegfs_node_num_id`: Numeric node ID used for target ID calculation.
-- `beegfs_oss`: Dict of object storage server configurations, keyed by name.
+- `beegfs_oss`: Dict of object storage server configurations, keyed by port. Each entry:
+  - `devices`: List of block devices for this OSS.
+  - `interfaces`: Optional. Overrides `beegfs_interfaces` for this OSS.
+  - `tune_bind_to_numa_zone`: Optional. NUMA zone to bind this OSS to on NUMA systems. A host can run multiple OSS services bound to different NUMA zones. Fails if the configured devices or the preferred (first) interface are attached to a different NUMA node.
+- `beegfs_meta_tune_bind_to_numa_zone`: Optional. NUMA zone to bind the metadata service to on NUMA systems, since only one metadata device/service is supported per host.
 - `beegfs_oss_path_prefix`: Filesystem path prefix for OSS mount points.
 - `beegfs_license_content`: Content of the BeeGFS license file (obtained from ThinkParQ). Deployed to `/etc/beegfs/license.pem` only on the management node. Leave unset to run without a license. See the [BeeGFS licensing docs](https://doc.beegfs.io/latest/advanced_topics/licensing.html). Note: unsetting this does not remove a previously deployed license file.
 - `beegfs_client_mounts`: List of client mounts to configure on this host. Default: `[]`. Each item:

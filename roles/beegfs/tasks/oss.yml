@@ -122,42 +122,42 @@
   notify: Restart BeeGFS storage service
 
 
-- name: Configure tuneNumWorkers settings for BeeGFS storage server
+- name: Configure tunings for BeeGFS storage server
+  become: true
   ansible.builtin.lineinfile:
     path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
-    regexp: "^tuneNumWorkers"
-    line: "tuneNumWorkers               = {{ beegfs_oss_tune_num_workers }}"
-  become: true
-  when: beegfs_oss_tune_num_workers | default(false, true)
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }}{{ ' ' * ([1, 30 - item.key | length] | max) }}= {{ item.value }}"
+  loop: >-
+    {{
+      [
+        {'key': 'tuneNumWorkers', 'value': beegfs_oss_tune_num_workers},
+        {'key': 'connMaxInternodeNum', 'value': beegfs_conn_oss_max_internode_num},
+        {'key': 'tuneFileReadSize', 'value': beegfs_oss_tune_file_read_size},
+        {'key': 'tuneFileWriteSize', 'value': beegfs_oss_tune_file_write_size},
+        {'key': 'tuneFileReadAheadSize', 'value': beegfs_oss_tune_file_read_ahead_size},
+        {'key': 'tuneFileReadAheadTriggerSize', 'value': beegfs_oss_tune_file_read_ahead_trigger_size},
+        {'key': 'tuneFileWriteSyncSize', 'value': beegfs_oss_tune_file_write_sync_size},
+        {'key': 'tuneNumStreamListeners', 'value': beegfs_oss_tune_num_stream_listeners},
+        {'key': 'tuneWorkerBufSize', 'value': beegfs_oss_tune_worker_buf_size},
+        {'key': 'tuneUsePerTargetWorkers', 'value': (beegfs_oss_tune_use_per_target_workers | ternary('true', 'false')) if beegfs_oss_tune_use_per_target_workers is not none else none},
+        {'key': 'tuneUsePerUserMsgQueues', 'value': (beegfs_oss_tune_use_per_user_msg_queues | ternary('true', 'false')) if beegfs_oss_tune_use_per_user_msg_queues is not none else none},
+        {'key': 'tuneUseAggressiveStreamPoll', 'value': (beegfs_oss_tune_use_aggressive_stream_poll | ternary('true', 'false')) if beegfs_oss_tune_use_aggressive_stream_poll is not none else none},
+        {'key': 'connRestrictOutboundInterfaces', 'value': (beegfs_conn_restrict_outbound_interfaces | ternary('true', 'false')) if beegfs_conn_restrict_outbound_interfaces is not none else none},
+      ] | rejectattr('value', 'none') | list
+    }}
+  loop_control:
+    label: "{{ item.key }}"
   notify: Restart BeeGFS storage service
 
-
-- name: Configure connMaxInternodeNum for BeeGFS storage server
-  become: true
-  ansible.builtin.lineinfile:
-    path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
-    regexp: "^connMaxInternodeNum"
-    line: connMaxInternodeNum           = {{ beegfs_conn_oss_max_internode_num }}
-    backrefs: true
-  when: beegfs_conn_oss_max_internode_num | default(false, true)
-  notify: Restart BeeGFS storage service
-
-- name: Configure RMDA buffer size for BeeGFS server
-  become: true
-  ansible.builtin.lineinfile:
-    path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
-    regexp: ^connRDMABufSize
-    line: connRDMABufSize               = {{ beegfs_conn_rdma_buf_size }}
-  when: beegfs_conn_rdma_buf_size | default(false, true)
-
-- name: Configure RMDA buffer number for BeeGFS server
-  become: true
-  ansible.builtin.lineinfile:
-    path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
-    regexp: ^connRDMABufNum
-    line: connRDMABufNum                = {{ beegfs_conn_rdma_buf_num }}
-  when: beegfs_conn_rdma_buf_num | default(false, true)
-
+# Kept separate from the loop above: oss_tune_bind_to_numa_zone is sourced via
+# `numa_zone | default(omit)` in create.yml's vars: block. When numa_zone is
+# unset, that omit sentinel is NOT equivalent to Jinja "none" here - embedding
+# it in a dict literal's value (as the loop above does) silently renders as an
+# empty string instead of being filtered out by rejectattr('value', 'none'),
+# which would blank this line instead of leaving it untouched. The explicit
+# `is defined`/`is not none` checks below are the only combination that
+# correctly detects both the omitted and unset cases.
 - name: Configure tuneBindToNumaZone for BeeGFS storage server
   become: true
   ansible.builtin.lineinfile:

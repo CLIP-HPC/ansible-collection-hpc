@@ -3,29 +3,127 @@
 
 set -x
 
-echo always > /sys/kernel/mm/transparent_hugepage/enabled
-echo always > /sys/kernel/mm/transparent_hugepage/defrag
-{% if beegfs_oss_tunable | length > 0 %}
-for dev in {{ beegfs_oss_tunable | join(' ') }}
-do
-  if [ -d /sys/block/${dev} ]; then
-    echo mq-deadline > /sys/block/${dev}/queue/scheduler
-    echo 2048 > /sys/block/${dev}/queue/nr_requests
-    echo 4096 > /sys/block/${dev}/queue/read_ahead_kb
-    echo {{ beegfs_oss_max_sectors_kb }} > /sys/block/${dev}/queue/max_sectors_kb
-    # http://smalldatum.blogspot.com/2018/01/xfs-nobarrier-and-413-linux-kernel.html
-    echo "write through" > /sys/block/${dev}/queue/write_cache
-  fi
-done
-{% endif %}
+# ---- Host-specific values, rendered by Ansible ----
+THP_ENABLED_MODE={{ beegfs_thp_enabled_mode }}
+THP_DEFRAG_MODE={{ beegfs_thp_defrag_mode }}
 
+OSS_TUNABLE_LABELS="{{ beegfs_oss_tunable | join(' ') }}"
+OSS_SCHEDULER={{ beegfs_oss_scheduler }}
+OSS_NR_REQUESTS={{ beegfs_oss_nr_requests }}
+OSS_READ_AHEAD_KB={{ beegfs_oss_read_ahead_kb }}
+OSS_MAX_SECTORS_KB={{ beegfs_oss_max_sectors_kb }}
+OSS_WRITE_CACHE="{{ beegfs_oss_write_cache }}"
+OSS_RQ_AFFINITY="{{ beegfs_oss_rq_affinity if beegfs_oss_rq_affinity is not none else '' }}"
+OSS_NOMERGES="{{ beegfs_oss_nomerges if beegfs_oss_nomerges is not none else '' }}"
+OSS_WBT_LAT_USEC="{{ beegfs_oss_wbt_lat_usec if beegfs_oss_wbt_lat_usec is not none else '' }}"
 
-{% if beegfs_meta_dev and beegfs_meta_tunings %}
-dev={{beegfs_meta_dev | relpath('/dev/') }}
- if [ -d /sys/block/${dev} ]; then
-    echo deadline > /sys/block/${dev}/queue/scheduler
-    echo 128 > /sys/block/${dev}/queue/nr_requests
-    echo 128 > /sys/block/${dev}/queue/read_ahead_kb
-    echo {{ beegfs_meta_max_sectors_kb }} > /sys/block/${dev}/queue/max_sectors_kb
+META_TUNING_ENABLED={{ (beegfs_meta_dev and beegfs_meta_tunings) | ternary('1', '0') }}
+META_DEV_LABEL="{{ beegfs_meta_dev_label | default('') }}"
+META_SCHEDULER={{ beegfs_meta_scheduler }}
+META_NR_REQUESTS={{ beegfs_meta_nr_requests }}
+META_READ_AHEAD_KB={{ beegfs_meta_read_ahead_kb }}
+META_MAX_SECTORS_KB={{ beegfs_meta_max_sectors_kb }}
+META_RQ_AFFINITY="{{ beegfs_meta_rq_affinity if beegfs_meta_rq_affinity is not none else '' }}"
+META_NOMERGES="{{ beegfs_meta_nomerges if beegfs_meta_nomerges is not none else '' }}"
+META_WBT_LAT_USEC="{{ beegfs_meta_wbt_lat_usec if beegfs_meta_wbt_lat_usec is not none else '' }}"
+# ---- End of host-specific values ----
+
+echo "${THP_ENABLED_MODE}" > /sys/kernel/mm/transparent_hugepage/enabled
+echo "${THP_DEFRAG_MODE}" > /sys/kernel/mm/transparent_hugepage/defrag
+
+# Applies queue tunings to a single real block device (not a multipath head).
+tune_queue() {
+  dev="$1" scheduler="$2" nr_requests="$3" read_ahead_kb="$4" max_sectors_kb="$5" write_cache="$6" rq_affinity="$7" nomerges="$8" wbt_lat_usec="$9"
+  if [ ! -d /sys/block/${dev} ]; then
+    return
   fi
-{% endif %}
+  # NVMe multipath "head" devices are bio-based and have no elevator attached,
+  # so queue/scheduler (and sometimes queue/write_cache) may not exist.
+  if [ -f /sys/block/${dev}/queue/scheduler ]; then
+    echo ${scheduler} > /sys/block/${dev}/queue/scheduler
+  fi
+  echo ${nr_requests} > /sys/block/${dev}/queue/nr_requests
+  echo ${max_sectors_kb} > /sys/block/${dev}/queue/max_sectors_kb
+  echo ${read_ahead_kb} > /sys/block/${dev}/queue/read_ahead_kb
+  if [ -n "${rq_affinity}" ]; then
+    echo ${rq_affinity} > /sys/block/${dev}/queue/rq_affinity
+  fi
+  if [ -n "${nomerges}" ]; then
+    echo ${nomerges} > /sys/block/${dev}/queue/nomerges
+  fi
+  # http://smalldatum.blogspot.com/2018/01/xfs-nobarrier-and-413-linux-kernel.html
+  if [ -n "${write_cache}" ] && [ -f /sys/block/${dev}/queue/write_cache ]; then
+    echo "${write_cache}" > /sys/block/${dev}/queue/write_cache
+  fi
+  # 0 disables write-back-throttling latency targeting entirely; only exists
+  # on queues with the wbt rq_qos policy attached (not all block drivers).
+  if [ -n "${wbt_lat_usec}" ] && [ -f /sys/block/${dev}/queue/wbt_lat_usec ]; then
+    echo ${wbt_lat_usec} > /sys/block/${dev}/queue/wbt_lat_usec
+  fi
+}
+
+# read_ahead_kb and max_sectors_kb are the two queue attributes that DO exist
+# on a multipath head device (unlike scheduler/nr_requests/write_cache, which
+# need a real elevator). Reads/writes against a native NVMe multipath device
+# are issued against the head node (e.g. /dev/nvme14n1), not its per-path
+# children, so these two must be set here too - setting them only on the real
+# paths (via tune_queue below) leaves actual I/O unaffected by the tuning.
+tune_head_queue() {
+  head="$1" read_ahead_kb="$2" max_sectors_kb="$3"
+  if [ -f /sys/block/${head}/queue/max_sectors_kb ]; then
+    echo ${max_sectors_kb} > /sys/block/${head}/queue/max_sectors_kb
+  fi
+  if [ -f /sys/block/${head}/queue/read_ahead_kb ]; then
+    echo ${read_ahead_kb} > /sys/block/${head}/queue/read_ahead_kb
+  fi
+}
+
+# A native NVMe multipath head device (e.g. one backed by nvme-subsys*) is
+# bio-based and has no queue of its own to tune. Its real path device(s) -
+# the ones with an actual request queue/elevator - are exposed as symlinks
+# under its multipath/ directory, e.g.:
+#   /sys/block/nvme14n1/multipath/nvme14c14n1 -> .../nvme14/nvme14c14n1
+# so resolve through that when present, falling back to the device itself.
+resolve_real_devs() {
+  dev="$1"
+  if [ -d /sys/block/${dev}/multipath ]; then
+    ls /sys/block/${dev}/multipath
+  else
+    echo "${dev}"
+  fi
+}
+
+# /dev/nvmeXnY (and sdX/vdX) names are assigned by asynchronous probe order
+# and are not stable across reboots, so resolve the whole-disk device name
+# from its durable filesystem label (see README's "Reboot-safe device
+# resolution") every time this script runs, rather than using a name baked in
+# at the last Ansible run - otherwise a renumbering event can silently apply
+# these tunings to the wrong physical disk (e.g. mixing up an OSS target with
+# the meta device).
+resolve_head_from_label() {
+  label="$1"
+  basename "$(readlink -f "/dev/disk/by-label/${label}" 2>/dev/null)" 2>/dev/null
+}
+
+if [ -n "${OSS_TUNABLE_LABELS}" ]; then
+  for label in ${OSS_TUNABLE_LABELS}
+  do
+    head=$(resolve_head_from_label "${label}")
+    if [ -n "${head}" ] && [ -d /sys/block/${head} ]; then
+      tune_head_queue "${head}" "${OSS_READ_AHEAD_KB}" "${OSS_MAX_SECTORS_KB}"
+      for dev in $(resolve_real_devs ${head}); do
+        tune_queue "${dev}" "${OSS_SCHEDULER}" "${OSS_NR_REQUESTS}" "${OSS_READ_AHEAD_KB}" "${OSS_MAX_SECTORS_KB}" "${OSS_WRITE_CACHE}" "${OSS_RQ_AFFINITY}" "${OSS_NOMERGES}" "${OSS_WBT_LAT_USEC}"
+      done
+    fi
+  done
+fi
+
+if [ "${META_TUNING_ENABLED}" = "1" ]; then
+  head=$(resolve_head_from_label "${META_DEV_LABEL}")
+  if [ -n "${head}" ] && [ -d /sys/block/${head} ]; then
+    tune_head_queue "${head}" "${META_READ_AHEAD_KB}" "${META_MAX_SECTORS_KB}"
+    for dev in $(resolve_real_devs ${head}); do
+      tune_queue "${dev}" "${META_SCHEDULER}" "${META_NR_REQUESTS}" "${META_READ_AHEAD_KB}" "${META_MAX_SECTORS_KB}" "" "${META_RQ_AFFINITY}" "${META_NOMERGES}" "${META_WBT_LAT_USEC}"
+    done
+  fi
+fi

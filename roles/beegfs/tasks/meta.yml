@@ -64,61 +64,28 @@
   become: true
   notify: Restart BeeGFS meta service
 
-- name: Modify tuneTargetChooser settings for
-  ansible.builtin.lineinfile:
-    path: /etc/beegfs/beegfs-meta.conf
-    regexp: "^tuneTargetChooser"
-    line: "tuneTargetChooser            = {{ beegfs_meta_tune_target_chooser }}"
-  become: true
-  notify: Restart BeeGFS meta service
-
-- name: Configure tuneNumWorkers settings for BeeGFS metadata server
-  ansible.builtin.lineinfile:
-    path: /etc/beegfs/beegfs-meta.conf
-    regexp: "^tuneNumWorkers"
-    line: "tuneNumWorkers               = {{ beegfs_meta_tune_num_workers }}"
-  become: true
-  when: beegfs_meta_tune_num_workers | default(false, true)
-  notify: Restart BeeGFS meta service
-
-
-- name: Configure connMaxInternodeNum for BeeGFS metadata server
+- name: Configure tunings for BeeGFS metadata server
   become: true
   ansible.builtin.lineinfile:
     path: /etc/beegfs/beegfs-meta.conf
-    regexp: "^connMaxInternodeNum"
-    line: connMaxInternodeNum           = {{ beegfs_conn_meta_max_internode_num }}
-    backrefs: true
-  when: beegfs_conn_meta_max_internode_num | default(false, true)
-  notify: Restart BeeGFS meta service
-
-
-- name: Configure RMDA buffer size for BeeGFS metadata server
-  become: true
-  ansible.builtin.lineinfile:
-    path: /etc/beegfs/beegfs-meta.conf
-    regexp: ^connRDMABufSize
-    line: connRDMABufSize               = {{ beegfs_conn_rdma_buf_size }}
-  when: beegfs_conn_rdma_buf_size | default(false, true)
-  notify: Restart BeeGFS meta service
-
-
-- name: Configure RMDA buffer number for BeeGFS metadata server
-  become: true
-  ansible.builtin.lineinfile:
-    path: /etc/beegfs/beegfs-meta.conf
-    regexp: ^connRDMABufNum
-    line: connRDMABufNum                = {{ beegfs_conn_rdma_buf_num }}
-  when: beegfs_conn_rdma_buf_num | default(false, true)
-  notify: Restart BeeGFS meta service
-
-- name: Configure tuneBindToNumaZone for BeeGFS metadata server
-  become: true
-  ansible.builtin.lineinfile:
-    path: /etc/beegfs/beegfs-meta.conf
-    regexp: ^tuneBindToNumaZone
-    line: tuneBindToNumaZone           = {{ beegfs_meta_tune_bind_to_numa_zone }}
-  when:
-    - beegfs_meta_tune_bind_to_numa_zone is defined
-    - beegfs_meta_tune_bind_to_numa_zone is not none
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }}{{ ' ' * ([1, 30 - item.key | length] | max) }}= {{ item.value }}"
+  loop: >-
+    {{
+      [
+        {'key': 'tuneTargetChooser', 'value': beegfs_meta_tune_target_chooser},
+        {'key': 'tuneNumWorkers', 'value': beegfs_meta_tune_num_workers},
+        {'key': 'connMaxInternodeNum', 'value': beegfs_conn_meta_max_internode_num},
+        {'key': 'tuneBindToNumaZone', 'value': beegfs_meta_tune_bind_to_numa_zone},
+        {'key': 'tuneNumStreamListeners', 'value': beegfs_meta_tune_num_stream_listeners},
+        {'key': 'tuneInvalWatchMaxObjects', 'value': beegfs_meta_tune_inval_watch_max_objects},
+        {'key': 'tuneInvalWatchQueueSize', 'value': beegfs_meta_tune_inval_watch_queue_size},
+        {'key': 'tuneUsePerUserMsgQueues', 'value': (beegfs_meta_tune_use_per_user_msg_queues | ternary('true', 'false')) if beegfs_meta_tune_use_per_user_msg_queues is not none else none},
+        {'key': 'tuneUseAggressiveStreamPoll', 'value': (beegfs_meta_tune_use_aggressive_stream_poll | ternary('true', 'false')) if beegfs_meta_tune_use_aggressive_stream_poll is not none else none},
+        {'key': 'sysRemoteInvalEnabled', 'value': (beegfs_meta_sys_remote_inval_enabled | ternary('true', 'false')) if beegfs_meta_sys_remote_inval_enabled is not none else none},
+        {'key': 'connRestrictOutboundInterfaces', 'value': (beegfs_conn_restrict_outbound_interfaces | ternary('true', 'false')) if beegfs_conn_restrict_outbound_interfaces is not none else none},
+      ] | rejectattr('value', 'none') | list
+    }}
+  loop_control:
+    label: "{{ item.key }}"
   notify: Restart BeeGFS meta service

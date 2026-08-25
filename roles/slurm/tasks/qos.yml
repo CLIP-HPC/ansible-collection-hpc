@@ -7,6 +7,10 @@
     state: present
     entity: cluster
     name: "{{ slurm_cluster_name }}"
+  register: slurm_qos_add_cluster
+  until: slurm_qos_add_cluster is not failed
+  retries: "{{ slurm_dbd_connect_retries }}"
+  delay: 10
 
 - name: qos | Add QOS
   tags:

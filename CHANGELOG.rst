@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.8.1
+======
+- slurm: Retry the initial ``sacctmgr`` cluster registration on the controller (``slurm_dbd_connect_retries``, default 30 x 10s) so a controller configured concurrently with the database node tolerates slurmdbd not being up yet
+
 v3.8.0
 ======
 - rdma_exporter: Add role to install and manage the Prometheus ``rdma_exporter``, exposing RDMA (InfiniBand/RoCE) NIC statistics via a pinned, checksum-verified release binary and a systemd service, with optional firewalld integration and optional upstream tooling to enable mlx5/QP hardware counters

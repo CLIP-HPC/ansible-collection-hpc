@@ -13,6 +13,9 @@
     - {key: 'vm.dirty_background_ratio', value: '5'}
     - {key: 'vm.dirty_ratio', value: '20'}
     - {key: 'vm.vfs_cache_pressure', value: '50'}
+    - {key: 'kernel.numa_balancing', value: '0'}
+    - {key: 'vm.zone_reclaim_mode', value: '1'}
+    - {key: 'vm.min_free_kbytes', value: '262144'}
     - {key: 'vm.min_free_kbytes', value: '262144'}
     - {key: 'vm.zone_reclaim_mode', value: '1'}
   become: true

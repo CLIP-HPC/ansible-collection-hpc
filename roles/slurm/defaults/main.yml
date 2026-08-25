@@ -95,6 +95,7 @@ slurm_dbd_mysql_username: slurm
 slurm_dbd_mysql_host: localhost
 slurm_dbd_port: 6819
 slurm_dbd_conf_debug_flags: ""
+slurm_dbd_connect_retries: 30
 slurm_db_data_dir:
 slurm_db_root_password: "{{ slurm_db_password }}"
 

@@ -25,16 +25,51 @@
         {'key': 'connTCPRcvBufSize', 'value': beegfs_client_mount.conn_tcp_rcv_buf_size | default(beegfs_client_conn_tcp_rcv_buf_size)},
         {'key': 'connUDPRcvBufSize', 'value': beegfs_client_mount.conn_udp_rcv_buf_size | default(beegfs_client_conn_udp_rcv_buf_size)},
         {'key': 'tuneFileCacheType', 'value': beegfs_client_mount.tune_file_cache_type | default(beegfs_client_tune_file_cache_type)},
-        {'key': 'tuneFileOpenRetryTimeoutMS', 'value': beegfs_client_mount.tune_file_open_retry_timeout_ms | default(beegfs_client_tune_file_open_retry_timeout_ms)},
-        {'key': 'tuneFileOpenRetryIntervalMS', 'value': beegfs_client_mount.tune_file_open_retry_interval_ms | default(beegfs_client_tune_file_open_retry_interval_ms)},
+        {'key': 'tuneFileOpenRetryTimeoutMS',
+         'value': beegfs_client_mount.tune_file_open_retry_timeout_ms
+                  | default(beegfs_client_tune_file_open_retry_timeout_ms)},
+        {'key': 'tuneFileOpenRetryIntervalMS',
+         'value': beegfs_client_mount.tune_file_open_retry_interval_ms
+                  | default(beegfs_client_tune_file_open_retry_interval_ms)},
         {'key': 'tunePreferredMetaFile', 'value': beegfs_client_mount.tune_preferred_meta_file | default(beegfs_client_tune_preferred_meta_file)},
         {'key': 'tunePreferredStorageFile', 'value': beegfs_client_mount.tune_preferred_storage_file | default(beegfs_client_tune_preferred_storage_file)},
-        {'key': 'connUseRDMA', 'value': ((beegfs_client_mount.conn_use_rdma | default(beegfs_client_conn_use_rdma)) | ternary('true', 'false')) if (beegfs_client_mount.conn_use_rdma | default(beegfs_client_conn_use_rdma)) is not none else none},
-        {'key': 'connTCPFallbackEnabled', 'value': ((beegfs_client_mount.conn_tcp_fallback_enabled | default(beegfs_client_conn_tcp_fallback_enabled)) | ternary('true', 'false')) if (beegfs_client_mount.conn_tcp_fallback_enabled | default(beegfs_client_conn_tcp_fallback_enabled)) is not none else none},
-        {'key': 'tuneRemoteFSync', 'value': ((beegfs_client_mount.tune_remote_fsync | default(beegfs_client_tune_remote_fsync)) | ternary('true', 'false')) if (beegfs_client_mount.tune_remote_fsync | default(beegfs_client_tune_remote_fsync)) is not none else none},
-        {'key': 'tuneUseGlobalFileLocks', 'value': ((beegfs_client_mount.tune_use_global_file_locks | default(beegfs_client_tune_use_global_file_locks)) | ternary('true', 'false')) if (beegfs_client_mount.tune_use_global_file_locks | default(beegfs_client_tune_use_global_file_locks)) is not none else none},
-        {'key': 'tuneUseGlobalAppendLocks', 'value': ((beegfs_client_mount.tune_use_global_append_locks | default(beegfs_client_tune_use_global_append_locks)) | ternary('true', 'false')) if (beegfs_client_mount.tune_use_global_append_locks | default(beegfs_client_tune_use_global_append_locks)) is not none else none},
-        {'key': 'connRestrictOutboundInterfaces', 'value': ((beegfs_client_mount.conn_restrict_outbound_interfaces | default(beegfs_conn_restrict_outbound_interfaces)) | ternary('true', 'false')) if (beegfs_client_mount.conn_restrict_outbound_interfaces | default(beegfs_conn_restrict_outbound_interfaces)) is not none else none},
+        {'key': 'connUseRDMA',
+         'value': ((beegfs_client_mount.conn_use_rdma | default(beegfs_client_conn_use_rdma))
+                   | ternary('true', 'false'))
+                  if (beegfs_client_mount.conn_use_rdma | default(beegfs_client_conn_use_rdma)) is not none
+                  else none},
+        {'key': 'connTCPFallbackEnabled',
+         'value': ((beegfs_client_mount.conn_tcp_fallback_enabled | default(beegfs_client_conn_tcp_fallback_enabled))
+                   | ternary('true', 'false'))
+                  if (beegfs_client_mount.conn_tcp_fallback_enabled
+                      | default(beegfs_client_conn_tcp_fallback_enabled)) is not none
+                  else none},
+        {'key': 'tuneRemoteFSync',
+         'value': ((beegfs_client_mount.tune_remote_fsync | default(beegfs_client_tune_remote_fsync))
+                   | ternary('true', 'false'))
+                  if (beegfs_client_mount.tune_remote_fsync | default(beegfs_client_tune_remote_fsync)) is not none
+                  else none},
+        {'key': 'tuneUseGlobalFileLocks',
+         'value': ((beegfs_client_mount.tune_use_global_file_locks
+                     | default(beegfs_client_tune_use_global_file_locks))
+                   | ternary('true', 'false'))
+                  if (beegfs_client_mount.tune_use_global_file_locks
+                      | default(beegfs_client_tune_use_global_file_locks)) is not none
+                  else none},
+        {'key': 'tuneUseGlobalAppendLocks',
+         'value': ((beegfs_client_mount.tune_use_global_append_locks
+                     | default(beegfs_client_tune_use_global_append_locks))
+                   | ternary('true', 'false'))
+                  if (beegfs_client_mount.tune_use_global_append_locks
+                      | default(beegfs_client_tune_use_global_append_locks)) is not none
+                  else none},
+        {'key': 'connRestrictOutboundInterfaces',
+         'value': ((beegfs_client_mount.conn_restrict_outbound_interfaces
+                     | default(beegfs_conn_restrict_outbound_interfaces))
+                   | ternary('true', 'false'))
+                  if (beegfs_client_mount.conn_restrict_outbound_interfaces
+                      | default(beegfs_conn_restrict_outbound_interfaces)) is not none
+                  else none},
         {'key': 'connRDMATypeOfService', 'value': beegfs_client_mount.conn_rdma_type_of_service | default(beegfs_conn_rdma_type_of_service)},
       ] | rejectattr('value', 'none') | list
     }}

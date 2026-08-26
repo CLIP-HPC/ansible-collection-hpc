@@ -80,10 +80,18 @@
         {'key': 'tuneNumStreamListeners', 'value': beegfs_meta_tune_num_stream_listeners},
         {'key': 'tuneInvalWatchMaxObjects', 'value': beegfs_meta_tune_inval_watch_max_objects},
         {'key': 'tuneInvalWatchQueueSize', 'value': beegfs_meta_tune_inval_watch_queue_size},
-        {'key': 'tuneUsePerUserMsgQueues', 'value': (beegfs_meta_tune_use_per_user_msg_queues | ternary('true', 'false')) if beegfs_meta_tune_use_per_user_msg_queues is not none else none},
-        {'key': 'tuneUseAggressiveStreamPoll', 'value': (beegfs_meta_tune_use_aggressive_stream_poll | ternary('true', 'false')) if beegfs_meta_tune_use_aggressive_stream_poll is not none else none},
-        {'key': 'sysRemoteInvalEnabled', 'value': (beegfs_meta_sys_remote_inval_enabled | ternary('true', 'false')) if beegfs_meta_sys_remote_inval_enabled is not none else none},
-        {'key': 'connRestrictOutboundInterfaces', 'value': (beegfs_conn_restrict_outbound_interfaces | ternary('true', 'false')) if beegfs_conn_restrict_outbound_interfaces is not none else none},
+        {'key': 'tuneUsePerUserMsgQueues',
+         'value': (beegfs_meta_tune_use_per_user_msg_queues | ternary('true', 'false'))
+                  if beegfs_meta_tune_use_per_user_msg_queues is not none else none},
+        {'key': 'tuneUseAggressiveStreamPoll',
+         'value': (beegfs_meta_tune_use_aggressive_stream_poll | ternary('true', 'false'))
+                  if beegfs_meta_tune_use_aggressive_stream_poll is not none else none},
+        {'key': 'sysRemoteInvalEnabled',
+         'value': (beegfs_meta_sys_remote_inval_enabled | ternary('true', 'false'))
+                  if beegfs_meta_sys_remote_inval_enabled is not none else none},
+        {'key': 'connRestrictOutboundInterfaces',
+         'value': (beegfs_conn_restrict_outbound_interfaces | ternary('true', 'false'))
+                  if beegfs_conn_restrict_outbound_interfaces is not none else none},
         {'key': 'connRDMATypeOfService', 'value': beegfs_conn_rdma_type_of_service},
       ] | rejectattr('value', 'none') | list
     }}

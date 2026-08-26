@@ -1,8 +1,15 @@
 # {{ ansible_managed }}
 ClusterName={{ slurm_cluster_name }}
 
+{% set _merged_config = slurm_default_config | combine(slurm_config) %}
+{% set _dynamic_nodegroups = [] %}
+{% for nodegroup in slurm_nodegroups | default([]) %}
+{%   if nodegroup.get('dynamic', slurm_dynamic_nodes) | bool %}
+{%     set _ = _dynamic_nodegroups.append(nodegroup.name) %}
+{%   endif %}
+{% endfor %}
 # PARAMETERS
-{% for k, v in slurm_default_config | combine(slurm_config) | items %}
+{% for k, v in _merged_config | items %}
 {%  if v != "omit" %}{# allow removing items using setting key: null #}
 {%    if k != 'JobSubmitPlugins' %}{# handled separately due to slurm_job_submit_script #}
 {{ k }}={{ v | join(',') if (v is sequence and v is not string) else v }}
@@ -13,6 +20,17 @@ ClusterName={{ slurm_cluster_name }}
 {% set jobsubmitplugins = ((['lua'] if slurm_job_submit_script | default('', true) | length > 0 else []) + slurm_config.get('JobSubmitPlugins', [])) | unique %}
 {% if jobsubmitplugins | length > 0 %}
 JobSubmitPlugins={{ jobsubmitplugins | join(',') }}
+{% endif %}
+
+{% if _dynamic_nodegroups | length > 0 %}
+# DYNAMIC NODES
+# Room for dynamically-registering nodes (slurmd -Z) beyond those defined here
+{%   if 'MaxNodeCount' not in _merged_config %}
+MaxNodeCount={{ slurm_max_node_count }}
+{%   endif %}
+{%   if 'TreeWidth' not in _merged_config %}
+TreeWidth=65533
+{%   endif %}
 {% endif %}
 
 
@@ -26,6 +44,9 @@ NodeName={{ node }}
 
 # COMPUTE NODES
 {% for nodegroup in slurm_nodegroups %}
+{%  if nodegroup.name in _dynamic_nodegroups %}
+# nodegroup: {{ nodegroup.name }} (dynamic: nodes register via slurmd -Z)
+{%  else %}
 # nodegroup: {{ nodegroup.name }}
 {%  set inventory_group_name = slurm_cluster_name ~ '_' ~ nodegroup.name %}
 {%  set inventory_group_hosts = groups.get(inventory_group_name, []) %}
@@ -67,6 +88,7 @@ NodeName={{ hostlists | join(',') }} {{ '' -}}
     {% if 'gres' in nodegroup %}Gres={{ ','.join(nodegroup.gres | map(attribute='conf')) }}{% endif %}
 
 {%      endif %}{# 1 or more hosts in inventory #}
+{%  endif %}{# not dynamic #}
 NodeSet=nodegroup_{{ nodegroup.name }} Feature=nodegroup_{{ nodegroup.name }}
 
 {% endfor %}

@@ -32,6 +32,9 @@
     "ram_multiplier": {
       "type": "number"
     },
+    "dynamic": {
+      "type": "boolean"
+    },
     "features": {
     	"type": "array",
         "items": {

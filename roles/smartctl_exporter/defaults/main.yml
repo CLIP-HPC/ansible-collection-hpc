@@ -1,0 +1,43 @@
+---
+# defaults file for clip.hpc.smartctl_exporter
+
+# Release management
+smartctl_exporter_version: "0.14.0"
+smartctl_exporter_arch_map:
+  x86_64: amd64
+  aarch64: arm64
+smartctl_exporter_arch: "{{ smartctl_exporter_arch_map[ansible_architecture] | default(ansible_architecture) }}"
+smartctl_exporter_download_url: "https://github.com/prometheus-community/smartctl_exporter/releases/download/v{{ smartctl_exporter_version }}/smartctl_exporter-{{ smartctl_exporter_version }}.linux-{{ smartctl_exporter_arch }}.tar.gz" # noqa: yaml[line-length]
+smartctl_exporter_checksum_url: "https://github.com/prometheus-community/smartctl_exporter/releases/download/v{{ smartctl_exporter_version }}/sha256sums.txt"
+smartctl_exporter_checksum_verify: true
+smartctl_exporter_download_dir: /usr/local/src/smartctl_exporter
+smartctl_exporter_binary_install_dir: /usr/local/bin
+smartctl_exporter_install_smartmontools: true
+
+# Service identity. smartctl requires root to issue ATA_12/ATA_16 passthrough
+# commands, so the upstream project runs the exporter as root by default -
+# see https://github.com/prometheus-community/smartctl_exporter#readme
+smartctl_exporter_user: root
+smartctl_exporter_group: root
+
+# smartctl_exporter CLI configuration
+smartctl_exporter_smartctl_path: /usr/sbin/smartctl
+smartctl_exporter_smartctl_interval: 60s
+smartctl_exporter_devices: []
+smartctl_exporter_device_include: ""
+smartctl_exporter_device_exclude: ""
+smartctl_exporter_port: 9633
+smartctl_exporter_web_listen_address: ":{{ smartctl_exporter_port }}"
+smartctl_exporter_web_telemetry_path: /metrics
+smartctl_exporter_web_config_file: ""
+smartctl_exporter_log_level: info
+smartctl_exporter_log_format: logfmt
+smartctl_exporter_extra_args: []
+
+# Service management
+smartctl_exporter_service_enabled: true
+smartctl_exporter_service_state: started
+
+# Optional firewalld integration
+smartctl_exporter_manage_firewalld: false
+smartctl_exporter_firewalld_zone: public

@@ -1,0 +1,42 @@
+{%- set args = [] %}
+{%- set _ = args.append('--smartctl.path=' + smartctl_exporter_smartctl_path) %}
+{%- set _ = args.append('--smartctl.interval=' + smartctl_exporter_smartctl_interval) %}
+{%- for device in smartctl_exporter_devices %}
+{%- set _ = args.append('--smartctl.device=' + device) %}
+{%- endfor %}
+{%- if smartctl_exporter_device_include %}
+{%- set _ = args.append('--smartctl.device-include=' + smartctl_exporter_device_include) %}
+{%- endif %}
+{%- if smartctl_exporter_device_exclude %}
+{%- set _ = args.append('--smartctl.device-exclude=' + smartctl_exporter_device_exclude) %}
+{%- endif %}
+{%- set _ = args.append('--web.listen-address=' + smartctl_exporter_web_listen_address) %}
+{%- set _ = args.append('--web.telemetry-path=' + smartctl_exporter_web_telemetry_path) %}
+{%- if smartctl_exporter_web_config_file %}
+{%- set _ = args.append('--web.config.file=' + smartctl_exporter_web_config_file) %}
+{%- endif %}
+{%- for arg in smartctl_exporter_extra_args %}
+{%- set _ = args.append(arg) %}
+{%- endfor %}
+{%- set _ = args.append('--log.level=' + smartctl_exporter_log_level) %}
+{%- set _ = args.append('--log.format=' + smartctl_exporter_log_format) %}
+[Unit]
+Description=Prometheus smartctl exporter
+Documentation=https://github.com/prometheus-community/smartctl_exporter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ smartctl_exporter_user }}
+Group={{ smartctl_exporter_group }}
+ExecStart={{ smartctl_exporter_binary_install_dir }}/smartctl_exporter \
+  {{ args | join(' \\\n  ') }}
+Restart=on-failure
+RestartSec=2
+SyslogIdentifier=smartctl_exporter
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

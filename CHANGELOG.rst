@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.7.0
+======
+- smartctl_exporter: Add role to install and manage the Prometheus ``smartctl_exporter``, exposing S.M.A.R.T. disk health metrics via a pinned, checksum-verified release binary and a systemd service
+
 v3.6.1
 ======
 - beegfs: Add ``numa_zone`` per entry in ``beegfs_oss`` and ``beegfs_meta_tune_bind_to_numa_zone`` to configure ``tuneBindToNumaZone`` on the oss and meta services for NUMA systems, and fail early if the resolved devices or preferred NIC do not match the configured NUMA zone

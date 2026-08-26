@@ -1,0 +1,118 @@
+---
+# argument spec file for clip.hpc.smartctl_exporter
+
+argument_specs:
+  main:
+    short_description: Main entrypoint for clip.hpc.smartctl_exporter role
+    options:
+      smartctl_exporter_version:
+        type: str
+        description: Version of smartctl_exporter to install (without the leading "v").
+        default: "0.14.0"
+      smartctl_exporter_arch_map:
+        type: dict
+        description: Maps `ansible_architecture` to the arch suffix used in upstream release asset names.
+        default:
+          x86_64: amd64
+          aarch64: arm64
+      smartctl_exporter_arch:
+        type: str
+        description: Release arch suffix to download. Derived from `smartctl_exporter_arch_map` by default.
+      smartctl_exporter_download_url:
+        type: str
+        description: URL of the smartctl_exporter release archive to download.
+      smartctl_exporter_checksum_url:
+        type: str
+        description: URL of the upstream sha256sums.txt file used to verify the downloaded archive.
+      smartctl_exporter_checksum_verify:
+        type: bool
+        description: Whether to verify the downloaded archive against `smartctl_exporter_checksum_url`.
+        default: true
+      smartctl_exporter_download_dir:
+        type: str
+        description: Directory used to cache the downloaded archive and its extracted contents.
+        default: /usr/local/src/smartctl_exporter
+      smartctl_exporter_binary_install_dir:
+        type: str
+        description: Directory the smartctl_exporter binary is installed into.
+        default: /usr/local/bin
+      smartctl_exporter_install_smartmontools:
+        type: bool
+        description: Whether to install the `smartmontools` package, which provides smartctl.
+        default: true
+      smartctl_exporter_user:
+        type: str
+        description: >
+          User the smartctl_exporter service runs as. Defaults to root, matching the upstream
+          systemd unit, since smartctl needs root to issue ATA_12/ATA_16 passthrough commands
+          on most kernels.
+        default: root
+      smartctl_exporter_group:
+        type: str
+        description: Group the smartctl_exporter service runs as.
+        default: root
+      smartctl_exporter_smartctl_path:
+        type: str
+        description: Path to the smartctl binary on the target host.
+        default: /usr/sbin/smartctl
+      smartctl_exporter_smartctl_interval:
+        type: str
+        description: Polling interval passed to `--smartctl.interval`.
+        default: 60s
+      smartctl_exporter_devices:
+        type: list
+        elements: str
+        description: Explicit list of devices to monitor (`--smartctl.device`). Auto-scans all devices when empty.
+        default: []
+      smartctl_exporter_device_include:
+        type: str
+        description: Regex passed to `--smartctl.device-include` to limit auto-scanned devices.
+        default: ""
+      smartctl_exporter_device_exclude:
+        type: str
+        description: Regex passed to `--smartctl.device-exclude` to exclude devices from auto-scan.
+        default: ""
+      smartctl_exporter_port:
+        type: int
+        description: TCP port the exporter listens on.
+        default: 9633
+      smartctl_exporter_web_listen_address:
+        type: str
+        description: Value passed to `--web.listen-address`.
+      smartctl_exporter_web_telemetry_path:
+        type: str
+        description: Value passed to `--web.telemetry-path`.
+        default: /metrics
+      smartctl_exporter_web_config_file:
+        type: str
+        description: Optional path to an exporter-toolkit web config file for TLS/basic auth (`--web.config.file`).
+        default: ""
+      smartctl_exporter_log_level:
+        type: str
+        description: Value passed to `--log.level`.
+        default: info
+      smartctl_exporter_log_format:
+        type: str
+        description: Value passed to `--log.format`.
+        default: logfmt
+      smartctl_exporter_extra_args:
+        type: list
+        elements: str
+        description: Additional raw CLI arguments appended to the smartctl_exporter ExecStart line.
+        default: []
+      smartctl_exporter_service_enabled:
+        type: bool
+        description: Whether the smartctl_exporter systemd service is enabled at boot.
+        default: true
+      smartctl_exporter_service_state:
+        type: str
+        description: Desired systemd state of the smartctl_exporter service.
+        default: started
+      smartctl_exporter_manage_firewalld:
+        type: bool
+        description: Whether to open `smartctl_exporter_port` in firewalld.
+        default: false
+      smartctl_exporter_firewalld_zone:
+        type: str
+        description: firewalld zone the port is opened in when `smartctl_exporter_manage_firewalld` is true.
+        default: public

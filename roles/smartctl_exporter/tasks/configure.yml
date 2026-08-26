@@ -1,0 +1,8 @@
+---
+- name: configure | Ensure smartctl_exporter service is enabled/started
+  ansible.builtin.systemd:
+    name: smartctl_exporter
+    enabled: "{{ smartctl_exporter_service_enabled }}"
+    state: "{{ smartctl_exporter_service_state }}"
+    daemon_reload: true
+  become: true

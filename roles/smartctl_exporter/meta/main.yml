@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  role_name: smartctl_exporter
+  author: Uemit Seren <uemit.seren@gmi.oeaw.ac.at>
+  description: >
+    Installs and configures the Prometheus smartctl_exporter, exposing
+    S.M.A.R.T. disk health metrics for scraping.
+  company: clip
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.15"
+  platforms:
+    - name: EL
+      versions:
+        - "9"
+        - "10"
+  galaxy_tags:
+    - monitoring
+    - prometheus
+    - smartctl
+    - smart
+
+dependencies: []

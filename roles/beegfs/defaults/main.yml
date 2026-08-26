@@ -123,7 +123,9 @@ beegfs_meta_path: "/data/beegfs/beegfs_meta"
 # resolution"), falling back to fresh NUMA/name-based discovery only for a
 # genuinely unprovisioned host.
 beegfs_meta_dev:  # /dev/sdb
-beegfs_meta_fstype:  # Example: "ext4"
+# ext4, not beegfs_fstype (xfs) - BeeGFS recommends ext4 for metadata
+# targets, and beegfs_meta_filesystem_opts below is ext4-specific mkfs syntax.
+beegfs_meta_fstype: "ext4"
 beegfs_meta_filesystem_opts: "-i 2048 -I 1024 -J size=400 -O dir_index,filetype"
 beegfs_meta_mount_opts: "noatime,nodiratime,auto"
 

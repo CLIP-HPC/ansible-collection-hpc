@@ -18,7 +18,7 @@
   block:
     - name: Format filesystem
       vars:
-        meta_fstype: "{{ beegfs_meta_fstype | default(beegfs_fstype) }}"
+        meta_fstype: "{{ beegfs_meta_fstype | default(beegfs_fstype, true) }}"
       community.general.filesystem:
         dev: "{{ beegfs_meta_dev }}"
         fstype: "{{ meta_fstype }}"
@@ -36,7 +36,7 @@
 
     - name: Mount filesystem
       vars:
-        meta_fstype: "{{ beegfs_meta_fstype | default(beegfs_fstype) }}"
+        meta_fstype: "{{ beegfs_meta_fstype | default(beegfs_fstype, true) }}"
       ansible.posix.mount:
         src: "/dev/disk/by-label/{{ beegfs_meta_dev_label }}"
         path: "{{ beegfs_meta_path }}"

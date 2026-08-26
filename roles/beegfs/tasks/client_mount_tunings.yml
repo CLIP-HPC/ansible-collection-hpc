@@ -35,6 +35,7 @@
         {'key': 'tuneUseGlobalFileLocks', 'value': ((beegfs_client_mount.tune_use_global_file_locks | default(beegfs_client_tune_use_global_file_locks)) | ternary('true', 'false')) if (beegfs_client_mount.tune_use_global_file_locks | default(beegfs_client_tune_use_global_file_locks)) is not none else none},
         {'key': 'tuneUseGlobalAppendLocks', 'value': ((beegfs_client_mount.tune_use_global_append_locks | default(beegfs_client_tune_use_global_append_locks)) | ternary('true', 'false')) if (beegfs_client_mount.tune_use_global_append_locks | default(beegfs_client_tune_use_global_append_locks)) is not none else none},
         {'key': 'connRestrictOutboundInterfaces', 'value': ((beegfs_client_mount.conn_restrict_outbound_interfaces | default(beegfs_conn_restrict_outbound_interfaces)) | ternary('true', 'false')) if (beegfs_client_mount.conn_restrict_outbound_interfaces | default(beegfs_conn_restrict_outbound_interfaces)) is not none else none},
+        {'key': 'connRDMATypeOfService', 'value': beegfs_client_mount.conn_rdma_type_of_service | default(beegfs_conn_rdma_type_of_service)},
       ] | rejectattr('value', 'none') | list
     }}
   loop_control:

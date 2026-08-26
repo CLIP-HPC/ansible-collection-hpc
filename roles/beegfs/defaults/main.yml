@@ -59,7 +59,7 @@ beegfs_repo_file: "{{ beegfs_distro_vars[ansible_os_family]['beegfs_repo_file'] 
 beegfs_rdma: true
 
 # Default filesystem options
-beegfs_filesystem_opts: "-K -isize=512 -l version=2,size=512m"
+beegfs_filesystem_opts: "-K -l size=2038m"
 beegfs_mount_opts: "uqnoenforce,gqnoenforce,nodiscard,noatime,nodiratime,logbufs=8,logbsize=256k,inode64"
 beegfs_force_format: false
 beegfs_fstype: "xfs"
@@ -266,6 +266,13 @@ beegfs_conn_client_max_internode_num:
 # meta, and client services (mgmt/mon aren't wired up - beegfs-mgmtd.toml is
 # a different config format and doesn't set connInterfacesFile in this role).
 beegfs_conn_restrict_outbound_interfaces:
+
+# IP ToS/DSCP value stamped on outgoing RDMA connections (0-255). Shared
+# across the OSS, meta, and client services, same as
+# beegfs_conn_restrict_outbound_interfaces above. Left unset (None) to leave
+# the package's shipped default in place.
+# https://doc.beegfs.io/latest/advanced_topics/rdma_tuning.html
+beegfs_conn_rdma_type_of_service:
 
 # Client tuning, written to /etc/beegfs/beegfs-client-<port>.conf (one per
 # beegfs_client_mounts entry) by tasks/client_mount_tunings.yml. These are

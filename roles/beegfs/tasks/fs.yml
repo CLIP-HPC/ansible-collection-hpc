@@ -8,11 +8,25 @@
     msg: OSS device {{ oss_dev }} does not exist
   when: not beegfs_oss_dev_stat.stat.exists
 
-- name: Unmount storage device if beegfs_force_format is true
+- name: Find the device's actual current mount point, if any
+  # oss_path is only where THIS run intends to mount the device - it need
+  # not be where the device is currently mounted (e.g. a stale mount left
+  # over from before a label/index scheme change, or from before this disk
+  # was reassigned to a different oss_path). Unmounting by oss_path instead
+  # of by device would silently no-op when they differ, then mkfs would fail
+  # with "contains a mounted filesystem" against the still-mounted device.
+  ansible.builtin.command: findmnt -n -o TARGET --source {{ oss_dev }}
+  register: beegfs_oss_dev_current_mount
+  changed_when: false
+  failed_when: false
+  when: beegfs_force_format | bool
+
+- name: Unmount storage device if beegfs_force_format is true and it is currently mounted
   become: true
   ansible.posix.mount:
-    path: "{{ oss_path }}"
+    path: "{{ item }}"
     state: unmounted
+  loop: "{{ beegfs_oss_dev_current_mount.stdout_lines | default([]) }}"
   when: beegfs_force_format | bool
 
 - name: Attempt to format if the device isn't already provisioned or if beegfs_force_format is true

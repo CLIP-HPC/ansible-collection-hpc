@@ -32,9 +32,20 @@
 
 - name: Determine mount paths and labels for OSS
   vars:
+    # ix (from subelements' loop_control) is the flattened index across ALL
+    # ports' devices combined, not this device's position within its own
+    # port's device list - those only coincide when every earlier-processed
+    # port's device count is a multiple of the current port's count. That's
+    # not guaranteed: resolve_oss_port_devices.yml excludes the metadata
+    # device from whichever NUMA zone it lives in, so on any host that is
+    # both meta and OSS, one port's device count is one less than the
+    # other's. Use this device's own local index for the label/target id;
+    # oss_path can safely keep the global ix since it only needs to be
+    # unique, not stable per-port.
+    oss_local_ix: "{{ item.0.value.devices.index(item.1) }}"
     oss_path: "{{ beegfs_oss_path_prefix }}/oss-data-{{ ix }}"
-    oss_dev_label: "ST-{{ item.0.key }}-{{ ix % (item.0.value.devices | length) }}"
-    oss_target_id: "{{ beegfs_oss_id_map[item.0.key] + (ix % (item.0.value.devices | length) + 1)  }}"
+    oss_dev_label: "ST-{{ item.0.key }}-{{ oss_local_ix }}"
+    oss_target_id: "{{ beegfs_oss_id_map[item.0.key] + (oss_local_ix | int + 1) }}"
   ansible.builtin.set_fact:
     # yamllint disable rule:line-length
     beegfs_oss_labels_mount_paths: "{{ beegfs_oss_labels_mount_paths | default({}) | combine({item.1: {'oss_storage_id': beegfs_oss_id_map[item.0.key], 'oss_target_id': (oss_target_id | int), 'mount_path': oss_path, 'label': oss_dev_label}}) }}"

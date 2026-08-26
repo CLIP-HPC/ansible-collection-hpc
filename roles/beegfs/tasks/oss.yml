@@ -144,6 +144,7 @@
         {'key': 'tuneUsePerUserMsgQueues', 'value': (beegfs_oss_tune_use_per_user_msg_queues | ternary('true', 'false')) if beegfs_oss_tune_use_per_user_msg_queues is not none else none},
         {'key': 'tuneUseAggressiveStreamPoll', 'value': (beegfs_oss_tune_use_aggressive_stream_poll | ternary('true', 'false')) if beegfs_oss_tune_use_aggressive_stream_poll is not none else none},
         {'key': 'connRestrictOutboundInterfaces', 'value': (beegfs_conn_restrict_outbound_interfaces | ternary('true', 'false')) if beegfs_conn_restrict_outbound_interfaces is not none else none},
+        {'key': 'connRDMATypeOfService', 'value': beegfs_conn_rdma_type_of_service},
       ] | rejectattr('value', 'none') | list
     }}
   loop_control:

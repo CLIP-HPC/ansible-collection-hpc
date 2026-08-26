@@ -59,16 +59,52 @@ beegfs_repo_file: "{{ beegfs_distro_vars[ansible_os_family]['beegfs_repo_file'] 
 beegfs_rdma: true
 
 # Default filesystem options
-beegfs_filesystem_opts: "-K -d su=128k,sw=8 -l version=2,su=128k -isize=512"
-beegfs_mount_opts: "uqnoenforce,gqnoenforce,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k"
+beegfs_filesystem_opts: "-K -l size=2038m"
+beegfs_mount_opts: "uqnoenforce,gqnoenforce,nodiscard,noatime,nodiratime,logbufs=8,logbsize=256k,inode64"
 beegfs_force_format: false
 beegfs_fstype: "xfs"
 
 # Storage server options
 beegfs_oss_path_prefix: "/data/beegfs/beegfs_oss"
+# Dict of object storage server configurations, keyed by port. Each entry supports:
+#   numa_zone: NUMA zone this OSS is local to (optional). Configures tuneBindToNumaZone
+#     for this OSS, and is required to auto-discover devices/interfaces (below).
+#   devices: list of block devices for this OSS (optional). If omitted, devices are
+#     auto-discovered from disks matching beegfs_disk_device_regex that are attached to
+#     `numa_zone` (excluding the OS disk, beegfs_meta_dev, and any device explicitly
+#     claimed by another beegfs_oss entry) - numa_zone is required in that case.
+#   interfaces: list of network interfaces in order of preference, overriding
+#     beegfs_interfaces (optional). If omitted and `numa_zone` is set, this is
+#     beegfs_interfaces reordered so the NIC(s) local to `numa_zone` come first.
+# This lets a deployment either configure OSS ports/devices/interfaces statically, or
+# rely on NUMA-zone-based auto-discovery, or mix both on the same host.
 beegfs_oss: {}
+# Regex matching candidate whole-disk device names eligible for BeeGFS OSS
+# auto-discovery. Only used for beegfs_oss entries that omit `devices`.
+beegfs_disk_device_regex: '^(nvme[0-9]+n[0-9]+|vd[a-z]|sd[a-z])$'
+# Device path -> bool, populated by resolve_oss_devices.yml: true if that
+# device was resolved from an existing ST-<port>-<idx> filesystem label
+# (already provisioned in a previous run), false if freshly discovered.
+# fs.yml's format guard uses this to skip reformatting already-provisioned
+# disks even if their current device name changed (e.g. after a reboot).
+# Always defined as {} so looking up an unresolved device stays a safe
+# dict-key-miss rather than a subscript on an undefined variable.
+beegfs_oss_device_provisioned: {}
+# Device path -> {label, mount_path, ...}, set in tasks/main.yml from every
+# beegfs_oss entry's resolved devices. Defaulted to {} so beegfs_oss_tunable
+# (below) can reference it safely even on a run where beegfs_oss is empty
+# (e.g. a meta-only host) and that set_fact never executes - the map() over
+# an empty device list still needs this argument to be a defined dict.
+beegfs_oss_labels_mount_paths: {}
+# Durable ST-<port>-<index> filesystem labels (see beegfs_oss_labels_mount_paths,
+# set in tasks/main.yml) for every OSS device, used by beegfs-oss-tuning.sh.j2 to
+# re-resolve each device's current /dev name via /dev/disk/by-label at tuning
+# time - not the device names themselves, since those aren't stable across
+# reboots and baking one into the generated script risks tuning the wrong
+# physical disk (e.g. mixing up an OSS target with the meta device) after a
+# renumbering event.
 # yamllint disable rule:line-length
-beegfs_oss_tunable: "{{ beegfs_oss | dict2items | selectattr('value.devices', 'defined') | map(attribute='value.devices') | flatten | map('relpath', '/dev/') | list }}"
+beegfs_oss_tunable: "{{ beegfs_oss | dict2items | selectattr('value.devices', 'defined') | map(attribute='value.devices') | flatten | map('extract', beegfs_oss_labels_mount_paths, 'label') | list }}"
 
 # Management options
 beegfs_mgmt_path: "/data/beegfs/beegfs_mgmtd"
@@ -82,10 +118,16 @@ beegfs_license_content:
 
 # Metadata storage options
 beegfs_meta_path: "/data/beegfs/beegfs_meta"
+# If left unset and beegfs_enable.meta is true, resolved automatically via
+# resolve_meta_device.yml: label-first (see README's "Reboot-safe device
+# resolution"), falling back to fresh NUMA/name-based discovery only for a
+# genuinely unprovisioned host.
 beegfs_meta_dev:  # /dev/sdb
-beegfs_meta_fstype:  # Example: "ext4"
-beegfs_meta_filesystem_opts: "-i 2048 -I 512 -J size=400 -O dir_index,filetype"
-beegfs_meta_mount_opts: "noatime,nodiratime,nobarrier,auto"
+# ext4, not beegfs_fstype (xfs) - BeeGFS recommends ext4 for metadata
+# targets, and beegfs_meta_filesystem_opts below is ext4-specific mkfs syntax.
+beegfs_meta_fstype: "ext4"
+beegfs_meta_filesystem_opts: "-i 2048 -I 1024 -J size=400 -O dir_index,filetype"
+beegfs_meta_mount_opts: "noatime,nodiratime,auto"
 
 # Client mount configs
 beegfs_client_mounts: []
@@ -93,6 +135,12 @@ beegfs_client_mounts: []
 # - path: "/mnt/beegfs" # If there are multiple clients, use different path for each client.
 #   port: 8004 # If there are multiple clients, use different port for each client.
 #   mgmt_host: # Use this to override the default beegfs_mgmt_host in cases there are multiple clients.
+#   # Any of the beegfs_client_tune_*/beegfs_client_conn_*/beegfs_conn_client_max_internode_num/
+#   # beegfs_conn_restrict_outbound_interfaces tuning defaults (see below) can
+#   # also be overridden per mount here, minus their beegfs_client_/beegfs_
+#   # prefix - e.g. conn_use_rdma: false or tune_file_cache_type: none - since
+#   # a client can mount more than one
+#   # BeeGFS filesystem, each with different tuning needs.
 
 # Should the package manager use the `present` or `latest` flag for
 # BeeGFS? This is useful for upgrading.
@@ -112,9 +160,49 @@ beegfs_mon_db_database:
 
 beegfs_mon_db_port:
 
-beegfs_oss_max_sectors_kb: 256
+# Sysctl parameters applied via tuning.yml when beegfs_enable.tuning is true.
+# https://www.beegfs.io/wiki/StorageServerTuning
+# vm.dirty_background_bytes/vm.dirty_bytes are absolute writeback thresholds,
+# used instead of vm.dirty_background_ratio/vm.dirty_ratio since a ratio of
+# total RAM scales into an unreasonably large dirty-page buffer on
+# large-memory storage servers. tuning.yml forces the ratio-based settings to
+# 0 (their mutually-exclusive counterpart), since setting either member of a
+# ratio/bytes pair resets the other anyway.
+beegfs_sysctl_vm_dirty_background_bytes: 8589934592  # 8 GB
+beegfs_sysctl_vm_dirty_bytes: 34359738368  # 32 GB
+beegfs_sysctl_vm_vfs_cache_pressure: 50
+beegfs_sysctl_kernel_numa_balancing: 0
+beegfs_sysctl_vm_zone_reclaim_mode: 1
+beegfs_sysctl_vm_min_free_kbytes: 262144
+# Kernel defaults, in centisecs.
+beegfs_sysctl_vm_dirty_expire_centisecs: 3000
+beegfs_sysctl_vm_dirty_writeback_centisecs: 500
 
+beegfs_oss_scheduler: none
+beegfs_oss_nr_requests: 2048
+beegfs_oss_read_ahead_kb: 4096
+beegfs_oss_max_sectors_kb: 256
+beegfs_oss_write_cache: "write back"
+# Optional. Leave unset to not tune queue/rq_affinity, queue/nomerges, or
+# queue/wbt_lat_usec at all.
+beegfs_oss_rq_affinity:
+beegfs_oss_nomerges:
+beegfs_oss_wbt_lat_usec:
+
+beegfs_meta_scheduler: none
+beegfs_meta_nr_requests: 128
+beegfs_meta_read_ahead_kb: 128
 beegfs_meta_max_sectors_kb: 256
+# Optional. Leave unset to not tune queue/rq_affinity, queue/nomerges, or
+# queue/wbt_lat_usec at all.
+beegfs_meta_rq_affinity:
+beegfs_meta_nomerges:
+beegfs_meta_wbt_lat_usec:
+
+# Mode for /sys/kernel/mm/transparent_hugepage/enabled and /defrag, applied by
+# beegfs-oss-tuning.sh.j2
+beegfs_thp_enabled_mode: always
+beegfs_thp_defrag_mode: defer+madvise
 
 # Set to a non-empty string to enable authentication
 beegfs_auth_secret:
@@ -135,9 +223,36 @@ beegfs_oss_tune_num_workers:
 # tuneNumWorkers settings for meta server
 beegfs_meta_tune_target_chooser: randomized
 
-beegfs_conn_rdma_buf_num:
+# OSS I/O sizing and threading tuning, written to
+# /etc/beegfs/<port>.d/beegfs-storage.conf by tasks/oss.yml. Left unset (None)
+# to leave the package's shipped beegfs-storage.conf default for that key in
+# place - only keys with a value set here get patched.
+# https://doc.beegfs.io/latest/advanced_topics/storage_tuning.html
+beegfs_oss_tune_file_read_size:
+beegfs_oss_tune_file_write_size:
+beegfs_oss_tune_file_read_ahead_size:
+beegfs_oss_tune_file_read_ahead_trigger_size:
+beegfs_oss_tune_file_write_sync_size:
+beegfs_oss_tune_num_stream_listeners:
+beegfs_oss_tune_use_per_target_workers:
+beegfs_oss_tune_use_per_user_msg_queues:
+beegfs_oss_tune_use_aggressive_stream_poll:
+beegfs_oss_tune_worker_buf_size:
 
-beegfs_conn_rdma_buf_size:
+# Metadata server (meta) threading and client-cache invalidation tuning,
+# written to /etc/beegfs/beegfs-meta.conf by tasks/meta.yml. Left unset (None)
+# to leave the package's shipped beegfs-meta.conf default for that key in
+# place - only keys with a value set here get patched.
+# https://doc.beegfs.io/latest/advanced_topics/metadata_tuning.html
+beegfs_meta_tune_num_stream_listeners:
+beegfs_meta_tune_use_per_user_msg_queues:
+beegfs_meta_tune_use_aggressive_stream_poll:
+# Off = clients may serve slightly stale cached metadata. Only safe for
+# close-to-open workloads, not for concurrent read-while-write across nodes.
+beegfs_meta_sys_remote_inval_enabled:
+# Inert while beegfs_meta_sys_remote_inval_enabled is false.
+beegfs_meta_tune_inval_watch_max_objects:
+beegfs_meta_tune_inval_watch_queue_size:
 
 # Number of connections between nodes
 # https://doc.beegfs.io/latest/advanced_topics/client_tuning.html#parallel-network-requests
@@ -145,6 +260,61 @@ beegfs_conn_rdma_buf_size:
 beegfs_conn_meta_max_internode_num:
 beegfs_conn_oss_max_internode_num:
 beegfs_conn_client_max_internode_num:
+
+# When true, outbound connections are restricted to the interfaces listed in
+# connInterfacesFile instead of letting the OS pick any available interface -
+# relevant on multi-homed hosts (see beegfs_multi_homing) so BeeGFS traffic
+# can't accidentally go out over a non-BeeGFS NIC. Shared across the OSS,
+# meta, and client services (mgmt/mon aren't wired up - beegfs-mgmtd.toml is
+# a different config format and doesn't set connInterfacesFile in this role).
+beegfs_conn_restrict_outbound_interfaces:
+
+# IP ToS/DSCP value stamped on outgoing RDMA connections (0-255). Shared
+# across the OSS, meta, and client services, same as
+# beegfs_conn_restrict_outbound_interfaces above. Left unset (None) to leave
+# the package's shipped default in place.
+# https://doc.beegfs.io/latest/advanced_topics/rdma_tuning.html
+beegfs_conn_rdma_type_of_service:
+
+# Client tuning, written to /etc/beegfs/beegfs-client-<port>.conf (one per
+# beegfs_client_mounts entry) by tasks/client_mount_tunings.yml. These are
+# global fallbacks - since a client can mount multiple BeeGFS filesystems,
+# any of them can be overridden per mount by setting the same key (minus the
+# beegfs_client_/beegfs_ prefix, e.g. conn_use_rdma, tune_file_cache_type) on
+# the corresponding beegfs_client_mounts entry. Left unset (None) to leave
+# the package's shipped beegfs-client.conf default for that key in place -
+# only keys with a value set here (globally or per mount) get patched.
+# https://doc.beegfs.io/latest/advanced_topics/client_tuning.html
+beegfs_client_conn_use_rdma:
+# connRDMABufSize/connRDMABufNum and connRDMAFragmentSize are client-only:
+# they size and shape the client's own RDMA connection buffers. They are
+# deliberately not applied to the OSS/meta services.
+beegfs_client_conn_rdma_buf_size:
+beegfs_client_conn_rdma_buf_num:
+beegfs_client_conn_rdma_fragment_size:
+beegfs_client_conn_rdma_meta_buf_size:
+beegfs_client_conn_rdma_meta_buf_num:
+beegfs_client_conn_tcp_fallback_enabled:
+beegfs_client_conn_tcp_rcv_buf_size:
+beegfs_client_conn_udp_rcv_buf_size:
+beegfs_client_tune_file_cache_type:
+beegfs_client_tune_file_open_retry_timeout_ms:
+beegfs_client_tune_file_open_retry_interval_ms:
+beegfs_client_tune_remote_fsync:
+beegfs_client_tune_use_global_file_locks:
+beegfs_client_tune_use_global_append_locks:
+beegfs_client_tune_preferred_meta_file:
+beegfs_client_tune_preferred_storage_file:
+
+# NUMA zone to bind the meta service (and its worker threads) to on NUMA systems.
+# Set to the NUMA zone number that is local to beegfs_meta_dev and the preferred
+# network interface. Leave unset on single-NUMA-zone systems. There is only a single
+# global setting since only one metadata device/service is supported per host.
+# For OSS, set numa_zone per entry in beegfs_oss instead, since a host
+# can run multiple OSS services bound to different NUMA zones.
+# https://doc.beegfs.io/latest/advanced_topics/storage_tuning.html
+# https://doc.beegfs.io/latest/advanced_topics/metadata_tuning.html
+beegfs_meta_tune_bind_to_numa_zone:
 
 
 beegfs_nvfs_include_path:

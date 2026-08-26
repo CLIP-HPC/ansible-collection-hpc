@@ -1,0 +1,81 @@
+---
+# Included per beegfs_oss entry (oss_resolve_item, set by the caller's loop)
+# from resolve_oss_devices.yml. Resolves this port's devices label-first:
+# existing ST-<port>-<index> labels are pinned to their current device
+# regardless of name; any remaining index is filled from this NUMA zone's
+# fresh candidate pool, sorted by name (today's original tie-break policy).
+
+- name: Compute this port's NUMA-zone candidate pool
+  ansible.builtin.set_fact:
+    beegfs_oss_resolve_zone_pool: >-
+      {{
+        beegfs_disk_numa_map
+        | dict2items(key_name='name', value_name='numa')
+        | selectattr('numa', 'equalto', oss_resolve_item.value.numa_zone | int)
+        | map(attribute='name')
+        | reject('equalto', beegfs_meta_dev_name | default(beegfs_meta_dev | default('') | basename))
+        | reject('in', beegfs_oss_claimed_disk_names)
+        | sort | list
+      }}
+
+- name: Determine this port's expected device count
+  ansible.builtin.set_fact:
+    beegfs_oss_resolve_expected_count: "{{ beegfs_oss_resolve_zone_pool | length }}"
+
+- name: Check existing labels for each expected device slot
+  ansible.builtin.stat:
+    path: "/dev/disk/by-label/ST-{{ oss_resolve_item.key }}-{{ item }}"
+  loop: "{{ range(0, beegfs_oss_resolve_expected_count | int) | list }}"
+  loop_control:
+    label: "ST-{{ oss_resolve_item.key }}-{{ item }}"
+  register: beegfs_oss_resolve_label_stats
+
+- name: Initialize this port's resolved-device map
+  ansible.builtin.set_fact:
+    beegfs_oss_resolve_resolved: {}
+
+- name: Pin devices for slots with an existing label
+  ansible.builtin.set_fact:
+    beegfs_oss_resolve_resolved: >-
+      {{
+        beegfs_oss_resolve_resolved | combine({
+          item.item: ((item.stat.lnk_source if item.stat.islnk else item.stat.path) | basename)
+        })
+      }}
+    beegfs_oss_device_provisioned: >-
+      {{
+        beegfs_oss_device_provisioned | combine({
+          '/dev/' + ((item.stat.lnk_source if item.stat.islnk else item.stat.path) | basename): true
+        })
+      }}
+  loop: "{{ beegfs_oss_resolve_label_stats.results }}"
+  loop_control:
+    label: "slot {{ item.item }}"
+  when: item.stat.exists
+
+- name: Fill remaining slots from the fresh candidate pool, excluding already-pinned/filled devices
+  ansible.builtin.set_fact:
+    beegfs_oss_resolve_resolved: "{{ beegfs_oss_resolve_resolved | combine({item: fill_pool[0]}) }}"
+    beegfs_oss_device_provisioned: "{{ beegfs_oss_device_provisioned | combine({'/dev/' + fill_pool[0]: false}) }}"
+  vars:
+    fill_pool: "{{ beegfs_oss_resolve_zone_pool | reject('in', beegfs_oss_resolve_resolved.values() | list) | list }}"
+  loop: "{{ range(0, beegfs_oss_resolve_expected_count | int) | list | reject('in', beegfs_oss_resolve_resolved.keys() | list) | list }}"
+  loop_control:
+    label: "slot {{ item }}"
+
+- name: Assemble this port's resolved device list, in index order
+  ansible.builtin.set_fact:
+    beegfs_oss: >-
+      {{
+        beegfs_oss | combine({
+          oss_resolve_item.key: (oss_resolve_item.value | combine({
+            'devices': (range(0, beegfs_oss_resolve_expected_count | int) | list
+                        | map('extract', beegfs_oss_resolve_resolved)
+                        | map('regex_replace', '^', '/dev/') | list)
+          }))
+        })
+      }}
+
+- name: Record this port's resolved devices as claimed, for subsequent ports
+  ansible.builtin.set_fact:
+    beegfs_oss_claimed_disk_names: "{{ beegfs_oss_claimed_disk_names + (beegfs_oss_resolve_resolved.values() | list) }}"

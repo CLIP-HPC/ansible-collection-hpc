@@ -1,0 +1,19 @@
+---
+# Resolves beegfs_meta_dev, label-first: if a disk already carries the
+# beegfs_meta_dev_label filesystem label (i.e. this host was already
+# provisioned in a previous run), that disk is used regardless of what name
+# the kernel currently assigns it - device names are not stable across
+# reboots. Fresh NUMA/name-based discovery (today's original policy: first
+# candidate disk in the lowest NUMA zone) only runs for a genuinely
+# unprovisioned host. No-ops entirely if beegfs_meta_dev is already set
+# explicitly (static config).
+#
+# This is a thin guard: include_tasks (not import_tasks, and not a
+# block-level `when`) evaluates the condition once, here, rather than
+# propagating it to every task in resolve_meta_device_impl.yml individually -
+# that file sets beegfs_meta_dev partway through its own run, so a
+# per-task-propagated guard would flip false and skip its own remaining
+# tasks the first time it's ever exercised.
+- name: Resolve which physical disk is the metadata device
+  ansible.builtin.include_tasks: resolve_meta_device_impl.yml
+  when: beegfs_meta_dev is not defined or beegfs_meta_dev is none

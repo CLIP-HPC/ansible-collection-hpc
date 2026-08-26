@@ -65,39 +65,12 @@
   loop: "{{ beegfs_client_mounts | default([]) }}"
 
 
-- name: Configure RMDA buffer size for BeeGFS client
-  become: true
-  vars:
-    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
-  ansible.builtin.lineinfile:
-    dest: /etc/beegfs/{{ beegfs_client_config_file }}
-    regexp: ^connRDMABufSize
-    line: connRDMABufSize               = {{ beegfs_conn_rdma_buf_size }}
+- name: Configure tunings for each BeeGFS client mount
+  ansible.builtin.include_tasks: client_mount_tunings.yml
   loop: "{{ beegfs_client_mounts | default([]) }}"
-  when: beegfs_conn_rdma_buf_size | default(false, true)
-
-- name: Configure RMDA buffer number for BeeGFS client
-  become: true
-  vars:
-    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
-  ansible.builtin.lineinfile:
-    dest: /etc/beegfs/{{ beegfs_client_config_file }}
-    regexp: ^connRDMABufNum
-    line: connRDMABufNum                = {{ beegfs_conn_rdma_buf_num }}
-  loop: "{{ beegfs_client_mounts | default([]) }}"
-  when: beegfs_conn_rdma_buf_num | default(false, true)
-
-- name: Configure connMaxInternodeNum for BeeGFS client
-  become: true
-  vars:
-    beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
-  ansible.builtin.lineinfile:
-    dest: /etc/beegfs/{{ beegfs_client_config_file }}
-    regexp: "^connMaxInternodeNum"
-    line: connMaxInternodeNum           = {{ beegfs_conn_client_max_internode_num }}
-    backrefs: true
-  when: beegfs_conn_client_max_internode_num | default(false, true)
-  loop: "{{ beegfs_client_mounts | default([]) }}"
+  loop_control:
+    loop_var: beegfs_client_mount
+    label: "{{ beegfs_client_mount.port }}"
 
 
 - name: Make sure to load beegfs module after reboot

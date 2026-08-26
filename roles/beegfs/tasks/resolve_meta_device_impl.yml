@@ -1,0 +1,81 @@
+---
+# The actual metadata-device resolution logic, split out from
+# resolve_meta_device.yml so that file's "already set" guard can be
+# evaluated once (via include_tasks) instead of propagated to every task in
+# a block - this file itself sets beegfs_meta_dev partway through, so a
+# block-level `when: beegfs_meta_dev is not defined` would flip false and
+# skip its own remaining tasks the first time it ever runs.
+
+- name: Compute shared BeeGFS disk/NUMA facts
+  # include_tasks (dynamic), not import_tasks: import_tasks would propagate
+  # this `when` to every task inside disk_facts.yml individually, and
+  # disk_facts.yml sets beegfs_candidate_disk_names partway through its
+  # own run - the guard would flip false and skip the rest of its own
+  # tasks on the very first run. include_tasks evaluates `when` once, here.
+  ansible.builtin.include_tasks: disk_facts.yml
+  when: beegfs_candidate_disk_names is not defined
+
+- name: Group candidate disks by NUMA node, ascending
+  # Computed unconditionally (not just for the fresh-discovery branch
+  # below) so callers that also need to decide their own NUMA-zone-based
+  # policy (e.g. how many OSS ports to create) can reuse this instead of
+  # grouping beegfs_disk_numa_map themselves.
+  ansible.builtin.set_fact:
+    # groupby() returns GroupTuple(grouper, list) objects, but set_fact
+    # serializes them to plain [grouper, list] pairs - index, don't use .grouper/.list.
+    beegfs_disk_groups: "{{ beegfs_disk_numa_map | dict2items(key_name='name', value_name='numa') | groupby('numa') }}"
+
+- name: Check whether the metadata device's filesystem label already exists
+  ansible.builtin.stat:
+    path: "/dev/disk/by-label/{{ beegfs_meta_dev_label }}"
+  register: beegfs_meta_label_stat
+
+- name: Resolve the metadata device from its existing label
+  ansible.builtin.set_fact:
+    beegfs_meta_dev_name: >-
+      {{
+        (beegfs_meta_label_stat.stat.lnk_source
+         if beegfs_meta_label_stat.stat.islnk
+         else beegfs_meta_label_stat.stat.path) | basename
+      }}
+    beegfs_meta_already_provisioned: true
+  when: beegfs_meta_label_stat.stat.exists
+
+- name: Pick the metadata device - first disk in the lowest NUMA-node group (first bootstrap only)
+  ansible.builtin.set_fact:
+    beegfs_meta_dev_name: "{{ beegfs_disk_groups[0][1][0].name }}"
+    beegfs_meta_already_provisioned: false
+  when: not beegfs_meta_label_stat.stat.exists
+
+- name: Set the final beegfs_meta_dev path
+  ansible.builtin.set_fact:
+    beegfs_meta_dev: "/dev/{{ beegfs_meta_dev_name }}"
+
+- name: Set the metadata device's NUMA zone from the discovered candidate map
+  ansible.builtin.set_fact:
+    beegfs_meta_tune_bind_to_numa_zone: "{{ beegfs_disk_numa_map[beegfs_meta_dev_name] }}"
+  when: beegfs_meta_dev_name in beegfs_disk_numa_map
+
+- name: Determine the metadata device's NUMA zone directly, if it isn't in the discovered candidate set
+  # Only reached if the label resolved to a disk that beegfs_disk_device_regex
+  # doesn't match (e.g. a manually relabeled disk of an unexpected type).
+  when: beegfs_meta_dev_name not in beegfs_disk_numa_map
+  block:
+    - name: Read NUMA node for the metadata device
+      ansible.builtin.slurp:
+        src: >-
+          {{
+            ('/sys/class/nvme/' + (beegfs_meta_dev_name | regex_replace('n[0-9]+$', '')) + '/device/numa_node')
+            if (beegfs_meta_dev_name is match('^nvme[0-9]+n[0-9]+$'))
+            else ('/sys/class/block/' + beegfs_meta_dev_name + '/device/numa_node')
+          }}
+      register: beegfs_meta_numa_raw
+      ignore_errors: true
+
+    - name: Set the metadata device's NUMA zone from the direct read
+      ansible.builtin.set_fact:
+        beegfs_meta_tune_bind_to_numa_zone: >-
+          {{
+            [0, (0 if (beegfs_meta_numa_raw.failed or beegfs_meta_numa_raw.content is not defined)
+                 else (beegfs_meta_numa_raw.content | b64decode | trim | int))] | max
+          }}

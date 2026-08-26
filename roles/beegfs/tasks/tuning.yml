@@ -10,11 +10,22 @@
     sysctl_set: true
     sysctl_file: /etc/sysctl.d/99-beegfs-oss-tuning.conf
   loop:
-    - {key: 'vm.dirty_background_ratio', value: '5'}
-    - {key: 'vm.dirty_ratio', value: '20'}
-    - {key: 'vm.vfs_cache_pressure', value: '50'}
-    - {key: 'vm.min_free_kbytes', value: '262144'}
-    - {key: 'vm.zone_reclaim_mode', value: '1'}
+    # vm.dirty_background_ratio/vm.dirty_ratio must be 0 for the corresponding
+    # _bytes value (below) to take effect - each pair is mutually exclusive,
+    # and writing one resets the other, so these must come before their
+    # _bytes counterpart both here and in the resulting sysctl.d file.
+    - {key: 'vm.dirty_background_ratio', value: '0'}
+    - {key: 'vm.dirty_background_bytes', value: "{{ beegfs_sysctl_vm_dirty_background_bytes }}"}
+    - {key: 'vm.dirty_ratio', value: '0'}
+    - {key: 'vm.dirty_bytes', value: "{{ beegfs_sysctl_vm_dirty_bytes }}"}
+    - {key: 'vm.vfs_cache_pressure', value: "{{ beegfs_sysctl_vm_vfs_cache_pressure }}"}
+    - {key: 'kernel.numa_balancing', value: "{{ beegfs_sysctl_kernel_numa_balancing }}"}
+    - {key: 'vm.zone_reclaim_mode', value: "{{ beegfs_sysctl_vm_zone_reclaim_mode }}"}
+    - {key: 'vm.min_free_kbytes', value: "{{ beegfs_sysctl_vm_min_free_kbytes }}"}
+    - {key: 'vm.dirty_expire_centisecs', value: "{{ beegfs_sysctl_vm_dirty_expire_centisecs }}"}
+    - {key: 'vm.dirty_writeback_centisecs', value: "{{ beegfs_sysctl_vm_dirty_writeback_centisecs }}"}
+  loop_control:
+    label: "{{ item.key }}"
   become: true
 
 - name: Tune beegfs_oss_tunable devices

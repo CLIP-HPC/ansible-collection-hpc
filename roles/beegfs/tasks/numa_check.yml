@@ -1,0 +1,26 @@
+---
+# Compares the NUMA node reported by sysfs for numa_check_path against numa_check_zone.
+# Expects numa_check_path, numa_check_label and numa_check_zone to be set by the caller.
+
+- name: Check availability of NUMA node info for {{ numa_check_label }}
+  ansible.builtin.stat:
+    path: "{{ numa_check_path }}"
+  register: beegfs_numa_check_stat
+
+- name: Read NUMA node for {{ numa_check_label }}
+  ansible.builtin.slurp:
+    src: "{{ numa_check_path }}"
+  register: beegfs_numa_check_raw
+  when: beegfs_numa_check_stat.stat.exists
+
+- name: Fail on tuneBindToNumaZone mismatch for {{ numa_check_label }}
+  vars:
+    beegfs_numa_check_node: "{{ beegfs_numa_check_raw.content | b64decode | trim }}"
+  ansible.builtin.fail:
+    msg: >-
+      {{ numa_check_label }} is attached to NUMA node {{ beegfs_numa_check_node }},
+      but tuneBindToNumaZone is set to {{ numa_check_zone }} for BeeGFS storage port {{ oss_port }}.
+  when:
+    - beegfs_numa_check_stat.stat.exists
+    - beegfs_numa_check_node | int >= 0
+    - beegfs_numa_check_node | int != numa_check_zone | int

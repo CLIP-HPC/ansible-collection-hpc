@@ -8,22 +8,41 @@
     msg: OSS device {{ oss_dev }} does not exist
   when: not beegfs_oss_dev_stat.stat.exists
 
-- name: Unmount storage device if beegfs_force_format is true
-  become: true
-  ansible.posix.mount:
-    path: "{{ oss_path }}"
-    state: unmounted
+- name: Find the device's actual current mount point, if any
+  # oss_path is only where THIS run intends to mount the device - it need
+  # not be where the device is currently mounted (e.g. a stale mount left
+  # over from before a label/index scheme change, or from before this disk
+  # was reassigned to a different oss_path). Unmounting by oss_path instead
+  # of by device would silently no-op when they differ, then mkfs would fail
+  # with "contains a mounted filesystem" against the still-mounted device.
+  ansible.builtin.command: findmnt -n -o TARGET --source {{ oss_dev }}
+  register: beegfs_oss_dev_current_mount
+  changed_when: false
+  failed_when: false
   when: beegfs_force_format | bool
 
-- name: Attempt to format if the device is not mounted or if beegfs_force_format is true
-  vars:
-    oss_dev_real: "{{ beegfs_oss_dev_stat.stat.lnk_source if beegfs_oss_dev_stat.stat.islnk else beegfs_oss_dev_stat.stat.path }}"
+- name: Unmount storage device if beegfs_force_format is true and it is currently mounted
+  become: true
+  ansible.posix.mount:
+    path: "{{ item }}"
+    state: unmounted
+  loop: "{{ beegfs_oss_dev_current_mount.stdout_lines | default([]) }}"
+  when: beegfs_force_format | bool
+
+- name: Attempt to format if the device isn't already provisioned or if beegfs_force_format is true
   community.general.filesystem:
     dev: "{{ oss_dev }}"
     fstype: "{{ beegfs_fstype }}"
     force: "{{ beegfs_force_format | bool }}"
     opts: "{{ beegfs_filesystem_opts }} -L {{ oss_dev_label }}"
-  when: (oss_dev_real not in beegfs_mounted_devs) or (beegfs_force_format | bool)
+  # oss_dev_already_provisioned (passed in from oss.yml, sourced from
+  # beegfs_oss_device_provisioned) means oss_dev was resolved from its
+  # existing filesystem label, i.e. this disk was already formatted in a
+  # previous run - skip reformatting it even though its current device name
+  # may differ from last time (device names aren't stable across reboots).
+  # Undefined (a statically configured device that never went through label
+  # resolution) is treated as "not provisioned", preserving prior behavior.
+  when: (not (oss_dev_already_provisioned | default(false) | bool)) or (beegfs_force_format | bool)
   become: true
 
 

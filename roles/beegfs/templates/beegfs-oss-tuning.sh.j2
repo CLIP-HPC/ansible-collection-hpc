@@ -17,7 +17,7 @@ OSS_RQ_AFFINITY="{{ beegfs_oss_rq_affinity if beegfs_oss_rq_affinity is not none
 OSS_NOMERGES="{{ beegfs_oss_nomerges if beegfs_oss_nomerges is not none else '' }}"
 OSS_WBT_LAT_USEC="{{ beegfs_oss_wbt_lat_usec if beegfs_oss_wbt_lat_usec is not none else '' }}"
 
-META_TUNING_ENABLED={{ (beegfs_meta_dev and beegfs_meta_tunings) | ternary('1', '0') }}
+META_TUNING_ENABLED={{ (beegfs_meta_dev and (beegfs_enable.meta | default(false) | bool)) | ternary('1', '0') }}
 META_DEV_LABEL="{{ beegfs_meta_dev_label | default('') }}"
 META_SCHEDULER={{ beegfs_meta_scheduler }}
 META_NR_REQUESTS={{ beegfs_meta_nr_requests }}

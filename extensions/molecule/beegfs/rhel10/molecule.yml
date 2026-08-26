@@ -11,13 +11,13 @@ platforms:
     cpus: 2
     memory: 4096
     instance_raw_config_args:
-      # One disk for the OSS storage target, one for the metadata target -
-      # meta must not be auto-discovered onto the same device the OSS entry
-      # statically claims (see disk_facts.yml).
-      - 'vm.disk :disk, name: "beegfsOssDisk", size: "10GB"'
-      - 'vm.disk :disk, name: "beegfsMetaDisk", size: "10GB"'
+      - 'vm.disk :disk, name: "mySmallDisk", size: "10GB"'
     provider_raw_config_args:
+      # Two extra disks: one for the OSS storage target, one for the
+      # metadata target - meta must not be auto-discovered onto the same
+      # device the OSS entry statically claims (see disk_facts.yml).
       - "${VAGRANT_PROVIDER_ARGS:-storage :file, size: '10G'}"
+      - "storage :file, size: '10G'"
     groups:
       - cluster_beegfs_mgmt
       - cluster_beegfs_mds

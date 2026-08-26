@@ -44,7 +44,20 @@
     | reject('in', ansible_facts.devices.keys() | list)
     | list | length > 0
 
-- name: Determine candidate BeeGFS disks, excluding the OS disk
+- name: Determine candidate BeeGFS disks, excluding the OS disk and statically configured OSS devices
+  vars:
+    # Devices an admin pinned to a beegfs_oss entry via its `devices` list
+    # must not also be handed to meta auto-discovery (resolve_meta_device_impl.yml
+    # runs before oss_discovery.yml, so it has no other way to learn this) -
+    # auto-discovered beegfs_oss entries are excluded separately, by
+    # resolve_oss_port_devices.yml rejecting beegfs_meta_dev_name from its pool.
+    beegfs_statically_claimed_oss_disk_names: >-
+      {{
+        beegfs_oss | dict2items
+        | selectattr('value.devices', 'defined')
+        | map(attribute='value.devices') | flatten
+        | map('basename') | list
+      }}
   ansible.builtin.set_fact:
     beegfs_candidate_disk_names: >-
       {{
@@ -52,15 +65,26 @@
         | dict2items | map(attribute='key')
         | select('match', beegfs_disk_device_regex)
         | reject('in', beegfs_os_whole_disks)
+        | reject('in', beegfs_statically_claimed_oss_disk_names)
         | sort | list
       }}
 
 - name: Fail if no BeeGFS candidate disks were found
+  vars:
+    beegfs_statically_claimed_oss_disk_names: >-
+      {{
+        beegfs_oss | dict2items
+        | selectattr('value.devices', 'defined')
+        | map(attribute='value.devices') | flatten
+        | map('basename') | list
+      }}
   ansible.builtin.fail:
     msg: >-
       No candidate BeeGFS disks found after excluding the OS disk(s)
-      {{ beegfs_os_whole_disks }}. Check beegfs_disk_device_regex
-      ({{ beegfs_disk_device_regex }}) against this host's block devices.
+      ({{ beegfs_os_whole_disks }}) and devices already statically claimed by
+      a beegfs_oss entry ({{ beegfs_statically_claimed_oss_disk_names }}).
+      Check beegfs_disk_device_regex ({{ beegfs_disk_device_regex }}) against
+      this host's block devices.
   when: beegfs_candidate_disk_names | length == 0
 
 - name: Read NUMA node for each candidate disk

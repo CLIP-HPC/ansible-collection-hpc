@@ -1,0 +1,63 @@
+---
+- name: install | Install smartmontools
+  ansible.builtin.package:
+    name: smartmontools
+    state: present
+  become: true
+  when: smartctl_exporter_install_smartmontools | bool
+
+- name: install | Create smartctl_exporter group
+  ansible.builtin.group:
+    name: "{{ smartctl_exporter_group }}"
+    system: true
+    state: present
+  become: true
+  when: smartctl_exporter_group != 'root'
+
+- name: install | Create smartctl_exporter user
+  ansible.builtin.user:
+    name: "{{ smartctl_exporter_user }}"
+    group: "{{ smartctl_exporter_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+    state: present
+  become: true
+  when: smartctl_exporter_user != 'root'
+
+- name: install | Ensure download directory exists
+  ansible.builtin.file:
+    path: "{{ smartctl_exporter_download_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: install | Download smartctl_exporter release archive
+  ansible.builtin.get_url:
+    url: "{{ smartctl_exporter_download_url }}"
+    dest: "{{ smartctl_exporter_download_dir }}/smartctl_exporter-{{ smartctl_exporter_version }}.linux-{{ smartctl_exporter_arch }}.tar.gz"
+    checksum: "{{ ('sha256:' + smartctl_exporter_checksum_url) if smartctl_exporter_checksum_verify else omit }}"
+    mode: '0644'
+  become: true
+  register: smartctl_exporter_download
+
+- name: install | Extract smartctl_exporter archive
+  ansible.builtin.unarchive:
+    src: "{{ smartctl_exporter_download.dest }}"
+    dest: "{{ smartctl_exporter_download_dir }}"
+    remote_src: true
+    creates: "{{ smartctl_exporter_download_dir }}/smartctl_exporter-{{ smartctl_exporter_version }}.linux-{{ smartctl_exporter_arch }}/smartctl_exporter"
+  become: true
+
+- name: install | Install smartctl_exporter binary
+  ansible.builtin.copy:
+    src: "{{ smartctl_exporter_download_dir }}/smartctl_exporter-{{ smartctl_exporter_version }}.linux-{{ smartctl_exporter_arch }}/smartctl_exporter"
+    dest: "{{ smartctl_exporter_binary_install_dir }}/smartctl_exporter"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  notify: Restart smartctl_exporter

@@ -1,0 +1,28 @@
+---
+- name: configure | Deploy smartctl_exporter systemd unit
+  ansible.builtin.template:
+    src: smartctl_exporter.service.j2
+    dest: /etc/systemd/system/smartctl_exporter.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Restart smartctl_exporter
+
+- name: configure | Ensure smartctl_exporter service is enabled/started
+  ansible.builtin.systemd:
+    name: smartctl_exporter
+    enabled: "{{ smartctl_exporter_service_enabled }}"
+    state: "{{ smartctl_exporter_service_state }}"
+    daemon_reload: true
+  become: true
+
+- name: configure | Open firewalld port for smartctl_exporter
+  ansible.posix.firewalld:
+    port: "{{ smartctl_exporter_port }}/tcp"
+    zone: "{{ smartctl_exporter_firewalld_zone }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  become: true
+  when: smartctl_exporter_manage_firewalld | bool

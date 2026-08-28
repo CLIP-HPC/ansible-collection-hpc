@@ -11,6 +11,8 @@
 #
 # In practice ConnectX hardware sets ECT itself for RoCE traffic regardless, so 104 usually still ends up working — but there's no reason to deviate from 106.
 TOS=106
+attempted=0
+succeeded=0
 
 for ibdev in /sys/class/infiniband/mlx5_*; do
     # Configure TOS for RDMA-CM QPs
@@ -27,14 +29,22 @@ for ibdev in /sys/class/infiniband/mlx5_*; do
     if [ -d "$netdir" ]; then
         for netif in "$netdir"/*; do
             ethname=$(basename "$netif")
+            attempted=$((attempted + 1))
             # Internal NVLink/fabric ConnectX-7 NICs (e.g. on GPU nodes) expose a
             # netdev but don't support DSCP-based trust classification. Skip those
             # instead of failing the whole service.
-            if ! mlnx_qos -i "$ethname" --trust dscp; then
+            if mlnx_qos -i "$ethname" --trust dscp; then
+                succeeded=$((succeeded + 1))
+            else
                 echo "mlnx-roce-qos: $ethname does not support 'trust dscp', skipping" >&2
             fi
         done
     fi
 done
+
+if [ "$attempted" -gt 0 ] && [ "$succeeded" -eq 0 ]; then
+    echo "mlnx-roce-qos: none of the $attempted NIC(s) found could be configured for DSCP trust" >&2
+    exit 1
+fi
 
 exit 0

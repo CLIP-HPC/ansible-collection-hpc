@@ -1,5 +1,5 @@
 ---
-- name: configure | Ensure service is enabled and started
+- name: service | Ensure service is enabled and started
   ansible.builtin.systemd:
     name: mlnx-roce-qos
     enabled: true

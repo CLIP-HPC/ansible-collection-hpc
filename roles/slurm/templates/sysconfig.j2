@@ -9,16 +9,13 @@
 {%   endif %}
 {% endfor %}
 {% if ns.nodegroup is not none and ns.nodegroup.get('dynamic', slurm_dynamic_nodes) | bool %}
-{%   set slurmd_topo = (ansible_local | default({})).get('slurmd_topology', {}) %}
-{%   set slurmd_topo = slurmd_topo if slurmd_topo is mapping else {} %}
-{%   set ram_mb = ns.nodegroup.ram_mb | default(slurmd_topo.get('RealMemory', ansible_facts['memory_mb']['real']['total'])) | int %}
+{%   set ram_mb = ns.nodegroup.ram_mb | default(ansible_facts['memory_mb']['real']['total']) | int %}
 {%   set mem_spec_limit = (ram_mb * ns.nodegroup.get('mem_spec_percent', slurm_mem_spec_percent | default(0))) | int %}
-{%   set conf = ['Features=' ~ ((['nodegroup_' ~ ns.nodegroup.name] + ns.nodegroup.features | default([])) | join(',')),
-                 'RealMemory=' ~ ram_mb]
+{%   set conf = ['Features=' ~ ((['nodegroup_' ~ ns.nodegroup.name] + ns.nodegroup.features | default([])) | join(','))]
                + (['MemSpecLimit=' ~ mem_spec_limit] if mem_spec_limit else [])
                + (['Gres=' ~ (ns.nodegroup.gres | map(attribute='conf') | join(','))] if 'gres' in ns.nodegroup else [])
                + ([ns.nodegroup.node_params | clip.hpc.dict2parameters] if ns.nodegroup.node_params | default({}) else []) %}
-SLURMD_OPTIONS=-M -Z -N {{ node_name }} --conf-server {{ slurm_control_host }} --conf "{{ conf | join(' ') }}"
+SLURMD_OPTIONS=-M -Z -N {{ node_name }} --conf-server {{ slurm_control_host }} --parameters=numa_node_as_socket --conf "{{ conf | join(' ') }}"
 {% else %}
-SLURMD_OPTIONS=-M --conf-server {{ slurm_control_host }}
+SLURMD_OPTIONS=-M --conf-server {{ slurm_control_host }} --parameters=numa_node_as_socket
 {% endif %}

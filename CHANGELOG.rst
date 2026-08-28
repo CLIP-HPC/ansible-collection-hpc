@@ -5,6 +5,11 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.7.1
+======
+- rocev2: Run the QoS service enable/start step in a new ``service.yml`` after ``dcbx.yml`` instead of during ``install.yml``, since starting the service before DCBX/LLDP is configured can fail with "Priority trust state is not supported on your system"
+- rocev2: Make ``mlnx-roce-qos.sh`` skip individual NICs that don't support ``cma_roce_tos`` or ``mlnx_qos --trust dscp`` (e.g. internal NVLink/fabric ConnectX-7 NICs on GPU nodes) instead of failing the whole service, while still failing the service if none of the NICs found could be configured
+
 v3.7.0
 ======
 - smartctl_exporter: Add role to install and manage the Prometheus ``smartctl_exporter``, exposing S.M.A.R.T. disk health metrics via a pinned, checksum-verified release binary and a systemd service

@@ -34,11 +34,3 @@
     mode: '0644'
   become: true
   notify: Restart MLNX RoCE QoS service
-
-- name: install | Ensure service is enabled and started
-  ansible.builtin.systemd:
-    name: mlnx-roce-qos
-    enabled: true
-    state: started
-    daemon_reload: true
-  become: true

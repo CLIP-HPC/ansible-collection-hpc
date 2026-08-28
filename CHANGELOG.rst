@@ -5,6 +5,11 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.7.2
+======
+- slurm: Stop passing ``RealMemory`` from the ``slurmd_topology`` local fact into the dynamic-node ``--conf`` string, since slurmd already auto-detects it at registration (``-Z``) when it isn't explicitly overridden
+- slurm: Start slurmd with ``--parameters=numa_node_as_socket`` for both dynamic and static nodegroups, so the running daemon's own topology self-detection matches the NUMA-as-socket accounting already used to populate ``slurm.conf``'s ``Sockets``/``CoresPerSocket``/``ThreadsPerCore`` for static nodegroups (via ``slurmd_topology.fact``, which also runs with ``--parameters=numa_node_as_socket``). This restarts slurmd fleet-wide; on hardware where NUMA-domain count differs from physical-socket count this is expected to resolve topology mismatches, but should be verified on such hardware after rollout
+
 v3.7.1
 ======
 - rocev2: Run the QoS service enable/start step in a new ``service.yml`` after ``dcbx.yml`` instead of during ``install.yml``, since starting the service before DCBX/LLDP is configured can fail with "Priority trust state is not supported on your system"

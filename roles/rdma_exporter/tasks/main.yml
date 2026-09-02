@@ -1,0 +1,6 @@
+---
+- name: Import install.yml tasks
+  ansible.builtin.import_tasks: install.yml
+
+- name: Import configure.yml tasks
+  ansible.builtin.import_tasks: configure.yml

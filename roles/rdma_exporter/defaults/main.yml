@@ -1,0 +1,79 @@
+---
+# defaults file for clip.hpc.rdma_exporter
+
+# Release management
+rdma_exporter_version: "0.7.3"
+rdma_exporter_arch_map:
+  x86_64: amd64
+  aarch64: arm64
+rdma_exporter_arch: "{{ rdma_exporter_arch_map[ansible_architecture] | default(ansible_architecture) }}"
+rdma_exporter_download_url: "https://github.com/yuuki/rdma_exporter/releases/download/v{{ rdma_exporter_version }}/rdma_exporter_{{ rdma_exporter_version }}_linux_{{ rdma_exporter_arch }}.tar.gz" # noqa: yaml[line-length]
+rdma_exporter_checksum_url: "https://github.com/yuuki/rdma_exporter/releases/download/v{{ rdma_exporter_version }}/rdma_exporter_checksums.txt"
+rdma_exporter_checksum_verify: true
+rdma_exporter_download_dir: /usr/local/src/rdma_exporter
+rdma_exporter_binary_install_dir: /usr/local/bin
+
+# The role fetches deploy assets (systemd units, the hardware-counter
+# enablement script, the udev rule) verbatim from the upstream repository,
+# pinned to the "v{{ rdma_exporter_version }}" tag, rather than maintaining
+# local copies that could drift from upstream.
+rdma_exporter_deploy_ref: "v{{ rdma_exporter_version }}"
+rdma_exporter_deploy_raw_base_url: "https://raw.githubusercontent.com/yuuki/rdma_exporter/{{ rdma_exporter_deploy_ref }}/deploy"
+rdma_exporter_systemd_unit_url: "{{ rdma_exporter_deploy_raw_base_url }}/systemd/rdma_exporter.service"
+
+# Service identity. Upstream ships a dedicated, unprivileged rdma_exporter
+# user with an empty capability set - see
+# https://github.com/yuuki/rdma_exporter/blob/main/deploy/systemd/rdma_exporter.service
+# Reading sysfs RDMA counters and issuing netlink GET requests does not
+# require any capability, so the role does not grant any by default.
+# The fetched rdma_exporter.service unit hardcodes this identity and
+# ExecStart=/usr/local/bin/rdma_exporter, so rdma_exporter_user,
+# rdma_exporter_group and rdma_exporter_binary_install_dir must keep their
+# defaults - the role asserts this before installing.
+rdma_exporter_user: rdma_exporter
+rdma_exporter_group: rdma_exporter
+
+# rdma_exporter CLI configuration. Every flag has an environment variable
+# equivalent, and upstream's own systemd unit configures the exporter
+# exclusively through an EnvironmentFile, so this role follows the same
+# pattern rather than passing CLI flags on the ExecStart line.
+rdma_exporter_port: 9879
+rdma_exporter_listen_address: ":{{ rdma_exporter_port }}"
+rdma_exporter_metrics_path: /metrics
+rdma_exporter_health_path: /healthz
+rdma_exporter_log_level: info
+rdma_exporter_sysfs_root: /sys
+rdma_exporter_scrape_timeout: 5s
+rdma_exporter_collector_ethtool: true
+rdma_exporter_collector_optional_counters: true
+rdma_exporter_collector_qp_counters: false
+rdma_exporter_exclude_devices: []
+rdma_exporter_extra_environment: {}
+
+# Service management
+rdma_exporter_service_enabled: true
+rdma_exporter_service_state: started
+
+# Optional firewalld integration
+rdma_exporter_manage_firewalld: false
+rdma_exporter_firewalld_zone: public
+
+# Optional hardware-counter enablement. Off by default: this deploys a root
+# oneshot (deploy/scripts/rdma-enable-hardware-counters.sh) that runs
+# `rdma statistic set` / `rdma statistic qp set` against live NICs on every
+# InfiniBand hotplug event, enabling mlx5 optional (cc_*) and/or QP
+# auto-type counters. Enablement is not persistent (reset on reboot/driver
+# reload/VF hotplug) and enabling optional counters may affect datapath
+# performance - see https://github.com/yuuki/rdma_exporter#run. The
+# exporter itself never enables these counters; it only scrapes them when
+# rdma_exporter_collector_optional_counters / rdma_exporter_collector_qp_counters
+# are on and something else (this, or an operator) has already enabled them.
+rdma_exporter_manage_hardware_counters: false
+rdma_exporter_hw_counters_script_url: "{{ rdma_exporter_deploy_raw_base_url }}/scripts/rdma-enable-hardware-counters.sh"
+rdma_exporter_hw_counters_service_url: "{{ rdma_exporter_deploy_raw_base_url }}/systemd/rdma-hardware-counters.service"
+rdma_exporter_hw_counters_udev_rule_url: "{{ rdma_exporter_deploy_raw_base_url }}/udev/90-rdma-hardware-counters.rules"
+# Optional counter names to pass to `rdma statistic set ... optional-counters`.
+# Empty defers to the script's own built-in default (cc_rx_ce_pkts,cc_rx_cnp_pkts,cc_tx_cnp_pkts).
+rdma_exporter_hw_counters_optional_counters: []
+# Also enable QP auto-type + optional-counters on, for rdma_exporter_collector_qp_counters.
+rdma_exporter_hw_counters_enable_qp_counters: false

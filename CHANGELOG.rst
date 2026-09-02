@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.8.0
+======
+- rdma_exporter: Add role to install and manage the Prometheus ``rdma_exporter``, exposing RDMA (InfiniBand/RoCE) NIC statistics via a pinned, checksum-verified release binary and a systemd service, with optional firewalld integration and optional upstream tooling to enable mlx5/QP hardware counters
+
 v3.7.2
 ======
 - slurm: Stop passing ``RealMemory`` from the ``slurmd_topology`` local fact into the dynamic-node ``--conf`` string, since slurmd already auto-detects it at registration (``-Z``) when it isn't explicitly overridden

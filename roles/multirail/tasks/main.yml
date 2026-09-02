@@ -116,6 +116,7 @@
         if (multirail_ipv6_enabled_first | bool and multirail_ipv6_global_addrs | length > 0)
         else omit
       }}
+    never_default4: false
   notify: Reload first interface
 
 - name: Modify NetworkManager connection for {{ multirail_interfaces | last }}

@@ -1,0 +1,19 @@
+---
+# handlers file for clip.hpc.rdma_exporter
+- name: Restart rdma_exporter
+  ansible.builtin.systemd:
+    name: rdma_exporter
+    state: restarted
+    daemon_reload: true
+  become: true
+
+- name: Reload udev rules
+  ansible.builtin.command: udevadm control --reload-rules
+  become: true
+  changed_when: false
+
+- name: Trigger udev for infiniband devices
+  ansible.builtin.command: udevadm trigger --subsystem-match=infiniband --action=add
+  become: true
+  changed_when: false
+  listen: Reload udev rules

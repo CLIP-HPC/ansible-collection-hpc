@@ -1,0 +1,165 @@
+---
+# argument spec file for clip.hpc.rdma_exporter
+
+argument_specs:
+  main:
+    short_description: Main entrypoint for clip.hpc.rdma_exporter role
+    options:
+      rdma_exporter_version:
+        type: str
+        description: Version of rdma_exporter to install (without the leading "v").
+        default: "0.7.3"
+      rdma_exporter_arch_map:
+        type: dict
+        description: Maps `ansible_architecture` to the arch suffix used in upstream release asset names.
+        default:
+          x86_64: amd64
+          aarch64: arm64
+      rdma_exporter_arch:
+        type: str
+        description: Release arch suffix to download. Derived from `rdma_exporter_arch_map` by default.
+      rdma_exporter_download_url:
+        type: str
+        description: URL of the rdma_exporter release archive to download.
+      rdma_exporter_checksum_url:
+        type: str
+        description: URL of the upstream rdma_exporter_checksums.txt file used to verify the downloaded archive.
+      rdma_exporter_checksum_verify:
+        type: bool
+        description: Whether to verify the downloaded archive against `rdma_exporter_checksum_url`.
+        default: true
+      rdma_exporter_download_dir:
+        type: str
+        description: Directory used to cache the downloaded archive and its extracted contents.
+        default: /usr/local/src/rdma_exporter
+      rdma_exporter_binary_install_dir:
+        type: str
+        description: >
+          Directory the rdma_exporter binary is installed into. Must stay /usr/local/bin:
+          the fetched rdma_exporter.service unit hardcodes this path in ExecStart.
+        default: /usr/local/bin
+      rdma_exporter_deploy_ref:
+        type: str
+        description: Git ref used to fetch deploy/ assets (systemd units, script, udev rule) from upstream.
+        default: "v{{ rdma_exporter_version }}"
+      rdma_exporter_deploy_raw_base_url:
+        type: str
+        description: Base URL deploy/ assets are fetched from, pinned to `rdma_exporter_deploy_ref`.
+      rdma_exporter_systemd_unit_url:
+        type: str
+        description: URL of the upstream rdma_exporter.service systemd unit, fetched verbatim.
+      rdma_exporter_user:
+        type: str
+        description: >
+          User the rdma_exporter service runs as. Must stay rdma_exporter: the fetched
+          upstream systemd unit hardcodes this identity. Reading RDMA sysfs counters and
+          issuing netlink GET requests does not require any capability.
+        default: rdma_exporter
+      rdma_exporter_group:
+        type: str
+        description: >
+          Group the rdma_exporter service runs as. Must stay rdma_exporter: the fetched
+          upstream systemd unit hardcodes this identity.
+        default: rdma_exporter
+      rdma_exporter_port:
+        type: int
+        description: TCP port the exporter listens on.
+        default: 9879
+      rdma_exporter_listen_address:
+        type: str
+        description: Value passed to `RDMA_EXPORTER_LISTEN_ADDRESS`.
+      rdma_exporter_metrics_path:
+        type: str
+        description: Value passed to `RDMA_EXPORTER_METRICS_PATH`.
+        default: /metrics
+      rdma_exporter_health_path:
+        type: str
+        description: Value passed to `RDMA_EXPORTER_HEALTH_PATH`.
+        default: /healthz
+      rdma_exporter_log_level:
+        type: str
+        description: Value passed to `RDMA_EXPORTER_LOG_LEVEL` (`debug`, `info`, `warn`, `error`).
+        default: info
+      rdma_exporter_sysfs_root:
+        type: str
+        description: Root directory used to read RDMA sysfs data (`RDMA_EXPORTER_SYSFS_ROOT`).
+        default: /sys
+      rdma_exporter_scrape_timeout:
+        type: str
+        description: Upper bound for metric gathering per scrape (`RDMA_EXPORTER_SCRAPE_TIMEOUT`).
+        default: 5s
+      rdma_exporter_collector_ethtool:
+        type: bool
+        description: >
+          Whether to collect RoCEv2 PFC and netdev hardware ethtool families
+          (`RDMA_EXPORTER_COLLECTOR_ETHTOOL`).
+        default: true
+      rdma_exporter_collector_optional_counters:
+        type: bool
+        description: >
+          Whether to collect optional RDMA hardware counters via netlink
+          (`RDMA_EXPORTER_COLLECTOR_OPTIONAL_COUNTERS`). The exporter never enables counters itself.
+        default: true
+      rdma_exporter_collector_qp_counters:
+        type: bool
+        description: >
+          Whether to collect live auto-type QP hardware counters via netlink
+          (`RDMA_EXPORTER_COLLECTOR_QP_COUNTERS`). Off by default: the dump can exceed the
+          scrape timeout on dense hosts.
+        default: false
+      rdma_exporter_exclude_devices:
+        type: list
+        elements: str
+        description: RDMA devices to exclude from collection (`RDMA_EXPORTER_EXCLUDE_DEVICES`).
+        default: []
+      rdma_exporter_extra_environment:
+        type: dict
+        description: Additional key/value pairs appended to the rdma_exporter EnvironmentFile.
+        default: {}
+      rdma_exporter_service_enabled:
+        type: bool
+        description: Whether the rdma_exporter systemd service is enabled at boot.
+        default: true
+      rdma_exporter_service_state:
+        type: str
+        description: Desired systemd state of the rdma_exporter service.
+        default: started
+      rdma_exporter_manage_firewalld:
+        type: bool
+        description: Whether to open `rdma_exporter_port` in firewalld.
+        default: false
+      rdma_exporter_firewalld_zone:
+        type: str
+        description: firewalld zone the port is opened in when `rdma_exporter_manage_firewalld` is true.
+        default: public
+      rdma_exporter_manage_hardware_counters:
+        type: bool
+        description: >
+          Whether to fetch and enable the upstream hardware-counter enablement stack (script,
+          rdma-hardware-counters.service, udev rule). This runs a root oneshot that calls
+          `rdma statistic set` / `rdma statistic qp set` against live NICs on every InfiniBand
+          hotplug event. Off by default - enablement is not persistent and may affect datapath
+          performance. Setting this back to false stops/disables the service and removes the
+          script, unit, udev rule and env file it previously installed.
+        default: false
+      rdma_exporter_hw_counters_script_url:
+        type: str
+        description: URL of the upstream rdma-enable-hardware-counters.sh script, fetched verbatim.
+      rdma_exporter_hw_counters_service_url:
+        type: str
+        description: URL of the upstream rdma-hardware-counters.service systemd unit, fetched verbatim.
+      rdma_exporter_hw_counters_udev_rule_url:
+        type: str
+        description: URL of the upstream 90-rdma-hardware-counters.rules udev rule, fetched verbatim.
+      rdma_exporter_hw_counters_optional_counters:
+        type: list
+        elements: str
+        description: >
+          Optional counter names passed to `rdma statistic set ... optional-counters`. Empty
+          defers to the script's own built-in default (cc_rx_ce_pkts,cc_rx_cnp_pkts,cc_tx_cnp_pkts).
+        default: []
+      rdma_exporter_hw_counters_enable_qp_counters:
+        type: bool
+        description: >
+          Also enable QP auto-type + optional-counters on, feeding `rdma_exporter_collector_qp_counters`.
+        default: false

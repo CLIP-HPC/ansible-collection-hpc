@@ -1,0 +1,8 @@
+---
+- name: configure | Ensure rdma_exporter service is enabled/started
+  ansible.builtin.systemd:
+    name: rdma_exporter
+    enabled: "{{ rdma_exporter_service_enabled }}"
+    state: "{{ rdma_exporter_service_state }}"
+    daemon_reload: true
+  become: true

@@ -1,0 +1,184 @@
+---
+- name: install | Ensure service identity matches the fetched upstream systemd unit
+  ansible.builtin.assert:
+    that:
+      - rdma_exporter_user == 'rdma_exporter'
+      - rdma_exporter_group == 'rdma_exporter'
+      - rdma_exporter_binary_install_dir == '/usr/local/bin'
+    fail_msg: >-
+      rdma_exporter_user, rdma_exporter_group and rdma_exporter_binary_install_dir must keep
+      their defaults: rdma_exporter.service is fetched verbatim from
+      {{ rdma_exporter_systemd_unit_url }}, which hardcodes User=rdma_exporter,
+      Group=rdma_exporter and ExecStart=/usr/local/bin/rdma_exporter.
+
+- name: install | Create rdma_exporter group
+  ansible.builtin.group:
+    name: "{{ rdma_exporter_group }}"
+    system: true
+    state: present
+  become: true
+  when: rdma_exporter_group != 'root'
+
+- name: install | Create rdma_exporter user
+  ansible.builtin.user:
+    name: "{{ rdma_exporter_user }}"
+    group: "{{ rdma_exporter_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+    state: present
+  become: true
+  when: rdma_exporter_user != 'root'
+
+- name: install | Ensure download directory exists
+  ansible.builtin.file:
+    path: "{{ rdma_exporter_download_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: install | Ensure versioned extraction directory exists
+  ansible.builtin.file:
+    path: "{{ rdma_exporter_download_dir }}/{{ rdma_exporter_version }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: install | Download rdma_exporter release archive
+  ansible.builtin.get_url:
+    url: "{{ rdma_exporter_download_url }}"
+    dest: "{{ rdma_exporter_download_dir }}/rdma_exporter_{{ rdma_exporter_version }}_linux_{{ rdma_exporter_arch }}.tar.gz"
+    checksum: "{{ ('sha256:' + rdma_exporter_checksum_url) if rdma_exporter_checksum_verify else omit }}"
+    mode: '0644'
+  become: true
+  register: rdma_exporter_download
+
+- name: install | Extract rdma_exporter archive
+  ansible.builtin.unarchive:
+    src: "{{ rdma_exporter_download.dest }}"
+    dest: "{{ rdma_exporter_download_dir }}/{{ rdma_exporter_version }}"
+    remote_src: true
+    creates: "{{ rdma_exporter_download_dir }}/{{ rdma_exporter_version }}/rdma_exporter"
+  become: true
+
+- name: install | Install rdma_exporter binary
+  ansible.builtin.copy:
+    src: "{{ rdma_exporter_download_dir }}/{{ rdma_exporter_version }}/rdma_exporter"
+    dest: "{{ rdma_exporter_binary_install_dir }}/rdma_exporter"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  notify: Restart rdma_exporter
+
+- name: install | Deploy rdma_exporter environment file
+  ansible.builtin.template:
+    src: rdma_exporter.env.j2
+    dest: /etc/rdma_exporter.env
+    owner: root
+    group: root
+    mode: '0640'
+  become: true
+  notify: Restart rdma_exporter
+
+- name: install | Fetch rdma_exporter systemd unit from upstream
+  ansible.builtin.get_url:
+    url: "{{ rdma_exporter_systemd_unit_url }}"
+    dest: /etc/systemd/system/rdma_exporter.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Restart rdma_exporter
+
+- name: install | Open firewalld port for rdma_exporter
+  ansible.posix.firewalld:
+    port: "{{ rdma_exporter_port }}/tcp"
+    zone: "{{ rdma_exporter_firewalld_zone }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  become: true
+  when: rdma_exporter_manage_firewalld | bool
+
+- name: install | Manage rdma-hardware-counters enablement stack
+  become: true
+  when: rdma_exporter_manage_hardware_counters | bool
+  block:
+    - name: install | Fetch rdma-hardware-counters enablement script from upstream
+      ansible.builtin.get_url:
+        url: "{{ rdma_exporter_hw_counters_script_url }}"
+        dest: /usr/local/sbin/rdma-enable-hardware-counters
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: install | Deploy rdma-hardware-counters environment file
+      ansible.builtin.template:
+        src: rdma-hardware-counters.env.j2
+        dest: /etc/rdma-hardware-counters.env
+        owner: root
+        group: root
+        mode: '0640'
+
+    - name: install | Fetch rdma-hardware-counters systemd unit from upstream
+      ansible.builtin.get_url:
+        url: "{{ rdma_exporter_hw_counters_service_url }}"
+        dest: /etc/systemd/system/rdma-hardware-counters.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: install | Fetch rdma-hardware-counters udev rule from upstream
+      ansible.builtin.get_url:
+        url: "{{ rdma_exporter_hw_counters_udev_rule_url }}"
+        dest: /etc/udev/rules.d/90-rdma-hardware-counters.rules
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload udev rules
+
+    - name: install | Enable rdma-hardware-counters service
+      ansible.builtin.systemd:
+        name: rdma-hardware-counters
+        enabled: true
+        daemon_reload: true
+
+- name: install | Remove rdma-hardware-counters enablement stack
+  become: true
+  when: not (rdma_exporter_manage_hardware_counters | bool)
+  block:
+    - name: install | Probe installed services
+      ansible.builtin.service_facts:
+
+    - name: install | Disable and stop rdma-hardware-counters service
+      ansible.builtin.systemd:
+        name: rdma-hardware-counters
+        state: stopped
+        enabled: false
+      when: "'rdma-hardware-counters.service' in ansible_facts.services"
+
+    - name: install | Remove rdma-hardware-counters files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /usr/local/sbin/rdma-enable-hardware-counters
+        - /etc/rdma-hardware-counters.env
+        - /etc/systemd/system/rdma-hardware-counters.service
+
+    - name: install | Remove rdma-hardware-counters udev rule
+      ansible.builtin.file:
+        path: /etc/udev/rules.d/90-rdma-hardware-counters.rules
+        state: absent
+      notify: Reload udev rules
+
+    - name: install | Reload systemd after removing rdma-hardware-counters unit
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: "'rdma-hardware-counters.service' in ansible_facts.services"

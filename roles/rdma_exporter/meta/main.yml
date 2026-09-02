@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  role_name: rdma_exporter
+  author: Uemit Seren <uemit.seren@gmi.oeaw.ac.at>
+  description: >
+    Installs and configures the Prometheus rdma_exporter, exposing
+    RDMA (InfiniBand/RoCE) NIC statistics for scraping.
+  company: clip
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.15"
+  platforms:
+    - name: EL
+      versions:
+        - "9"
+        - "10"
+  galaxy_tags:
+    - monitoring
+    - prometheus
+    - rdma
+    - infiniband
+    - roce
+
+dependencies: []

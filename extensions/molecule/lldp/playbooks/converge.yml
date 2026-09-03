@@ -1,0 +1,9 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Apply lldp role
+      ansible.builtin.include_role:
+        name: clip.hpc.lldp

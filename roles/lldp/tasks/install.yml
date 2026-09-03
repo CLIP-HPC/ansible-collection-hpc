@@ -1,0 +1,13 @@
+---
+- name: install | Install lldpd package
+  ansible.builtin.package:
+    name: lldpd
+    state: "{{ lldp_package_state }}"
+  become: true
+
+- name: install | Enable and start lldpd service
+  ansible.builtin.service:
+    name: lldpd
+    enabled: true
+    state: "{{ lldp_service_state }}"
+  become: true

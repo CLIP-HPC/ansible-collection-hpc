@@ -5,9 +5,13 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.9.0
+======
+- lldp: Add role to install and enable ``lldpd`` (so the switch learns about the host via LLDP), and enable ``connection.lldp=enable-rx`` via NetworkManager on every non-loopback interface with an active connection by default, or on specific interfaces via ``lldp_interfaces`` (so the host can see switch-side LLDP neighbor info), since ``community.general.nmcli`` has no dedicated parameter for that property
+
 v3.8.0
 ======
-- rdma_exporter: Add role to install and manage the Prometheus ``rdma_exporter``, exposing RDMA (InfiniBand/RoCE) NIC statistics via a pinned, checksum-verified release binary and a systemd service, with optional firewalld integration and optional upstream tooling to enable mlx5/QP hardware counters
+- dma_exporter: Add role to install and manage the Prometheus rdma_exporter, exposing RDMA (InfiniBand/RoCE) NIC statistics via a pinned, checksum-verified release binary and a systemd service, with optional firewalld integration and optional upstream tooling to enable mlx5/QP hardware counters
 
 v3.7.2
 ======

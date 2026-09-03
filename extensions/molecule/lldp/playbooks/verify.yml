@@ -1,0 +1,38 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert lldpd service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - "'lldpd.service' in ansible_facts.services"
+          - "ansible_facts.services['lldpd.service'].state == 'running'"
+          - "ansible_facts.services['lldpd.service'].status == 'enabled'"
+
+    - name: Get NetworkManager connection name for default interface
+      ansible.builtin.command:
+        cmd: "nmcli -g GENERAL.CONNECTION device show {{ ansible_default_ipv4.interface }}"
+      register: lldp_verify_connection
+      changed_when: false
+
+    - name: Get current LLDP setting for default interface connection
+      ansible.builtin.command:
+        argv:
+          - nmcli
+          - -g
+          - connection.lldp
+          - connection
+          - show
+          - "{{ lldp_verify_connection.stdout }}"
+      register: lldp_verify_setting
+      changed_when: false
+
+    - name: Assert LLDP RX is enabled on default interface connection
+      ansible.builtin.assert:
+        that:
+          - lldp_verify_setting.stdout == 'enable-rx'

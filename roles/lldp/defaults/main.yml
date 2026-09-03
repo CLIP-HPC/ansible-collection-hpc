@@ -1,0 +1,5 @@
+---
+# defaults file for clip.hpc.lldp
+lldp_interfaces: []
+lldp_package_state: present
+lldp_service_state: started

@@ -22,6 +22,7 @@ collections:
 Roles in this collection:
 
 - [roles/doca](roles/doca): Installs and configures NVIDIA DOCA drivers for Mellanox NICs.
+- [roles/lldp](roles/lldp): Installs/enables lldpd and enables NetworkManager LLDP RX reporting on non-loopback interfaces.
 - [roles/multirail](roles/multirail): Sets up NetworkManager multirail for dual-interface hosts.
 - [roles/rdma_exporter](roles/rdma_exporter): Installs and configures the Prometheus rdma_exporter for RDMA (InfiniBand/RoCE) NIC statistics.
 - [roles/rocev2](roles/rocev2): Tunes Mellanox NIC firmware for RoCEv2 with DSCP-based QoS.

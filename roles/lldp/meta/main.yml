@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  role_name: lldp
+  author: Uemit Seren <uemit.seren@gmi.oeaw.ac.at>
+  description: >
+    Installs and enables lldpd so the host is visible to the switch via LLDP,
+    and optionally enables LLDP RX reporting on specific interfaces'
+    NetworkManager connection profiles.
+  company: clip
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.15"
+  platforms:
+    - name: EL
+      versions:
+        - "9"
+        - "10"
+  galaxy_tags:
+    - networking
+    - lldp
+    - networkmanager
+
+dependencies: []

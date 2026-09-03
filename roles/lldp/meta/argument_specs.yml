@@ -1,0 +1,25 @@
+---
+# argument spec file for clip.hpc.lldp
+
+argument_specs:
+  main:
+    short_description: Main entrypoint for clip.hpc.lldp role
+    options:
+      lldp_interfaces:
+        type: list
+        elements: "str"
+        description: >-
+          Interface names whose NetworkManager connection profile should have
+          LLDP RX reporting enabled, so the host can see switch-side neighbor
+          information (e.g. via `nmcli device lldp list`). Leave empty to
+          enable it on every non-loopback interface that currently has an
+          active NetworkManager connection.
+        default: []
+      lldp_package_state:
+        type: str
+        description: State passed to the lldpd package install task.
+        default: "present"
+      lldp_service_state:
+        type: str
+        description: State passed to the lldpd service task.
+        default: "started"

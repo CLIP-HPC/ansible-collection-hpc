@@ -1,0 +1,92 @@
+---
+- name: nmcli | Discover devices with an active NetworkManager connection
+  become: true
+  ansible.builtin.command:
+    cmd: nmcli -t -f DEVICE,TYPE,CONNECTION device status
+  register: lldp_nmcli_device_status
+  changed_when: false
+  when: lldp_interfaces | length == 0
+
+- name: nmcli | Determine target LLDP interfaces
+  ansible.builtin.set_fact:
+    lldp_target_interfaces: >-
+      {{ lldp_interfaces if lldp_interfaces | length > 0 else
+      (lldp_nmcli_device_status.stdout_lines | map('split', ':') | rejectattr('1', 'equalto', 'loopback')
+      | rejectattr('2', 'in', ['--', '']) | map(attribute=0) | list) }}
+
+- name: nmcli | Get NetworkManager connection names for LLDP interfaces
+  become: true
+  ansible.builtin.command:
+    cmd: "nmcli -g GENERAL.CONNECTION device show {{ item }}"
+  register: lldp_interface_connections
+  changed_when: false
+  loop: "{{ lldp_target_interfaces }}"
+
+# Auto-discovered interfaces can still turn up here with no connection (e.g.
+# a device with no profile at all reports an empty value here, rather than
+# the '--' placeholder 'device status' uses), so only hard-fail when the
+# interface was explicitly requested via lldp_interfaces.
+- name: nmcli | Assert explicitly configured LLDP interfaces have an active NetworkManager connection
+  ansible.builtin.assert:
+    that: item.stdout not in ['--', '']
+    fail_msg: "Interface {{ item.item }} has no active NetworkManager connection."
+  loop: "{{ lldp_interface_connections.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: lldp_interfaces | length > 0
+
+- name: nmcli | Initialize interface-to-connection map
+  ansible.builtin.set_fact:
+    lldp_interface_connections_map: []
+
+- name: nmcli | Map LLDP interfaces to their NetworkManager connection names
+  ansible.builtin.set_fact:
+    lldp_interface_connections_map: "{{ lldp_interface_connections_map + [{'iface': item.item, 'conn': item.stdout}] }}"
+  loop: "{{ lldp_interface_connections.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.stdout not in ['--', '']
+
+# community.general.nmcli has no dedicated parameter for NetworkManager's
+# connection.lldp property, so it's read/set here with raw nmcli commands.
+- name: nmcli | Get current LLDP setting for LLDP interface connections
+  become: true
+  ansible.builtin.command:
+    argv:
+      - nmcli
+      - -g
+      - connection.lldp
+      - connection
+      - show
+      - "{{ item.conn }}"
+  register: lldp_interface_lldp
+  changed_when: false
+  loop: "{{ lldp_interface_connections_map }}"
+  loop_control:
+    label: "{{ item.iface }}"
+
+- name: nmcli | Enable LLDP RX on interface connections
+  become: true
+  ansible.builtin.command:
+    argv:
+      - nmcli
+      - connection
+      - modify
+      - "{{ item.item.conn }}"
+      - connection.lldp
+      - enable-rx
+  loop: "{{ lldp_interface_lldp.results }}"
+  loop_control:
+    label: "{{ item.item.iface }}"
+  when: item.stdout != 'enable-rx'
+  changed_when: true
+
+- name: nmcli | Reapply NetworkManager connection for changed LLDP interfaces
+  become: true
+  ansible.builtin.command:
+    cmd: "nmcli device reapply {{ item.item.iface }}"
+  loop: "{{ lldp_interface_lldp.results }}"
+  loop_control:
+    label: "{{ item.item.iface }}"
+  when: item.stdout != 'enable-rx'
+  changed_when: true

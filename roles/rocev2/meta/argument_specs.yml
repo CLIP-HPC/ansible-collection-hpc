@@ -9,3 +9,21 @@ argument_specs:
         type: str
         description: The state of the RoCEv2 MLX QoS service
         default: "started"
+      rocev2_ethtool_ring_rx:
+        type: raw
+        description: >-
+          Desired ethtool.ring-rx value to apply to the NetworkManager connection of each
+          discovered RoCE NIC: an integer ring size, or an empty string to remove an existing
+          override (NetworkManager's own -1 "unmanaged" default) so the driver's default value
+          applies again on the next reconnect/reboot. When left unset (the default), no
+          ring-rx change is made at all.
+        default: ~
+      rocev2_ethtool_ring_tx:
+        type: raw
+        description: >-
+          Desired ethtool.ring-tx value to apply to the NetworkManager connection of each
+          discovered RoCE NIC: an integer ring size, or an empty string to remove an existing
+          override (NetworkManager's own -1 "unmanaged" default) so the driver's default value
+          applies again on the next reconnect/reboot. When left unset (the default), no
+          ring-tx change is made at all.
+        default: ~

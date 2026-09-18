@@ -11,3 +11,23 @@
     state: "{{ rocev2_mlx_qos_service_state }}"
     daemon_reload: true
   become: true
+
+- name: Apply RoCE ethtool ring settings
+  # NetworkManager cannot hot-reapply the 'ethtool' setting ("Can't reapply any changes to
+  # 'ethtool' setting"), so the live ring sizes are set directly instead. The NetworkManager
+  # connection profile is already updated, so this stays in sync on the next reconnect/reboot.
+  # An empty value only clears the NetworkManager override (see ethtool.yml); it is not
+  # live-applied here, so the driver's own default takes over on the next reconnect/reboot.
+  become: true
+  ansible.builtin.command:
+    argv: >-
+      {{
+        ['/usr/sbin/ethtool', '-G', item]
+        + (['rx', rocev2_ethtool_ring_rx | string] if rocev2_ethtool_ring_rx is not none and rocev2_ethtool_ring_rx != '' else [])
+        + (['tx', rocev2_ethtool_ring_tx | string] if rocev2_ethtool_ring_tx is not none and rocev2_ethtool_ring_tx != '' else [])
+      }}
+  loop: "{{ rocev2_roce_netifs_up | default([]) }}"
+  when: >-
+    (rocev2_ethtool_ring_rx is not none and rocev2_ethtool_ring_rx != '')
+    or (rocev2_ethtool_ring_tx is not none and rocev2_ethtool_ring_tx != '')
+  changed_when: true

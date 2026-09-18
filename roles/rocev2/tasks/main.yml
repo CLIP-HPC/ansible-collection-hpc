@@ -7,3 +7,6 @@
 
 - name: Import service.yml tasks
   ansible.builtin.import_tasks: service.yml
+
+- name: Import ethtool.yml tasks
+  ansible.builtin.import_tasks: ethtool.yml

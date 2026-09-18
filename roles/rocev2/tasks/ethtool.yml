@@ -1,0 +1,221 @@
+---
+- name: ethtool | Validate ring-rx/ring-tx variable values
+  ansible.builtin.assert:
+    that:
+      - rocev2_ethtool_ring_rx is none or rocev2_ethtool_ring_rx == '' or rocev2_ethtool_ring_rx is number
+      - rocev2_ethtool_ring_tx is none or rocev2_ethtool_ring_tx == '' or rocev2_ethtool_ring_tx is number
+    fail_msg: >-
+      rocev2_ethtool_ring_rx and rocev2_ethtool_ring_tx must each be an integer, an empty
+      string (to remove an existing override), or left unset.
+  when: rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+
+- name: ethtool | Normalize desired ring-rx/ring-tx values
+  ansible.builtin.set_fact:
+    rocev2_ethtool_ring_rx_value: "{{ '-1' if rocev2_ethtool_ring_rx == '' else (rocev2_ethtool_ring_rx | string) }}"
+    rocev2_ethtool_ring_tx_value: "{{ '-1' if rocev2_ethtool_ring_tx == '' else (rocev2_ethtool_ring_tx | string) }}"
+  when: rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+
+- name: ethtool | Discover RoCE InfiniBand devices
+  ansible.builtin.find:
+    paths: /sys/class/infiniband
+    file_type: any
+    patterns: "mlx5_*"
+  register: rocev2_ib_devices
+  when: rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+
+- name: ethtool | Discover netdevs for each RoCE InfiniBand device
+  ansible.builtin.find:
+    paths: "{{ item.path }}/device/net"
+    file_type: any
+  loop: "{{ rocev2_ib_devices.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: rocev2_ib_netdev_dirs
+  when: rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+
+- name: ethtool | Store discovered RoCE netdevs
+  ansible.builtin.set_fact:
+    rocev2_roce_netifs: >-
+      {{
+        rocev2_ib_netdev_dirs.results
+        | default([])
+        | map(attribute='files')
+        | flatten
+        | map(attribute='path')
+        | map('basename')
+        | unique
+        | list
+      }}
+  when: rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+
+- name: ethtool | Fail if no RoCE netdevs were found
+  ansible.builtin.fail:
+    msg: "ethtool.ring-rx/ring-tx were requested but no RoCE netdevs were discovered under /sys/class/infiniband."
+  when:
+    - rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+    - rocev2_roce_netifs | default([]) | length == 0
+
+- name: ethtool | Retrieve NetworkManager connection for each RoCE netdev
+  become: true
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/nmcli
+      - -t
+      - -g
+      - GENERAL.CONNECTION
+      - device
+      - show
+      - "{{ item }}"
+  loop: "{{ rocev2_roce_netifs | default([]) }}"
+  register: rocev2_nm_connections
+  changed_when: false
+  failed_when: false
+  when: rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+
+- name: ethtool | Report RoCE netdevs without an active NetworkManager connection
+  ansible.builtin.debug:
+    msg: "Skipping {{ item.item }}: no active NetworkManager connection found for this interface."
+  loop: "{{ rocev2_nm_connections.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+    - item.rc != 0 or item.stdout | trim == ''
+
+- name: ethtool | Store RoCE netdevs with an active NetworkManager connection
+  ansible.builtin.set_fact:
+    rocev2_nm_connections_active: >-
+      {{
+        rocev2_nm_connections.results
+        | default([])
+        | selectattr('rc', 'equalto', 0)
+        | rejectattr('stdout', 'equalto', '')
+        | list
+      }}
+  when: rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+
+- name: ethtool | Retrieve NetworkManager device state for each RoCE netdev
+  become: true
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/nmcli
+      - -t
+      - -g
+      - GENERAL.STATE
+      - device
+      - show
+      - "{{ item.item }}"
+  loop: "{{ rocev2_nm_connections_active | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  register: rocev2_nm_device_states
+  changed_when: false
+  when: rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+
+- name: ethtool | Report RoCE netdevs that are not active/up
+  ansible.builtin.debug:
+    msg: "Skipping {{ item.item.item }}: device is not activated (state: {{ item.stdout | trim }})."
+  loop: "{{ rocev2_nm_device_states.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.item }}"
+  when:
+    - rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+    - item.rc != 0 or (item.stdout | trim) is not match('^100(\s|$)')
+
+- name: ethtool | Store RoCE netdevs that are active/up
+  ansible.builtin.set_fact:
+    rocev2_nm_connections_up: >-
+      {{
+        rocev2_nm_device_states.results
+        | default([])
+        | selectattr('rc', 'equalto', 0)
+        | selectattr('stdout', 'match', '^100(\s|$)')
+        | map(attribute='item')
+        | list
+      }}
+    rocev2_roce_netifs_up: >-
+      {{
+        rocev2_nm_device_states.results
+        | default([])
+        | selectattr('rc', 'equalto', 0)
+        | selectattr('stdout', 'match', '^100(\s|$)')
+        | map(attribute='item')
+        | map(attribute='item')
+        | list
+      }}
+  when: rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
+
+- name: ethtool | Retrieve current ethtool.ring-rx value
+  become: true
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/nmcli
+      - -g
+      - ethtool.ring-rx
+      - connection
+      - show
+      - "{{ item.stdout }}"
+  loop: "{{ rocev2_nm_connections_up | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  register: rocev2_current_ring_rx
+  changed_when: false
+  when: rocev2_ethtool_ring_rx is not none
+
+- name: ethtool | Set ethtool.ring-rx where it differs from the desired value
+  become: true
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/nmcli
+      - connection
+      - modify
+      - "{{ item.item.stdout }}"
+      - ethtool.ring-rx
+      - "{{ rocev2_ethtool_ring_rx_value }}"
+  loop: "{{ rocev2_current_ring_rx.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.item }}"
+  when:
+    - rocev2_ethtool_ring_rx is not none
+    - item.stdout | trim != rocev2_ethtool_ring_rx_value
+  changed_when: true
+  notify: Apply RoCE ethtool ring settings
+
+- name: ethtool | Retrieve current ethtool.ring-tx value
+  become: true
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/nmcli
+      - -g
+      - ethtool.ring-tx
+      - connection
+      - show
+      - "{{ item.stdout }}"
+  loop: "{{ rocev2_nm_connections_up | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  register: rocev2_current_ring_tx
+  changed_when: false
+  when: rocev2_ethtool_ring_tx is not none
+
+- name: ethtool | Set ethtool.ring-tx where it differs from the desired value
+  become: true
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/nmcli
+      - connection
+      - modify
+      - "{{ item.item.stdout }}"
+      - ethtool.ring-tx
+      - "{{ rocev2_ethtool_ring_tx_value }}"
+  loop: "{{ rocev2_current_ring_tx.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.item }}"
+  when:
+    - rocev2_ethtool_ring_tx is not none
+    - item.stdout | trim != rocev2_ethtool_ring_tx_value
+  changed_when: true
+  notify: Apply RoCE ethtool ring settings
+
+- name: ethtool | Flush handlers
+  ansible.builtin.meta: flush_handlers

@@ -90,9 +90,9 @@
   ansible.builtin.copy:
     content: "{{ beegfs_auth_secret | b64decode }}"
     dest: /etc/beegfs/conn.auth
-    mode: "0600"
+    mode: "{{ '0640' if (beegfs_conn_auth_beegfs_group | bool) else '0600' }}"
     owner: root
-    group: beegfs
+    group: "{{ 'beegfs' if (beegfs_conn_auth_beegfs_group | bool) else 'root' }}"
   become: true
   tags: always
   notify:

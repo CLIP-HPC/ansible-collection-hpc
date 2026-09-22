@@ -45,8 +45,6 @@
 - name: Create connInterfacesFile
   vars:
     beegfs_interfaces: "{{ interfaces }}"
-    beegfs_conn_interfaces_addr: "{{ oss_interfaces_addr }}"
-    beegfs_conn_interfaces_protocol: "{{ oss_interfaces_protocol }}"
   ansible.builtin.template:
     src: connInterfacesFile.j2
     dest: /etc/beegfs/{{ oss_port }}.d/connInterfacesFile

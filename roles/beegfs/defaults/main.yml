@@ -30,8 +30,9 @@ beegfs_interfaces: []
 # holds plain interface names (e.g. from NUMA auto-discovery, or a manually
 # curated name list) - don't set these if beegfs_interfaces already contains
 # raw filter-syntax entries of its own, since the two would be concatenated.
-# Overridable per beegfs_oss entry via that entry's interfaces_addr /
-# interfaces_protocol.
+# Applies globally (global connInterfacesFile, connRDMAInterfacesFile, and
+# every beegfs_oss entry's own connInterfacesFile) - not overridable per
+# beegfs_oss entry.
 beegfs_conn_interfaces_addr: # single IP address to require, e.g. "10.0.0.5" - unset/"*" allows any.
 beegfs_conn_interfaces_protocol: # "4", "6" - unset/"*" allows either.
 

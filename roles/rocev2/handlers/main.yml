@@ -12,6 +12,14 @@
     daemon_reload: true
   become: true
 
+- name: Restart MLNX IRQ affinity service
+  ansible.builtin.service:
+    name: mlnx-irq-affinity.service
+    enabled: true
+    state: "{{ rocev2_irq_affinity_service_state }}"
+    daemon_reload: true
+  become: true
+
 - name: Apply RoCE ethtool ring settings
   # NetworkManager cannot hot-reapply the 'ethtool' setting ("Can't reapply any changes to
   # 'ethtool' setting"), so the live ring sizes are set directly instead. The NetworkManager

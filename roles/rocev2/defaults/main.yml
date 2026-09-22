@@ -1,5 +1,7 @@
 ---
 # defaults file for clip.hpc.rocev2
 rocev2_mlx_qos_service_state: started
+rocev2_irq_affinity_enabled: false
+rocev2_irq_affinity_service_state: started
 rocev2_ethtool_ring_rx: ~
 rocev2_ethtool_ring_tx: ~

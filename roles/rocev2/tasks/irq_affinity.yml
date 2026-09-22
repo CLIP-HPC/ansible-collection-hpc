@@ -1,0 +1,32 @@
+---
+- name: irq_affinity | Gather service facts
+  ansible.builtin.service_facts:
+
+- name: irq_affinity | Disable and mask irqbalance service
+  ansible.builtin.systemd:
+    name: irqbalance
+    enabled: false
+    masked: true
+    state: stopped
+  become: true
+  when: "'irqbalance.service' in ansible_facts.services"
+
+- name: irq_affinity | Copy IRQ affinity script to the target machine
+  ansible.builtin.copy:
+    src: mlnx-irq-affinity.sh
+    dest: /usr/local/bin/mlnx-irq-affinity.sh
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  notify: Restart MLNX IRQ affinity service
+
+- name: irq_affinity | Create systemd service unit file
+  ansible.builtin.copy:
+    src: mlnx-irq-affinity.service
+    dest: /etc/systemd/system/mlnx-irq-affinity.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Restart MLNX IRQ affinity service

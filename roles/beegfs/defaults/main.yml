@@ -14,9 +14,35 @@ beegfs_state: present
 # with what to multiply the nodeid to get the target id in case a node is explictly set
 beegfs_target_id_multiplier: 100
 
-# Network interfaces in order of preference
-# (leaving empty means InfiniBand & RDMA enabled devices are preferred)
+# Group owner for /etc/beegfs/conn.auth. When true, the file is owned by
+# root:beegfs (with group-read permission added, mode 0640) - matches the
+# group the beegfs package's own config files use. When false, it's owned
+# by root:root with mode 0600 (no group access) - set this to false for
+# hosts where the beegfs system group doesn't exist (e.g. beegfs packages
+# not yet installed) or where group access to the auth secret is unwanted.
+beegfs_conn_auth_beegfs_group: true
+
+# Network interfaces in order of preference, written one per list item into
+# connInterfacesFile (leaving empty means InfiniBand & RDMA enabled devices
+# are preferred). Each item is written verbatim, so besides plain interface
+# names (e.g. "eth0") this also accepts the advanced filter syntax BeeGFS
+# supports in that file (name/address/protocol matching, "!" to exclude,
+# "*" wildcards):
+# https://doc.beegfs.io/latest/advanced_topics/network_configuration.html#configure-allowed-network-interfaces
 beegfs_interfaces: []
+
+# Optional connInterfacesFile advanced-filter restriction (BeeGFS >= 8.2),
+# applied to every plain interface name in beegfs_interfaces: when either is
+# set, each "<name>" line is rewritten as "<name> <addr> <protocol>" (a
+# field left unset is written as "*"). Only meaningful when beegfs_interfaces
+# holds plain interface names (e.g. from NUMA auto-discovery, or a manually
+# curated name list) - don't set these if beegfs_interfaces already contains
+# raw filter-syntax entries of its own, since the two would be concatenated.
+# Applies globally (global connInterfacesFile, connRDMAInterfacesFile, and
+# every beegfs_oss entry's own connInterfacesFile) - not overridable per
+# beegfs_oss entry.
+beegfs_conn_interfaces_addr: # single IP address to require, e.g. "10.0.0.5" - unset/"*" allows any.
+beegfs_conn_interfaces_protocol: # "4", "6" - unset/"*" allows either.
 
 # Distribution-specific parameters
 beegfs_distro_vars:

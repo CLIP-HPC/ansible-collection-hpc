@@ -92,7 +92,7 @@
     dest: /etc/beegfs/conn.auth
     mode: "0600"
     owner: root
-    group: root
+    group: beegfs
   become: true
   tags: always
   notify:

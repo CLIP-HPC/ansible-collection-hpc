@@ -14,6 +14,14 @@ beegfs_state: present
 # with what to multiply the nodeid to get the target id in case a node is explictly set
 beegfs_target_id_multiplier: 100
 
+# Group owner for /etc/beegfs/conn.auth. When true, the file is owned by
+# root:beegfs (with group-read permission added, mode 0640) - matches the
+# group the beegfs package's own config files use. When false, it's owned
+# by root:root with mode 0600 (no group access) - set this to false for
+# hosts where the beegfs system group doesn't exist (e.g. beegfs packages
+# not yet installed) or where group access to the auth secret is unwanted.
+beegfs_conn_auth_beegfs_group: true
+
 # Network interfaces in order of preference, written one per list item into
 # connInterfacesFile (leaving empty means InfiniBand & RDMA enabled devices
 # are preferred). Each item is written verbatim, so besides plain interface

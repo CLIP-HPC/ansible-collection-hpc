@@ -5,6 +5,10 @@
 - name: Import dcbx.yml tasks
   ansible.builtin.import_tasks: dcbx.yml
 
+- name: Import irq_affinity.yml tasks
+  ansible.builtin.import_tasks: irq_affinity.yml
+  when: rocev2_irq_affinity_enabled
+
 - name: Import service.yml tasks
   ansible.builtin.import_tasks: service.yml
 

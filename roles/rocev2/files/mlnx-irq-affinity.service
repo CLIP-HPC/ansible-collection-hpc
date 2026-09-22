@@ -1,0 +1,11 @@
+[Unit]
+Description=Set NUMA-aware IRQ affinity for Mellanox/NVIDIA RoCE NICs
+After=network.target
+Conflicts=irqbalance.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mlnx-irq-affinity.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -9,6 +9,22 @@ argument_specs:
         type: str
         description: The state of the RoCEv2 MLX QoS service
         default: "started"
+      rocev2_irq_affinity_enabled:
+        type: bool
+        description: >-
+          Whether to apply the IRQ affinity optimization: disable/mask irqbalance and install and
+          run the mlnx-irq-affinity service. When false, the role does not touch irqbalance and
+          does not install, manage, or start the mlnx-irq-affinity service (an already-installed
+          service from a previous run is left as-is).
+        default: false
+      rocev2_irq_affinity_service_state:
+        type: str
+        description: >-
+          The state of the mlnx-irq-affinity service, which applies NUMA-aware IRQ affinity for
+          RoCE NICs via the vendor set_irq_affinity.sh script. irqbalance is disabled/masked
+          whenever this role runs, since it conflicts with static IRQ affinity tuning. Only
+          applies when rocev2_irq_affinity_enabled is true.
+        default: "started"
       rocev2_ethtool_ring_rx:
         type: raw
         description: >-

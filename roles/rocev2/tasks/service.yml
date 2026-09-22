@@ -6,3 +6,12 @@
     state: started
     daemon_reload: true
   become: true
+
+- name: service | Ensure IRQ affinity service is enabled and started
+  ansible.builtin.systemd:
+    name: mlnx-irq-affinity
+    enabled: true
+    state: "{{ rocev2_irq_affinity_service_state }}"
+    daemon_reload: true
+  become: true
+  when: rocev2_irq_affinity_enabled

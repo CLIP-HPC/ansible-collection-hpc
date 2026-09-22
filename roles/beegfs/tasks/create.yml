@@ -131,7 +131,9 @@
   vars:
     oss_devices: "{{ oss_item.value.devices }}"
     oss_port: "{{ oss_item.key }}"
-    interfaces: "{{ oss_item.value.interfaces | default(oss_interfaces) }}"
+    interfaces: "{{ oss_item.value.interfaces | default(beegfs_interfaces) }}"
+    oss_interfaces_addr: "{{ oss_item.value.interfaces_addr | default(beegfs_conn_interfaces_addr) }}"
+    oss_interfaces_protocol: "{{ oss_item.value.interfaces_protocol | default(beegfs_conn_interfaces_protocol) }}"
     oss_num_id: "{{ (beegfs_node_num_id | int) + (oss_index + 1) * beegfs_target_id_multiplier / 10 }}"
     oss_tune_bind_to_numa_zone: "{{ oss_item.value.numa_zone | default(omit) }}"
   loop: "{{ beegfs_oss | dict2items }}"

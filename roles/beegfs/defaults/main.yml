@@ -14,8 +14,13 @@ beegfs_state: present
 # with what to multiply the nodeid to get the target id in case a node is explictly set
 beegfs_target_id_multiplier: 100
 
-# Network interfaces in order of preference
-# (leaving empty means InfiniBand & RDMA enabled devices are preferred)
+# Network interfaces in order of preference, written one per list item into
+# connInterfacesFile (leaving empty means InfiniBand & RDMA enabled devices
+# are preferred). Each item is written verbatim, so besides plain interface
+# names (e.g. "eth0") this also accepts the advanced filter syntax BeeGFS
+# supports in that file (name/address/protocol matching, "!" to exclude,
+# "*" wildcards):
+# https://doc.beegfs.io/latest/advanced_topics/network_configuration.html#configure-allowed-network-interfaces
 beegfs_interfaces: []
 
 # Distribution-specific parameters

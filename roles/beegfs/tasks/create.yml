@@ -90,9 +90,9 @@
   ansible.builtin.copy:
     content: "{{ beegfs_auth_secret | b64decode }}"
     dest: /etc/beegfs/conn.auth
-    mode: "0600"
+    mode: "{{ '0640' if (beegfs_conn_auth_beegfs_group | bool) else '0600' }}"
     owner: root
-    group: root
+    group: "{{ 'beegfs' if (beegfs_conn_auth_beegfs_group | bool) else 'root' }}"
   become: true
   tags: always
   notify:
@@ -121,6 +121,18 @@
   when: beegfs_enable.meta | default(false) | bool
   tags: ["beegfs", "meta"]
 
+# Snapshotted under its own name because oss.yml's connInterfacesFile task
+# rebinds beegfs_interfaces (to the per-OSS interfaces list) for its own
+# scope - falling back to the literal name beegfs_interfaces below would let
+# that rebinding feed back into itself, causing Ansible's "Recursive loop
+# detected in template" error for any beegfs_oss entry without an explicit
+# interfaces list.
+- name: Snapshot beegfs_interfaces for the OSS interfaces fallback below
+  ansible.builtin.set_fact:
+    beegfs_default_interfaces: "{{ beegfs_interfaces }}"
+  when: beegfs_enable.oss | default(false) | bool
+  tags: ["beegfs", "oss"]
+
 - name: Configure OSS node
   ansible.builtin.include_tasks: oss.yml
   when: beegfs_enable.oss | default(false) | bool
@@ -131,7 +143,7 @@
   vars:
     oss_devices: "{{ oss_item.value.devices }}"
     oss_port: "{{ oss_item.key }}"
-    interfaces: "{{ oss_item.value.interfaces | default(oss_interfaces) }}"
+    interfaces: "{{ oss_item.value.interfaces | default(beegfs_default_interfaces) }}"
     oss_num_id: "{{ (beegfs_node_num_id | int) + (oss_index + 1) * beegfs_target_id_multiplier / 10 }}"
     oss_tune_bind_to_numa_zone: "{{ oss_item.value.numa_zone | default(omit) }}"
   loop: "{{ beegfs_oss | dict2items }}"

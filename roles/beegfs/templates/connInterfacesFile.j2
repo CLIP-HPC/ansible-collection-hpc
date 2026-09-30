@@ -1,3 +1,3 @@
 {% for row in beegfs_interfaces %}
-{{ row }}
+{{ row ~ ((' ' ~ (beegfs_conn_interfaces_addr | default('*', true)) ~ ' ' ~ (beegfs_conn_interfaces_protocol | default('*', true))) if (beegfs_conn_interfaces_addr is not none or beegfs_conn_interfaces_protocol is not none) else '') }}
 {% endfor %}

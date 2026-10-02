@@ -188,6 +188,14 @@ beegfs_client_mounts: []
 #   # a client can mount more than one
 #   # BeeGFS filesystem, each with different tuning needs.
 
+# BeeGFS reads a client's config only at mount time. When true, a change to
+# any client config (or to the global connInterfacesFile/connRDMAInterfacesFile)
+# unmounts every beegfs_client_mounts entry and mounts it again so the change
+# takes effect. The unmount fails if processes still hold the mount, so this
+# is off by default; without it, changed client config only applies after a
+# manual remount or reboot.
+beegfs_client_remount_on_change: false
+
 # Should the package manager use the `present` or `latest` flag for
 # BeeGFS? This is useful for upgrading.
 beegfs_update: false

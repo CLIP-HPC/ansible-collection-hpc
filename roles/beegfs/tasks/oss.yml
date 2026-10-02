@@ -20,6 +20,7 @@
 - name: Reset the OSS devices and NIC(s) to validate
   ansible.builtin.set_fact:
     beegfs_oss_numa_checks: []
+  tags: interfaces
 
 - name: Collect OSS devices to validate against their port's NUMA zone
   vars:
@@ -68,11 +69,13 @@
   loop_control:
     label: "port {{ item.0.port }} {{ item.1 }}"
   when: (not (beegfs_numa_nic_fallback | bool)) or (item.1 == item.0.interfaces[0])
+  tags: interfaces
 
 - name: Validate OSS devices and NIC(s) are attached to the configured NUMA zone
   ansible.builtin.import_tasks: numa_check.yml
   vars:
     numa_checks: "{{ beegfs_oss_numa_checks }}"
+  tags: interfaces
 
 - name: Create connInterfacesFile
   vars:
@@ -87,6 +90,8 @@
   loop_control:
     label: "port {{ item.port }}"
   become: true
+  tags: interfaces
+  notify: Restart BeeGFS storage service
 
 - name: Add template beegfs-storage conf
   ansible.builtin.copy:
@@ -126,6 +131,7 @@
   loop_control:
     label: "port {{ item.port }}"
   become: true
+  tags: interfaces
   notify: Restart BeeGFS storage service
 
 - name: Prepare storage devices
@@ -232,6 +238,7 @@
 
 - name: Configure tunings for BeeGFS storage server
   become: true
+  tags: [oss_config, config]
   ansible.builtin.lineinfile:
     path: /etc/beegfs/{{ item.0.port }}.d/beegfs-storage.conf
     regexp: "^{{ item.1.key }}"
@@ -269,6 +276,7 @@
 
 - name: Configure tuneBindToNumaZone for BeeGFS storage server
   become: true
+  tags: [oss_config, config]
   ansible.builtin.lineinfile:
     path: /etc/beegfs/{{ item.port }}.d/beegfs-storage.conf
     regexp: ^tuneBindToNumaZone

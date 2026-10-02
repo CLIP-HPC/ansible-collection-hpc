@@ -132,6 +132,35 @@ A host can mount more than one BeeGFS filesystem, including filesystems served b
             mgmt_host: "beegfs-mgmt.other-cluster.example.org"
 ```
 
+### Tags
+
+Device/NUMA discovery and fact building always run; everything else can be selected with `--tags`:
+
+| Tag | Runs | Restarts / reloads |
+|---|---|---|
+| `mgmt`, `mon`, `meta`, `oss`, `client` | everything for that service (config, format/mount, setup) | that service |
+| `fs` | OSS format and mount | - |
+| `meta_config` | metadata server tunings (`beegfs_meta_tune_*`, ...) | meta |
+| `oss_config` | storage server tunings (`beegfs_oss_tune_*`, `tuneBindToNumaZone`, ...) | storage, all ports |
+| `client_config` | client tunings and `quotaEnabled` | client remount, see below |
+| `interfaces` | every `connInterfacesFile` (global, meta, per OSS port) and the NIC NUMA checks | matching services |
+| `tuning` | sysctls and the `beegfs-oss-tuning` device tuning service | tuning service |
+| `sysctl` | only the sysctls | - (applied directly) |
+| `install`, `repos`, `rdma`, `alias` | packages, repo, RDMA packages, aliases on mgmt | - |
+
+BeeGFS reads a client's config only at mount time. Set `beegfs_client_remount_on_change: true` to have
+changed client config (`client`, `client_config`, `config`, `interfaces`) unmount and mount again; this fails while
+processes still hold the mount. Restart handlers act on every selected host at once, so use `--limit` to
+try a change on a single node first, e.g.:
+
+```sh
+ansible-playbook beegfs.yml --tags oss_config --limit oss01 -e beegfs_oss_tune_num_workers=24
+```
+
+The role must be pulled in so that its own tags decide: a static `roles:`/`import_role`, or an
+`include_role` tagged `always`. An untagged `include_role` is skipped entirely under `--tags`, and `apply`
+would give every task the same tags.
+
 ### Deploying many nodes in parallel
 
 The role is written to run on every BeeGFS node of a play at the same time: per-port and per-device

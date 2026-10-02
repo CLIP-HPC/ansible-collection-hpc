@@ -131,6 +131,7 @@
   when: beegfs_enable.tuning | default(false) | bool
   tags: ["beegfs", "tuning"]
 
+# Only the client config points at these two (see client.yml).
 - name: Create connInterfacesFile
   ansible.builtin.template:
     src: connInterfacesFile.j2
@@ -139,6 +140,8 @@
     owner: root
     group: root
   become: true
+  tags: ["beegfs", "client", "interfaces"]
+  notify: Remount BeeGFS client mounts
 
 
 - name: Create connRDMAInterfacesFile
@@ -149,6 +152,8 @@
     owner: root
     group: root
   become: true
+  tags: ["beegfs", "client", "interfaces"]
+  notify: Remount BeeGFS client mounts
 
 - name: Flush handlers
   ansible.builtin.meta: flush_handlers

@@ -1,0 +1,97 @@
+---
+# DSU can run for a long time and flashes firmware, so it is started in the
+# background (async) and polled. A dropped SSH connection then neither kills the
+# update nor fails the host; the poll simply retries until the job finishes.
+- name: update | Start DSU apply in the background
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [dell_dsu_binary, '--non-interactive', '--apply-upgrades']
+        + (['--apply-downgrades'] if dell_dsu_apply_downgrades | bool else [])
+        + _dell_dsu_common_args
+      }}
+  become: true
+  async: "{{ dell_dsu_apply_timeout }}"
+  poll: 0
+  register: dell_dsu_update_job
+  changed_when: false
+  when: dell_dsu_updates_available | bool
+
+# The DSU return code is evaluated below, so this task never fails on it.
+# Unreachable hosts are retried; `finished` stays undefined until the job is done.
+- name: update | Wait for DSU apply to finish
+  ansible.builtin.async_status:
+    jid: "{{ dell_dsu_update_job.ansible_job_id }}"
+  become: true
+  register: dell_dsu_update
+  until: dell_dsu_update.finished is defined and dell_dsu_update.finished | bool
+  retries: "{{ _dell_dsu_apply_poll_retries }}"
+  delay: "{{ dell_dsu_apply_poll_interval }}"
+  ignore_unreachable: true
+  # 25 = partial failure, 26 = partial failure and reboot required: some updates
+  # were applied, so the reboot below must still run before the host is failed.
+  changed_when: dell_dsu_update.rc | default(none) in ([0, 8] + _dell_dsu_partial_return_codes)
+  failed_when: false
+  when: dell_dsu_update_job.ansible_job_id is defined
+
+- name: update | Clean up the DSU background job
+  ansible.builtin.async_status:
+    jid: "{{ dell_dsu_update_job.ansible_job_id }}"
+    mode: cleanup
+  become: true
+  ignore_unreachable: true
+  changed_when: false
+  failed_when: false
+  when:
+    - dell_dsu_update_job.ansible_job_id is defined
+    - dell_dsu_update.finished | default(false) | bool
+
+- name: update | Fail when the DSU job did not finish
+  ansible.builtin.fail:
+    msg: >-
+      DSU on {{ inventory_hostname }} did not report a result within {{ dell_dsu_apply_timeout }}s plus retries
+      ({{ dell_dsu_update.msg | default('connection lost or job still running') }}).
+      DSU may still be running on the host; re-running the play waits for it to finish.
+  when:
+    - dell_dsu_update_job.ansible_job_id is defined
+    - not (dell_dsu_update.finished | default(false) | bool) or dell_dsu_update.rc is not defined
+
+- name: update | Fail on an unexpected DSU return code
+  ansible.builtin.fail:
+    msg: >-
+      {{ dell_dsu_binary }} --apply-upgrades failed on {{ inventory_hostname }} with return code {{ dell_dsu_update.rc }}:
+      {{ (dell_dsu_update.stderr | default('') ~ ' ' ~ dell_dsu_update.stdout | default('')) | trim }}
+  when:
+    - dell_dsu_update_job.ansible_job_id is defined
+    - dell_dsu_update.rc is defined
+    - dell_dsu_update.rc not in (dell_dsu_ok_return_codes + _dell_dsu_partial_return_codes)
+
+- name: update | Record the DSU result
+  ansible.builtin.set_fact:
+    dell_dsu_update_rc: "{{ dell_dsu_update.rc | default(none) }}"
+    dell_dsu_update_output: "{{ dell_dsu_update.stdout_lines | default([]) }}"
+    dell_dsu_update_partial: "{{ (dell_dsu_update.rc | default(0)) in _dell_dsu_partial_return_codes }}"
+    dell_dsu_reboot_required: "{{ (dell_dsu_update.rc | default(0)) in [8, 26] }}"
+
+- name: update | Report that a reboot is required
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }}: DSU requires a reboot to finish applying updates."
+  when:
+    - dell_dsu_reboot_required | bool
+    - not dell_dsu_reboot | bool
+
+- name: update | Reboot to complete updates
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ dell_dsu_reboot_timeout }}"
+  become: true
+  when:
+    - dell_dsu_reboot_required | bool
+    - dell_dsu_reboot | bool
+
+- name: update | Fail the host after a partial update failure
+  ansible.builtin.fail:
+    msg: >-
+      DSU applied only part of the updates on {{ inventory_hostname }} (return code {{ dell_dsu_update_rc }}).
+      {{ 'The host was rebooted as requested. ' if (dell_dsu_reboot_required | bool and dell_dsu_reboot | bool) else '' }}
+      Review the DSU log and re-run. Output: {{ dell_dsu_update_output | join(' | ') }}
+  when: dell_dsu_update_partial | bool

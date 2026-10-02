@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  role_name: dell_dsu
+  author: Uemit Seren <uemit.seren@gmi.oeaw.ac.at>
+  description: >
+    Installs Dell System Update (DSU), inventories and previews available
+    firmware/driver updates on Dell servers and optionally applies them.
+  company: clip
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.15"
+  platforms:
+    - name: EL
+      versions:
+        - "9"
+        - "10"
+  galaxy_tags:
+    - dell
+    - firmware
+    - dsu
+    - hardware
+
+dependencies: []

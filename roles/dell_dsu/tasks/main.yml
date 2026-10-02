@@ -1,0 +1,26 @@
+---
+- name: Detect Dell hardware
+  ansible.builtin.set_fact:
+    dell_dsu_is_dell: "{{ dell_dsu_force | bool or (ansible_facts['system_vendor'] | default('') is search('(?i)dell')) }}"
+
+- name: Skip non-Dell hosts
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} is not Dell hardware (system_vendor={{ ansible_facts['system_vendor'] | default('unknown') }}); skipping."
+  when: not dell_dsu_is_dell
+
+- name: Run Dell System Update tasks
+  when: dell_dsu_is_dell
+  block:
+    - name: Import install.yml tasks
+      ansible.builtin.import_tasks: install.yml
+      when: dell_dsu_install | bool
+
+    - name: Import lock.yml tasks
+      ansible.builtin.import_tasks: lock.yml
+
+    - name: Import inventory.yml tasks
+      ansible.builtin.import_tasks: inventory.yml
+
+    - name: Import update.yml tasks
+      ansible.builtin.import_tasks: update.yml
+      when: dell_dsu_apply | bool

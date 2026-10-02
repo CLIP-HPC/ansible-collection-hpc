@@ -1,0 +1,49 @@
+---
+# DSU allows a single instance. An update started by an earlier run (for
+# example one whose SSH connection dropped while it kept running in the
+# background) must finish first: wait for it instead of failing with
+# "DSU already in use!". A stale lock file left by a killed run is removed
+# (Dell's documented workaround), but only when no dsu process is running.
+- name: lock | Look for a running dsu process
+  ansible.builtin.command:
+    argv: [pgrep, -x, dsu]
+  register: dell_dsu_pgrep
+  changed_when: false
+  failed_when: dell_dsu_pgrep.rc not in [0, 1]
+  check_mode: false
+
+- name: lock | Wait for a running dsu process to finish
+  ansible.builtin.command:
+    argv: [pgrep, -x, dsu]
+  register: dell_dsu_pgrep_wait
+  changed_when: false
+  failed_when: dell_dsu_pgrep_wait.rc not in [0, 1]
+  until: dell_dsu_pgrep_wait.rc == 1
+  retries: "{{ _dell_dsu_wait_retries }}"
+  delay: "{{ dell_dsu_apply_poll_interval }}"
+  check_mode: false
+  when: dell_dsu_pgrep.rc == 0
+
+- name: lock | Fail when dsu is still running after the wait
+  ansible.builtin.fail:
+    msg: >-
+      {{ inventory_hostname }}: a dsu process was still running after {{ dell_dsu_wait_timeout }}s
+      (pid {{ dell_dsu_pgrep_wait.stdout_lines | default(dell_dsu_pgrep.stdout_lines) | join(', ') }}).
+      Not starting another DSU command.
+  when:
+    - dell_dsu_pgrep_wait.rc | default(1) == 0
+
+- name: lock | Look for a DSU lock file
+  ansible.builtin.stat:
+    path: "{{ dell_dsu_lock_file }}"
+  register: dell_dsu_lock_stat
+  when: dell_dsu_clear_stale_lock | bool
+
+- name: lock | Remove a stale DSU lock file
+  ansible.builtin.file:
+    path: "{{ dell_dsu_lock_file }}"
+    state: absent
+  become: true
+  when:
+    - dell_dsu_clear_stale_lock | bool
+    - dell_dsu_lock_stat.stat.exists

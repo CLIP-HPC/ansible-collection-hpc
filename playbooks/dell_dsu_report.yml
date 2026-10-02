@@ -1,0 +1,69 @@
+---
+# Report which Dell nodes have firmware/driver components that can be updated.
+# Read-only with respect to updates: only inventories and previews (the DSU
+# package/repo is installed if missing; disable with -e dell_dsu_install=false).
+#
+# Usage:
+#   ansible-playbook clip.hpc.dell_dsu_report -e dell_dsu_hosts=compute
+#   ansible-playbook clip.hpc.dell_dsu_report -e dell_dsu_report_dest=./dsu_report.json
+- name: Collect Dell System Update inventory and preview
+  hosts: "{{ dell_dsu_hosts | default('all') }}"
+  gather_facts: true
+  tasks:
+    - name: Run DSU inventory and preview (no updates applied)
+      ansible.builtin.include_role:
+        name: clip.hpc.dell_dsu
+      vars:
+        dell_dsu_apply: false
+
+- name: Summarise Dell System Update results
+  hosts: "{{ dell_dsu_hosts | default('all') }}"
+  gather_facts: false
+  run_once: true
+  vars:
+    _dell_dsu_dell_hosts: >-
+      {{
+        ansible_play_hosts_all | map('extract', hostvars)
+        | selectattr('dell_dsu_is_dell', 'defined') | selectattr('dell_dsu_is_dell')
+        | map(attribute='inventory_hostname') | list
+      }}
+    _dell_dsu_with_updates: "{{ dell_dsu_report | default({}) | dict2items | selectattr('value.updates_available') | map(attribute='key') | sort | list }}"
+    _dell_dsu_up_to_date: "{{ dell_dsu_report | default({}) | dict2items | rejectattr('value.updates_available') | map(attribute='key') | sort | list }}"
+  tasks:
+    - name: Build per-host report
+      ansible.builtin.set_fact:
+        dell_dsu_report: >-
+          {{
+            dell_dsu_report | default({}) | combine({
+              item: {
+                'updates_available': hostvars[item]['dell_dsu_updates_available'] | default(false) | bool,
+                'preview_rc': hostvars[item]['dell_dsu_preview_rc'] | default(none),
+                'preview': hostvars[item]['dell_dsu_preview_output'] | default([]),
+                'inventory': hostvars[item]['dell_dsu_inventory_output'] | default([]),
+              }
+            })
+          }}
+      loop: "{{ _dell_dsu_dell_hosts }}"
+
+    - name: Show nodes with updates available
+      ansible.builtin.debug:
+        msg:
+          - "Dell nodes checked: {{ _dell_dsu_dell_hosts | length }}"
+          - "Nodes with updates available: {{ _dell_dsu_with_updates }}"
+          - "Nodes up to date: {{ _dell_dsu_up_to_date }}"
+          - "Skipped (not Dell): {{ ansible_play_hosts_all | difference(_dell_dsu_dell_hosts) | sort }}"
+
+    - name: Show pending updates per node
+      ansible.builtin.debug:
+        msg: "{{ item.value.preview }}"
+      loop: "{{ dell_dsu_report | default({}) | dict2items | selectattr('value.updates_available') | sort(attribute='key') }}"
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Write JSON report on the controller
+      ansible.builtin.copy:
+        content: "{{ dell_dsu_report | default({}) | to_nice_json }}\n"
+        dest: "{{ dell_dsu_report_dest }}"
+        mode: '0644'
+      delegate_to: localhost
+      when: dell_dsu_report_dest | default('') | length > 0

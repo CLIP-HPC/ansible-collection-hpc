@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.9.0
+======
+- dell_dsu: Add role to install Dell System Update (DSU), inventory/preview firmware and driver updates on Dell servers, and optionally apply them (``dell_dsu_apply``, with opt-in reboot via ``dell_dsu_reboot``). Also add standalone ``dell_dsu_report`` and ``dell_dsu_update`` playbooks
+
 v3.8.1
 ======
 - slurm: Retry the initial ``sacctmgr`` cluster registration on the controller (``slurm_dbd_connect_retries``, default 30 x 10s) so a controller configured concurrently with the database node tolerates slurmdbd not being up yet

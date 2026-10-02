@@ -1,0 +1,96 @@
+---
+# argument spec file for clip.hpc.dell_dsu
+
+argument_specs:
+  main:
+    short_description: Main entrypoint for clip.hpc.dell_dsu role
+    options:
+      dell_dsu_force:
+        type: bool
+        description: Run on hosts that are not detected as Dell hardware.
+        default: false
+      dell_dsu_apply:
+        type: bool
+        description: Apply updates. When false the role only inventories and previews.
+        default: false
+      dell_dsu_apply_downgrades:
+        type: bool
+        description: Also allow downgrades when applying updates.
+        default: false
+      dell_dsu_reboot:
+        type: bool
+        description: Reboot after applying when DSU reports a reboot is required.
+        default: false
+      dell_dsu_reboot_timeout:
+        type: int
+        description: Seconds to wait for the host to come back after a reboot.
+        default: 1800
+      dell_dsu_apply_timeout:
+        type: int
+        description: Maximum run time in seconds of the background `dsu --apply-upgrades` job; it is killed after this.
+        default: 3600
+      dell_dsu_apply_poll_interval:
+        type: int
+        description: Seconds between polls of the background DSU job (and of an already running dsu process).
+        default: 30
+      dell_dsu_wait_timeout:
+        type: int
+        description: Seconds to wait for an already running dsu process to finish before failing.
+        default: 3600
+      dell_dsu_install:
+        type: bool
+        description: Install the DSU package before use.
+        default: true
+      dell_dsu_package:
+        type: str
+        description: Name of the DSU package installed from the repositories configured by the bootstrap script.
+        default: dell-system-update
+      dell_dsu_binary:
+        type: str
+        description: Path of the dsu binary on the target host.
+        default: /usr/sbin/dsu
+      dell_dsu_run_bootstrap:
+        type: bool
+        description: >-
+          Run Dell's bootstrap script (configures the DSU repositories and keys) before installing the package.
+          Replaces the dell-system-update post-install scriptlet, which fails inside the RPM transaction.
+        default: true
+      dell_dsu_bootstrap_marker:
+        type: str
+        description: Marker file recording that the bootstrap script completed.
+        default: /var/lib/dell_dsu_bootstrap_done
+      dell_dsu_bootstrap_url:
+        type: str
+        description: URL of the Dell DSU bootstrap script.
+        default: https://linux.dell.com/repo/hardware/dsu/bootstrap.cgi
+      dell_dsu_catalog_location:
+        type: str
+        description: Optional catalog file (.xml, .gz, .cab) used instead of the online repository.
+        default: ""
+      dell_dsu_component_types:
+        type: list
+        elements: str
+        description: Restrict DSU to these component types (for example FRMW, BIOS, DRVR, APAC). Empty means all.
+        default: []
+      dell_dsu_extra_args:
+        type: list
+        elements: str
+        description: Additional raw DSU command line arguments added to preview and apply runs.
+        default: []
+      dell_dsu_ok_return_codes:
+        type: list
+        elements: int
+        description: DSU return codes that are not treated as failure.
+        default: [0, 8, 34]
+      dell_dsu_inventory_non_interactive:
+        type: bool
+        description: Also pass `--non-interactive` to `dsu --inventory`.
+        default: true
+      dell_dsu_clear_stale_lock:
+        type: bool
+        description: Remove a stale DSU lock file ("DSU already in use!") when no dsu process is running.
+        default: true
+      dell_dsu_lock_file:
+        type: str
+        description: Path of the DSU lock file.
+        default: /tmp/DSUINACTION.txt

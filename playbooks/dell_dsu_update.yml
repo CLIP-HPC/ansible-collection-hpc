@@ -1,0 +1,30 @@
+---
+# Apply Dell System Update (DSU) firmware/driver updates. Standalone.
+#
+# Safe by default: nodes are updated one at a time and are NOT rebooted.
+# Drain nodes (e.g. in Slurm) before running this against production nodes.
+#
+# Usage:
+#   ansible-playbook clip.hpc.dell_dsu_update -e dell_dsu_hosts=node01
+#   ansible-playbook clip.hpc.dell_dsu_update -e dell_dsu_hosts=compute \
+#     -e dell_dsu_serial=5 -e dell_dsu_reboot=true
+#   ansible-playbook clip.hpc.dell_dsu_update -e dell_dsu_hosts=node01 \
+#     -e '{"dell_dsu_component_types": ["FRMW", "BIOS"]}'
+- name: Apply Dell System Update updates
+  hosts: "{{ dell_dsu_hosts | default('all') }}"
+  serial: "{{ dell_dsu_serial | default(1) }}"
+  gather_facts: true
+  tasks:
+    - name: Run DSU and apply updates
+      ansible.builtin.include_role:
+        name: clip.hpc.dell_dsu
+      vars:
+        dell_dsu_apply: true
+
+    - name: Report result
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}:
+          {{ 'updates applied' if (dell_dsu_updates_available | default(false) | bool) else 'nothing to update' }}
+          {{ '(reboot still required)' if (dell_dsu_reboot_required | default(false) | bool and not dell_dsu_reboot | default(false) | bool) else '' }}
+      when: dell_dsu_is_dell | default(false) | bool

@@ -1,0 +1,44 @@
+---
+# defaults file for clip.hpc.dell_dsu
+
+# Safety switches
+# Run only on Dell hardware unless forced.
+dell_dsu_force: false
+# Apply updates. When false the role only inventories and previews (dry run).
+dell_dsu_apply: false
+# Also allow downgrades when applying.
+dell_dsu_apply_downgrades: false
+# Reboot after applying when DSU reports that a reboot is required.
+dell_dsu_reboot: false
+dell_dsu_reboot_timeout: 1800
+
+# Installation of Dell System Update (DSU)
+dell_dsu_install: true
+# Dell only publishes the latest DSU RPM at this location, so a pinned version
+# starts returning 404 once Dell releases a newer one - update it or override the URL.
+dell_dsu_version: 2.3.0.1-26.08.00
+dell_dsu_rpm_url: "https://linux.dell.com/repo/hardware/dsu/os_independent/x86_64/dell-system-update-{{ dell_dsu_version }}.x86_64.rpm"
+# The Dell signing key is not imported before DSU's bootstrap script has run, so the
+# package signature cannot be verified on a first install.
+dell_dsu_rpm_disable_gpg_check: true
+dell_dsu_binary: /usr/sbin/dsu
+# Workaround for the dell-system-update %post scriptlet failing during the RPM
+# transaction: re-run its steps (ldconfig, bootstrap.cgi) as Ansible tasks.
+dell_dsu_run_postinstall: true
+dell_dsu_postinstall_marker: /var/lib/dell_dsu_postinstall_done
+dell_dsu_bootstrap_url: https://linux.dell.com/repo/hardware/dsu/bootstrap.cgi
+dell_dsu_bootstrap_dest: /opt/dell/dsu/bootstrap.cgi
+
+# DSU invocation
+# Optional catalog (.xml, .gz or .cab) to use instead of the online repository.
+dell_dsu_catalog_location: ""
+# Restrict to component types, e.g. [FRMW, BIOS, DRVR, APAC]. Empty means all.
+dell_dsu_component_types: []
+dell_dsu_extra_args: []
+# DSU return codes treated as success (0 ok, 8 reboot required, 34 nothing to update).
+dell_dsu_ok_return_codes: [0, 8, 34]
+# Pass --non-interactive to `dsu --inventory` too, so it can never wait on a prompt.
+dell_dsu_inventory_non_interactive: true
+# Remove a stale "DSU already in use!" lock file when no dsu process is running.
+dell_dsu_clear_stale_lock: true
+dell_dsu_lock_file: /tmp/DSUINACTION.txt

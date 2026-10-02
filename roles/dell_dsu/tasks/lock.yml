@@ -1,0 +1,38 @@
+---
+# DSU prints "DSU already in use!" when a stale lock file is left behind by a
+# killed or crashed run. Dell's documented workaround is to delete it. Only do
+# so when no dsu process is running, so a live update is never disturbed.
+- name: lock | Look for a running dsu process
+  ansible.builtin.command:
+    argv: [pgrep, -x, dsu]
+  register: dell_dsu_pgrep
+  changed_when: false
+  failed_when: dell_dsu_pgrep.rc not in [0, 1]
+  check_mode: false
+  when: dell_dsu_clear_stale_lock | bool
+
+- name: lock | Look for a DSU lock file
+  ansible.builtin.stat:
+    path: "{{ dell_dsu_lock_file }}"
+  register: dell_dsu_lock_stat
+  when: dell_dsu_clear_stale_lock | bool
+
+- name: lock | Remove a stale DSU lock file
+  ansible.builtin.file:
+    path: "{{ dell_dsu_lock_file }}"
+    state: absent
+  become: true
+  when:
+    - dell_dsu_clear_stale_lock | bool
+    - dell_dsu_lock_stat.stat.exists
+    - dell_dsu_pgrep.rc == 1
+
+- name: lock | Warn when DSU is genuinely running
+  ansible.builtin.debug:
+    msg: >-
+      {{ inventory_hostname }}: a dsu process is running ({{ dell_dsu_pgrep.stdout_lines | join(', ') }});
+      leaving {{ dell_dsu_lock_file }} in place. The next DSU command will fail with "DSU already in use!" until it finishes.
+  when:
+    - dell_dsu_clear_stale_lock | bool
+    - dell_dsu_pgrep.rc == 0
+    - dell_dsu_lock_stat.stat.exists

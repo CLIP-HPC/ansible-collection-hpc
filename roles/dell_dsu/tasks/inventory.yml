@@ -1,0 +1,56 @@
+---
+# Read-only tasks: they also run in check mode.
+- name: inventory | Collect DSU component inventory
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [dell_dsu_binary, '--inventory']
+        + (['--non-interactive'] if dell_dsu_inventory_non_interactive | bool else [])
+        + _dell_dsu_common_args
+      }}
+  become: true
+  register: dell_dsu_inventory
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+# DSU refuses to run until Dell's public key is in place (return code 40, or
+# return code 1 with "Shared library integrity check failed" on some versions).
+# This is also the check that the post-install bootstrap workaround worked.
+- name: inventory | Fail with a hint when DSU cannot verify its libraries
+  ansible.builtin.fail:
+    msg: >-
+      DSU on {{ inventory_hostname }} cannot verify its signed libraries (return code {{ dell_dsu_inventory.rc }}):
+      {{ (dell_dsu_inventory.stderr | default('') ~ dell_dsu_inventory.stdout | default('')) | trim }}.
+      The Dell public key is missing. Check that the post-install bootstrap ran
+      (dell_dsu_run_postinstall, marker {{ dell_dsu_postinstall_marker }}) and that bootstrap.cgi succeeded.
+  when:
+    - dell_dsu_inventory.rc not in dell_dsu_ok_return_codes
+    - >-
+      dell_dsu_inventory.rc == 40
+      or (dell_dsu_inventory.stderr | default('') ~ dell_dsu_inventory.stdout | default(''))
+      is search('(?i)signature verification failed|integrity check failed|public key')
+
+- name: inventory | Fail on an unexpected DSU return code
+  ansible.builtin.fail:
+    msg: >-
+      {{ dell_dsu_binary }} --inventory failed on {{ inventory_hostname }} with return code {{ dell_dsu_inventory.rc }}:
+      {{ (dell_dsu_inventory.stderr | default('') ~ dell_dsu_inventory.stdout | default('')) | trim }}
+  when: dell_dsu_inventory.rc not in dell_dsu_ok_return_codes
+
+- name: inventory | Preview applicable DSU updates
+  ansible.builtin.command:
+    argv: "{{ [dell_dsu_binary, '--preview', '--non-interactive'] + _dell_dsu_common_args }}"
+  become: true
+  register: dell_dsu_preview
+  changed_when: false
+  failed_when: dell_dsu_preview.rc not in dell_dsu_ok_return_codes
+  check_mode: false
+
+- name: inventory | Record DSU results as facts
+  ansible.builtin.set_fact:
+    dell_dsu_inventory_output: "{{ dell_dsu_inventory.stdout_lines }}"
+    dell_dsu_preview_output: "{{ dell_dsu_preview.stdout_lines }}"
+    dell_dsu_preview_rc: "{{ dell_dsu_preview.rc }}"
+    # return code 34 is "No Applicable Updates Found"
+    dell_dsu_updates_available: "{{ dell_dsu_preview.rc != 34 }}"

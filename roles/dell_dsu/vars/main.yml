@@ -1,0 +1,10 @@
+---
+# Internal variables for clip.hpc.dell_dsu - not intended to be overridden.
+_dell_dsu_common_args: >-
+  {{
+    (['--catalog-location=' ~ dell_dsu_catalog_location] if dell_dsu_catalog_location | length > 0 else [])
+    + (['--component-type=' ~ (dell_dsu_component_types | join(','))] if dell_dsu_component_types | length > 0 else [])
+    + dell_dsu_extra_args
+  }}
+# DSU return codes 25 (partial failure) and 26 (partial failure, reboot required).
+_dell_dsu_partial_return_codes: [25, 26]

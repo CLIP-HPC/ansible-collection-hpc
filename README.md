@@ -27,3 +27,4 @@ Roles in this collection:
 - [roles/rocev2](roles/rocev2): Tunes Mellanox NIC firmware for RoCEv2 with DSCP-based QoS.
 - [roles/slurm](roles/slurm): Deploys and configures a functional SLURM cluster.
 - [roles/smartctl_exporter](roles/smartctl_exporter): Installs and configures the Prometheus smartctl_exporter for S.M.A.R.T. disk health metrics.
+- [roles/dell_dsu](roles/dell_dsu): Installs Dell System Update (DSU) and inventories, previews and applies firmware/driver updates on Dell servers (with `playbooks/dell_dsu_report.yml` and `playbooks/dell_dsu_update.yml`).

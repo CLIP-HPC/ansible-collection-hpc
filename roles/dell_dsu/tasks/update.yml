@@ -1,0 +1,46 @@
+---
+- name: update | Apply DSU updates
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [dell_dsu_binary, '--non-interactive', '--apply-upgrades']
+        + (['--apply-downgrades'] if dell_dsu_apply_downgrades | bool else [])
+        + _dell_dsu_common_args
+      }}
+  become: true
+  register: dell_dsu_update
+  # 25 = partial failure, 26 = partial failure and reboot required: some updates
+  # were applied, so the reboot below must still run before the host is failed.
+  changed_when: dell_dsu_update.rc in ([0, 8] + _dell_dsu_partial_return_codes)
+  failed_when: dell_dsu_update.rc not in (dell_dsu_ok_return_codes + _dell_dsu_partial_return_codes)
+  when: dell_dsu_updates_available | bool
+
+- name: update | Record the DSU result
+  ansible.builtin.set_fact:
+    dell_dsu_update_rc: "{{ dell_dsu_update.rc | default(none) }}"
+    dell_dsu_update_output: "{{ dell_dsu_update.stdout_lines | default([]) }}"
+    dell_dsu_update_partial: "{{ (dell_dsu_update.rc | default(0)) in _dell_dsu_partial_return_codes }}"
+    dell_dsu_reboot_required: "{{ (dell_dsu_update.rc | default(0)) in [8, 26] }}"
+
+- name: update | Report that a reboot is required
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }}: DSU requires a reboot to finish applying updates."
+  when:
+    - dell_dsu_reboot_required | bool
+    - not dell_dsu_reboot | bool
+
+- name: update | Reboot to complete updates
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ dell_dsu_reboot_timeout }}"
+  become: true
+  when:
+    - dell_dsu_reboot_required | bool
+    - dell_dsu_reboot | bool
+
+- name: update | Fail the host after a partial update failure
+  ansible.builtin.fail:
+    msg: >-
+      DSU applied only part of the updates on {{ inventory_hostname }} (return code {{ dell_dsu_update_rc }}).
+      {{ 'The host was rebooted as requested. ' if (dell_dsu_reboot_required | bool and dell_dsu_reboot | bool) else '' }}
+      Review the DSU log and re-run. Output: {{ dell_dsu_update_output | join(' | ') }}
+  when: dell_dsu_update_partial | bool

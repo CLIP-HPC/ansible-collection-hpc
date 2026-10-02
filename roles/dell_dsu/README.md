@@ -13,6 +13,8 @@ This role does not touch the scheduler. Drain nodes (e.g. in Slurm) before apply
 - `dell_dsu_apply_downgrades`: Also pass `--apply-downgrades`. Default: `false`.
 - `dell_dsu_reboot`: Reboot when DSU reports a reboot is required (return code 8). Default: `false`.
 - `dell_dsu_reboot_timeout`: Seconds to wait for the host after reboot. Default: `1800`.
+- `dell_dsu_apply_timeout` / `dell_dsu_apply_poll_interval`: `dsu --apply-upgrades` runs in the background (async) and is polled, so a dropped SSH connection neither kills the update nor fails the host. Maximum run time in seconds (the job is killed after this) and polling interval. Default: `3600` / `30`.
+- `dell_dsu_wait_timeout`: Before any DSU command, the role waits up to this many seconds for an already running `dsu` process (for example from an earlier run that lost its connection) instead of failing with "DSU already in use!". Default: `3600`.
 - `dell_dsu_install`: Install DSU before use. Default: `true`.
 - `dell_dsu_package`: Package installed from the repositories configured by the bootstrap script, only when it is not installed yet (initial bootstrapping); an installed DSU is never upgraded or reinstalled by the role. Default: `dell-system-update`.
 - `dell_dsu_binary`: Path of the `dsu` binary. Default: `/usr/sbin/dsu`.
@@ -43,6 +45,7 @@ ansible-playbook clip.hpc.dell_dsu_update -e dell_dsu_hosts=node01 -e dell_dsu_r
 
 ## Notes
 
+- If the connection is lost for longer than the polling retries allow, the host fails but DSU keeps running on the node; re-running the play waits for it to finish and then re-previews what is left. The inventory and preview commands are short and are not retried.
 - "Updates available" is decided by `dsu --preview` return code 34 ("No Applicable Updates Found"); any other accepted code counts as updates available.
 - DSU return codes 25 and 26 (partial failure / partial failure and reboot required) mean some updates were applied: the role still reboots when requested, and then fails the host.
 - If `dsu --inventory` fails because DSU cannot verify its libraries (return code 40, or "integrity check failed"), the role stops with a hint to check the bootstrap. This is also the check that the bootstrap worked.

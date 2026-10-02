@@ -11,6 +11,12 @@ dell_dsu_apply_downgrades: false
 # Reboot after applying when DSU reports that a reboot is required.
 dell_dsu_reboot: false
 dell_dsu_reboot_timeout: 1800
+# DSU apply runs in the background (async) so a dropped SSH connection does not
+# kill it. Maximum run time in seconds (the job is killed after this) and polling
+# interval; an already running dsu process is waited for up to dell_dsu_wait_timeout.
+dell_dsu_apply_timeout: 3600
+dell_dsu_apply_poll_interval: 30
+dell_dsu_wait_timeout: 3600
 
 # Installation of Dell System Update (DSU)
 dell_dsu_install: true

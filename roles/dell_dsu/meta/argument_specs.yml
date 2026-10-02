@@ -25,6 +25,18 @@ argument_specs:
         type: int
         description: Seconds to wait for the host to come back after a reboot.
         default: 1800
+      dell_dsu_apply_timeout:
+        type: int
+        description: Maximum run time in seconds of the background `dsu --apply-upgrades` job; it is killed after this.
+        default: 3600
+      dell_dsu_apply_poll_interval:
+        type: int
+        description: Seconds between polls of the background DSU job (and of an already running dsu process).
+        default: 30
+      dell_dsu_wait_timeout:
+        type: int
+        description: Seconds to wait for an already running dsu process to finish before failing.
+        default: 3600
       dell_dsu_install:
         type: bool
         description: Install the DSU package before use.

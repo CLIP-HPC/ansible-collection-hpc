@@ -1,7 +1,9 @@
 ---
-# DSU prints "DSU already in use!" when a stale lock file is left behind by a
-# killed or crashed run. Dell's documented workaround is to delete it. Only do
-# so when no dsu process is running, so a live update is never disturbed.
+# DSU allows a single instance. An update started by an earlier run (for
+# example one whose SSH connection dropped while it kept running in the
+# background) must finish first: wait for it instead of failing with
+# "DSU already in use!". A stale lock file left by a killed run is removed
+# (Dell's documented workaround), but only when no dsu process is running.
 - name: lock | Look for a running dsu process
   ansible.builtin.command:
     argv: [pgrep, -x, dsu]
@@ -9,7 +11,27 @@
   changed_when: false
   failed_when: dell_dsu_pgrep.rc not in [0, 1]
   check_mode: false
-  when: dell_dsu_clear_stale_lock | bool
+
+- name: lock | Wait for a running dsu process to finish
+  ansible.builtin.command:
+    argv: [pgrep, -x, dsu]
+  register: dell_dsu_pgrep_wait
+  changed_when: false
+  failed_when: dell_dsu_pgrep_wait.rc not in [0, 1]
+  until: dell_dsu_pgrep_wait.rc == 1
+  retries: "{{ _dell_dsu_wait_retries }}"
+  delay: "{{ dell_dsu_apply_poll_interval }}"
+  check_mode: false
+  when: dell_dsu_pgrep.rc == 0
+
+- name: lock | Fail when dsu is still running after the wait
+  ansible.builtin.fail:
+    msg: >-
+      {{ inventory_hostname }}: a dsu process was still running after {{ dell_dsu_wait_timeout }}s
+      (pid {{ dell_dsu_pgrep_wait.stdout_lines | default(dell_dsu_pgrep.stdout_lines) | join(', ') }}).
+      Not starting another DSU command.
+  when:
+    - dell_dsu_pgrep_wait.rc | default(1) == 0
 
 - name: lock | Look for a DSU lock file
   ansible.builtin.stat:
@@ -24,15 +46,4 @@
   become: true
   when:
     - dell_dsu_clear_stale_lock | bool
-    - dell_dsu_lock_stat.stat.exists
-    - dell_dsu_pgrep.rc == 1
-
-- name: lock | Warn when DSU is genuinely running
-  ansible.builtin.debug:
-    msg: >-
-      {{ inventory_hostname }}: a dsu process is running ({{ dell_dsu_pgrep.stdout_lines | join(', ') }});
-      leaving {{ dell_dsu_lock_file }} in place. The next DSU command will fail with "DSU already in use!" until it finishes.
-  when:
-    - dell_dsu_clear_stale_lock | bool
-    - dell_dsu_pgrep.rc == 0
     - dell_dsu_lock_stat.stat.exists

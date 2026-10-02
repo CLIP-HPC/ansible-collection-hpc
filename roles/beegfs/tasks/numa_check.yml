@@ -1,6 +1,7 @@
 ---
 # Compares the NUMA node reported by sysfs for numa_check_path against numa_check_zone.
-# Expects numa_check_path, numa_check_label and numa_check_zone to be set by the caller.
+# Expects numa_check_path, numa_check_label, numa_check_zone and numa_check_service
+# (the BeeGFS service being validated, for the error message) to be set by the caller.
 
 - name: Check availability of NUMA node info for {{ numa_check_label }}
   ansible.builtin.stat:
@@ -19,7 +20,7 @@
   ansible.builtin.fail:
     msg: >-
       {{ numa_check_label }} is attached to NUMA node {{ beegfs_numa_check_node }},
-      but tuneBindToNumaZone is set to {{ numa_check_zone }} for BeeGFS storage port {{ oss_port }}.
+      but tuneBindToNumaZone is set to {{ numa_check_zone }} for {{ numa_check_service }}.
   when:
     - beegfs_numa_check_stat.stat.exists
     - beegfs_numa_check_node | int >= 0

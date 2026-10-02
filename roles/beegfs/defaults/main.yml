@@ -31,6 +31,16 @@ beegfs_conn_auth_beegfs_group: false
 # https://doc.beegfs.io/latest/advanced_topics/network_configuration.html#configure-allowed-network-interfaces
 beegfs_interfaces: []
 
+# How the NUMA-bound meta and OSS services use NICs on other NUMA zones, when
+# their interfaces are derived from beegfs_interfaces by NUMA zone:
+#   true  - NUMA-local NIC(s) first, the other NIC(s) after them as an HA
+#           fallback; the preferred (first) NIC must be NUMA-local.
+#   false - NUMA-local NIC(s) only, no fallback; every NIC must be NUMA-local,
+#           and a service without a local NIC fails the run.
+# Explicit beegfs_meta_interfaces / beegfs_oss[*].interfaces lists are used
+# as given, but validated the same way.
+beegfs_numa_nic_fallback: true
+
 # Optional connInterfacesFile advanced-filter restriction (BeeGFS >= 8.2),
 # applied to every plain interface name in beegfs_interfaces: when either is
 # set, each "<name>" line is rewritten as "<name> <addr> <protocol>" (a
@@ -38,9 +48,9 @@ beegfs_interfaces: []
 # holds plain interface names (e.g. from NUMA auto-discovery, or a manually
 # curated name list) - don't set these if beegfs_interfaces already contains
 # raw filter-syntax entries of its own, since the two would be concatenated.
-# Applies globally (global connInterfacesFile, connRDMAInterfacesFile, and
-# every beegfs_oss entry's own connInterfacesFile) - not overridable per
-# beegfs_oss entry.
+# Applies globally (global connInterfacesFile, connRDMAInterfacesFile, the
+# meta service's and every beegfs_oss entry's own connInterfacesFile) - not
+# overridable per beegfs_oss entry.
 beegfs_conn_interfaces_addr: # single IP address to require, e.g. "10.0.0.5" - unset/"*" allows any.
 beegfs_conn_interfaces_protocol: # "4", "6" - unset/"*" allows either.
 
@@ -154,6 +164,16 @@ beegfs_meta_dev:  # /dev/sdb
 beegfs_meta_fstype: "ext4"
 beegfs_meta_filesystem_opts: "-i 2048 -I 1024 -J size=400 -O dir_index,filetype"
 beegfs_meta_mount_opts: "noatime,nodiratime,auto"
+# Network interfaces for the metadata service, in order of preference,
+# overriding beegfs_interfaces. If empty and beegfs_meta_tune_bind_to_numa_zone
+# is set, this is beegfs_interfaces reordered so the NIC(s) local to that NUMA
+# zone come first, with or without the others as a fallback depending on
+# beegfs_numa_nic_fallback (plain interface names only, like the per-OSS
+# ordering).
+beegfs_meta_interfaces: []
+# The metadata service's own connInterfacesFile, kept separate from the
+# global /etc/beegfs/connInterfacesFile that the client also uses.
+beegfs_meta_conn_interfaces_file: /etc/beegfs/beegfs-meta-connInterfacesFile
 
 # Client mount configs
 beegfs_client_mounts: []
@@ -271,6 +291,16 @@ beegfs_oss_tune_worker_buf_size:
 # place - only keys with a value set here get patched.
 # https://doc.beegfs.io/latest/advanced_topics/metadata_tuning.html
 beegfs_meta_tune_num_stream_listeners:
+# tuneNumCommSlaves: threads dedicated to parallel communication with other
+# nodes. BeeGFS default: 2 * tuneNumWorkers.
+beegfs_meta_tune_num_comm_slaves:
+# tuneDefaultChunkSize (e.g. "1m") / tuneDefaultNumStripeTargets: stripe
+# pattern given to the root directory, which files and directories inherit.
+# Only take effect when the meta service owning the root directory creates
+# it, i.e. on a new file system - an existing root directory keeps its
+# pattern (change that with "beegfs entry set" instead). BeeGFS default: 512k, 4.
+beegfs_meta_tune_default_chunk_size:
+beegfs_meta_tune_default_num_stripe_targets:
 beegfs_meta_tune_use_per_user_msg_queues:
 beegfs_meta_tune_use_aggressive_stream_poll:
 # Off = clients may serve slightly stale cached metadata. Only safe for

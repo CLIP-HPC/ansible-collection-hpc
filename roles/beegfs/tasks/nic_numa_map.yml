@@ -1,0 +1,30 @@
+---
+# Builds beegfs_nic_numa_map (interface name -> NUMA node) for every entry in
+# beegfs_interfaces, shared by the OSS and meta interface ordering. Entries
+# that aren't plain interface names (advanced filter syntax), or whose NUMA
+# node sysfs reports as -1/missing, are normalized to NUMA node 0.
+
+- name: Read NUMA node for each configured BeeGFS interface
+  ansible.builtin.slurp:
+    src: "/sys/class/net/{{ item }}/device/numa_node"
+  loop: "{{ beegfs_interfaces }}"
+  loop_control:
+    label: "{{ item }}"
+  register: beegfs_nic_numa_raw
+  ignore_errors: true
+
+- name: Initialize the NIC-to-NUMA-node map
+  ansible.builtin.set_fact:
+    beegfs_nic_numa_map: {}
+
+- name: Record NUMA node per interface, negative/missing normalized to 0
+  ansible.builtin.set_fact:
+    beegfs_nic_numa_map: >-
+      {{
+        beegfs_nic_numa_map | combine({
+          item.item: ([0, (0 if (item.failed or item.content is not defined) else (item.content | b64decode | trim | int))] | max)
+        })
+      }}
+  loop: "{{ beegfs_nic_numa_raw.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"

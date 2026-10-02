@@ -30,6 +30,12 @@
     index_var: ix
   tags: always
 
+- name: Reset the flattened OSS port and target lists
+  ansible.builtin.set_fact:
+    beegfs_oss_ports: []
+    beegfs_oss_targets: []
+  tags: always
+
 - name: Determine mount paths and labels for OSS
   vars:
     # ix (from subelements' loop_control) is the flattened index across ALL
@@ -46,12 +52,40 @@
     oss_path: "{{ beegfs_oss_path_prefix }}/oss-data-{{ ix }}"
     oss_dev_label: "ST-{{ item.0.key }}-{{ oss_local_ix }}"
     oss_target_id: "{{ beegfs_oss_id_map[item.0.key] + (oss_local_ix | int + 1) }}"
+    oss_target: >-
+      {{
+        {'oss_storage_id': beegfs_oss_id_map[item.0.key],
+         'oss_target_id': (oss_target_id | int),
+         'mount_path': oss_path,
+         'label': oss_dev_label}
+      }}
   ansible.builtin.set_fact:
+    beegfs_oss_labels_mount_paths: "{{ beegfs_oss_labels_mount_paths | default({}) | combine({item.1: oss_target}) }}"
     # yamllint disable rule:line-length
-    beegfs_oss_labels_mount_paths: "{{ beegfs_oss_labels_mount_paths | default({}) | combine({item.1: {'oss_storage_id': beegfs_oss_id_map[item.0.key], 'oss_target_id': (oss_target_id | int), 'mount_path': oss_path, 'label': oss_dev_label}}) }}"
+    beegfs_oss_targets: "{{ beegfs_oss_targets + [oss_target | combine({'port': item.0.key, 'dev': item.1, 'first_in_port': (oss_local_ix | int == 0), 'provisioned': (beegfs_oss_device_provisioned[item.1] | default(false) | bool), 'numa_zone': item.0.value.numa_zone | default(none)})] }}"
+    # yamllint enable rule:line-length
   loop: "{{ beegfs_oss | dict2items | subelements('value.devices') }}"
   loop_control:
     index_var: ix
+  tags: always
+
+# beegfs_oss_ports/beegfs_oss_targets are flat per-host lists that oss.yml's
+# tasks loop over directly. Looping include_tasks per port/device instead
+# makes every host's include unique (its loop vars differ), and the linear
+# strategy then runs those includes one host at a time.
+- name: Determine per-port OSS settings
+  ansible.builtin.set_fact:
+    beegfs_oss_ports: >-
+      {{
+        beegfs_oss_ports + [{
+          'port': item.key,
+          'interfaces': item.value.interfaces | default(beegfs_interfaces),
+          'numa_zone': item.value.numa_zone | default(none),
+        }]
+      }}
+  loop: "{{ beegfs_oss | dict2items }}"
+  loop_control:
+    label: "port {{ item.key }}"
   tags: always
 
 - name: Create BeeGFS cluster

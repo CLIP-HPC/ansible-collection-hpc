@@ -34,6 +34,12 @@
       when: (not (beegfs_meta_already_provisioned | default(false) | bool)) or (beegfs_force_format | bool)
       notify: Restart BeeGFS meta service
 
+    # The mount below goes through /dev/disk/by-label, which udev only
+    # creates some time after mkfs returns. Returns at once if udev is idle.
+    - name: Wait for udev to create the new filesystem label
+      ansible.builtin.command: udevadm settle
+      changed_when: false
+
     - name: Mount filesystem
       vars:
         meta_fstype: "{{ beegfs_meta_fstype | default(beegfs_fstype, true) }}"
@@ -104,18 +110,31 @@
 # With beegfs_numa_nic_fallback the remaining NICs are an HA fallback, so only
 # the preferred one must be local; without it every NIC must be.
 - name: Validate metadata NIC(s) are attached to the configured NUMA zone
-  ansible.builtin.include_tasks: numa_check.yml
-  vars:
-    numa_check_path: "/sys/class/net/{{ meta_nic }}/device/numa_node"
-    numa_check_label: "{{ 'Preferred NIC' if beegfs_numa_nic_fallback | bool else 'NIC' }} {{ meta_nic }}"
-    numa_check_zone: "{{ beegfs_meta_tune_bind_to_numa_zone }}"
-    numa_check_service: "the BeeGFS metadata service"
-  loop: "{{ beegfs_meta_resolved_interfaces[:1] if beegfs_numa_nic_fallback | bool else beegfs_meta_resolved_interfaces }}"
-  loop_control:
-    loop_var: meta_nic
   when:
     - beegfs_meta_tune_bind_to_numa_zone is not none
     - beegfs_meta_tune_bind_to_numa_zone | string | length > 0
+  block:
+    - name: Reset the metadata NIC(s) to validate
+      ansible.builtin.set_fact:
+        beegfs_meta_numa_checks: []
+
+    - name: Collect the metadata NIC(s) to validate
+      ansible.builtin.set_fact:
+        beegfs_meta_numa_checks: >-
+          {{
+            beegfs_meta_numa_checks + [{
+              'path': '/sys/class/net/' ~ item ~ '/device/numa_node',
+              'label': ('Preferred NIC' if beegfs_numa_nic_fallback | bool else 'NIC') ~ ' ' ~ item,
+              'zone': beegfs_meta_tune_bind_to_numa_zone,
+              'service': 'the BeeGFS metadata service',
+            }]
+          }}
+      loop: "{{ beegfs_meta_resolved_interfaces[:1] if beegfs_numa_nic_fallback | bool else beegfs_meta_resolved_interfaces }}"
+
+    - name: Validate the collected metadata NIC(s)
+      ansible.builtin.import_tasks: numa_check.yml
+      vars:
+        numa_checks: "{{ beegfs_meta_numa_checks }}"
 
 - name: Create connInterfacesFile for BeeGFS metadata server
   vars:

@@ -1,27 +1,39 @@
 ---
-# Compares the NUMA node reported by sysfs for numa_check_path against numa_check_zone.
-# Expects numa_check_path, numa_check_label, numa_check_zone and numa_check_service
-# (the BeeGFS service being validated, for the error message) to be set by the caller.
+# Compares the NUMA node reported by sysfs for each entry in numa_checks
+# against that entry's zone. Expects numa_checks to be set by the caller as a
+# list of {path, label, zone, service} (service being the BeeGFS service
+# validated, for the error message). Loops instead of being included once per
+# entry, so all hosts run these tasks together.
 
-- name: Check availability of NUMA node info for {{ numa_check_label }}
+- name: Check availability of NUMA node info
   ansible.builtin.stat:
-    path: "{{ numa_check_path }}"
+    path: "{{ item.path }}"
+  loop: "{{ numa_checks }}"
+  loop_control:
+    label: "{{ item.label }}"
   register: beegfs_numa_check_stat
 
-- name: Read NUMA node for {{ numa_check_label }}
+- name: Read NUMA node
   ansible.builtin.slurp:
-    src: "{{ numa_check_path }}"
+    src: "{{ item.item.path }}"
+  loop: "{{ beegfs_numa_check_stat.results }}"
+  loop_control:
+    label: "{{ item.item.label }}"
   register: beegfs_numa_check_raw
-  when: beegfs_numa_check_stat.stat.exists
+  when: item.stat.exists
 
-- name: Fail on tuneBindToNumaZone mismatch for {{ numa_check_label }}
+- name: Fail on tuneBindToNumaZone mismatch
   vars:
-    beegfs_numa_check_node: "{{ beegfs_numa_check_raw.content | b64decode | trim }}"
+    numa_check: "{{ item.item.item }}"
+    beegfs_numa_check_node: "{{ item.content | b64decode | trim }}"
   ansible.builtin.fail:
     msg: >-
-      {{ numa_check_label }} is attached to NUMA node {{ beegfs_numa_check_node }},
-      but tuneBindToNumaZone is set to {{ numa_check_zone }} for {{ numa_check_service }}.
+      {{ numa_check.label }} is attached to NUMA node {{ beegfs_numa_check_node }},
+      but tuneBindToNumaZone is set to {{ numa_check.zone }} for {{ numa_check.service }}.
+  loop: "{{ beegfs_numa_check_raw.results }}"
+  loop_control:
+    label: "{{ item.item.item.label }}"
   when:
-    - beegfs_numa_check_stat.stat.exists
+    - item.content is defined
     - beegfs_numa_check_node | int >= 0
-    - beegfs_numa_check_node | int != numa_check_zone | int
+    - beegfs_numa_check_node | int != numa_check.zone | int

@@ -121,7 +121,7 @@ beegfs_disk_device_regex: '^(nvme[0-9]+n[0-9]+|vd[a-z]|sd[a-z])$'
 # Device path -> bool, populated by resolve_oss_devices.yml: true if that
 # device was resolved from an existing ST-<port>-<idx> filesystem label
 # (already provisioned in a previous run), false if freshly discovered.
-# fs.yml's format guard uses this to skip reformatting already-provisioned
+# oss.yml's format guard uses this to skip reformatting already-provisioned
 # disks even if their current device name changed (e.g. after a reboot).
 # Always defined as {} so looking up an unresolved device stays a safe
 # dict-key-miss rather than a subscript on an undefined variable.

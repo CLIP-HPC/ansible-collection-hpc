@@ -1,143 +1,244 @@
 ---
+# Every task here loops over beegfs_oss_ports (one entry per storage port) or
+# beegfs_oss_targets (one entry per storage device), both set in main.yml,
+# instead of being included once per port/device. That keeps the tasks
+# identical across hosts, so the linear strategy runs them on all hosts in
+# parallel rather than one host after the other.
+
 - name: Create storage config dirs
   ansible.builtin.file:
-    path: "/etc/beegfs/{{ oss_port }}.d/"
+    path: "/etc/beegfs/{{ item.port }}.d/"
     state: directory
     mode: "0755"
     owner: root
     group: root
+  loop: "{{ beegfs_oss_ports }}"
+  loop_control:
+    label: "port {{ item.port }}"
   become: true
 
-- name: Validate configured OSS devices are attached to the configured NUMA zone
-  ansible.builtin.include_tasks: numa_check.yml
+- name: Reset the OSS devices and NIC(s) to validate
+  ansible.builtin.set_fact:
+    beegfs_oss_numa_checks: []
+
+- name: Collect OSS devices to validate against their port's NUMA zone
   vars:
     # /sys/block/<nvmeXnY>/device (and its /sys/class/block alias) is a
     # symlink to the NVMe *controller* node (nvmeX), not to its PCI
     # function, so numa_node isn't there - it's one more "device" hop up, at
     # the controller's own device symlink.
-    oss_dev_basename: "{{ oss_dev | basename }}"
-    numa_check_path: >-
+    oss_dev_basename: "{{ item.dev | basename }}"
+    oss_dev_numa_path: >-
       {{
         ('/sys/class/nvme/' + (oss_dev_basename | regex_replace('n[0-9]+$', '')) + '/device/numa_node')
         if (oss_dev_basename is match('^nvme[0-9]+n[0-9]+$'))
         else ('/sys/class/block/' + oss_dev_basename + '/device/numa_node')
       }}
-    numa_check_label: "OSS device {{ oss_dev }}"
-    numa_check_zone: "{{ oss_tune_bind_to_numa_zone }}"
-    numa_check_service: "BeeGFS storage port {{ oss_port }}"
-  loop: "{{ oss_devices }}"
+  ansible.builtin.set_fact:
+    beegfs_oss_numa_checks: >-
+      {{
+        beegfs_oss_numa_checks + [{
+          'path': oss_dev_numa_path,
+          'label': 'OSS device ' ~ item.dev,
+          'zone': item.numa_zone,
+          'service': 'BeeGFS storage port ' ~ item.port,
+        }]
+      }}
+  loop: "{{ beegfs_oss_targets | rejectattr('numa_zone', 'none') | list }}"
   loop_control:
-    loop_var: oss_dev
-  when:
-    - oss_tune_bind_to_numa_zone is defined
-    - oss_tune_bind_to_numa_zone is not none
+    label: "{{ item.dev }}"
 
 # With beegfs_numa_nic_fallback the remaining NICs are an HA fallback, so only
 # the preferred one must be local; without it every NIC must be.
-- name: Validate OSS NIC(s) are attached to the configured NUMA zone
-  ansible.builtin.include_tasks: numa_check.yml
+- name: Collect OSS NIC(s) to validate against their port's NUMA zone
   vars:
-    numa_check_path: "/sys/class/net/{{ oss_nic }}/device/numa_node"
-    numa_check_label: "{{ 'Preferred NIC' if beegfs_numa_nic_fallback | bool else 'NIC' }} {{ oss_nic }}"
-    numa_check_zone: "{{ oss_tune_bind_to_numa_zone }}"
-    numa_check_service: "BeeGFS storage port {{ oss_port }}"
-  loop: "{{ interfaces[:1] if beegfs_numa_nic_fallback | bool else interfaces }}"
+    oss_port: "{{ item.0 }}"
+    oss_nic: "{{ item.1 }}"
+  ansible.builtin.set_fact:
+    beegfs_oss_numa_checks: >-
+      {{
+        beegfs_oss_numa_checks + [{
+          'path': '/sys/class/net/' ~ oss_nic ~ '/device/numa_node',
+          'label': ('Preferred NIC' if beegfs_numa_nic_fallback | bool else 'NIC') ~ ' ' ~ oss_nic,
+          'zone': oss_port.numa_zone,
+          'service': 'BeeGFS storage port ' ~ oss_port.port,
+        }]
+      }}
+  loop: "{{ beegfs_oss_ports | rejectattr('numa_zone', 'none') | list | subelements('interfaces') }}"
   loop_control:
-    loop_var: oss_nic
-  when:
-    - oss_tune_bind_to_numa_zone is defined
-    - oss_tune_bind_to_numa_zone is not none
-    - interfaces | default([]) | length > 0
+    label: "port {{ item.0.port }} {{ item.1 }}"
+  when: (not (beegfs_numa_nic_fallback | bool)) or (item.1 == item.0.interfaces[0])
+
+- name: Validate OSS devices and NIC(s) are attached to the configured NUMA zone
+  ansible.builtin.import_tasks: numa_check.yml
+  vars:
+    numa_checks: "{{ beegfs_oss_numa_checks }}"
 
 - name: Create connInterfacesFile
   vars:
-    beegfs_interfaces: "{{ interfaces }}"
+    beegfs_interfaces: "{{ item.interfaces }}"
   ansible.builtin.template:
     src: connInterfacesFile.j2
-    dest: /etc/beegfs/{{ oss_port }}.d/connInterfacesFile
+    dest: /etc/beegfs/{{ item.port }}.d/connInterfacesFile
     mode: "0644"
     owner: root
     group: root
+  loop: "{{ beegfs_oss_ports }}"
+  loop_control:
+    label: "port {{ item.port }}"
   become: true
 
 - name: Add template beegfs-storage conf
   ansible.builtin.copy:
     src: "/etc/beegfs/beegfs-storage.conf"
-    dest: "/etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf"
+    dest: "/etc/beegfs/{{ item.port }}.d/beegfs-storage.conf"
     remote_src: true
     force: false
     mode: "0644"
     owner: root
     group: root
+  loop: "{{ beegfs_oss_ports }}"
+  loop_control:
+    label: "port {{ item.port }}"
   become: true
   notify: Restart BeeGFS storage service
 
 - name: Set Storage Port
   ansible.builtin.lineinfile:
-    path: "/etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf"
+    path: "/etc/beegfs/{{ item.port }}.d/beegfs-storage.conf"
     regexp: '^connStoragePort'
-    line: "connStoragePort = {{ oss_port }}"
+    line: "connStoragePort = {{ item.port }}"
+  loop: "{{ beegfs_oss_ports }}"
+  loop_control:
+    label: "port {{ item.port }}"
   become: true
   notify: Restart BeeGFS storage service
 
 - name: Specify connInterfacesFile
   ansible.builtin.lineinfile:
-    path: "/etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf"
+    path: "/etc/beegfs/{{ item.port }}.d/beegfs-storage.conf"
     regexp: "^connInterfacesFile"
-    line: "connInterfacesFile           = /etc/beegfs/{{ oss_port }}.d/connInterfacesFile"
+    line: "connInterfacesFile           = /etc/beegfs/{{ item.port }}.d/connInterfacesFile"
     owner: root
     group: root
     mode: "0644"
+  loop: "{{ beegfs_oss_ports }}"
+  loop_control:
+    label: "port {{ item.port }}"
   become: true
   notify: Restart BeeGFS storage service
 
 - name: Prepare storage devices
-  ansible.builtin.include_tasks: fs.yml
-  vars:
-    oss_path: "{{ beegfs_oss_labels_mount_paths[oss_dev].mount_path }}"
-    oss_dev_label: "{{ beegfs_oss_labels_mount_paths[oss_dev].label }}"
-    oss_dev_already_provisioned: "{{ beegfs_oss_device_provisioned[oss_dev] | default(false) }}"
   tags: ["beegfs", "oss", "fs"]
-  args:
-    apply:
-      tags: ["beegfs", "oss", "fs"]
-  loop: "{{ oss_devices }}"
-  loop_control:
-    loop_var: oss_dev
-    index_var: oss_idx
+  block:
+    - name: Stat the OSS devices
+      ansible.builtin.stat:
+        path: "{{ item.dev }}"
+      loop: "{{ beegfs_oss_targets }}"
+      loop_control:
+        label: "{{ item.dev }}"
+      register: beegfs_oss_dev_stat
 
+    - name: Fail if an OSS device does not exist
+      ansible.builtin.fail:
+        msg: OSS device {{ item.item.dev }} does not exist
+      loop: "{{ beegfs_oss_dev_stat.results }}"
+      loop_control:
+        label: "{{ item.item.dev }}"
+      when: not item.stat.exists
 
+    - name: Find each device's actual current mount point, if any
+      # mount_path is only where THIS run intends to mount the device - it
+      # need not be where the device is currently mounted (e.g. a stale mount
+      # left over from before a label/index scheme change, or from before
+      # this disk was reassigned to a different mount_path). Unmounting by
+      # mount_path instead of by device would silently no-op when they
+      # differ, then mkfs would fail with "contains a mounted filesystem"
+      # against the still-mounted device.
+      ansible.builtin.command: findmnt -n -o TARGET --source {{ item.dev }}
+      loop: "{{ beegfs_oss_targets }}"
+      loop_control:
+        label: "{{ item.dev }}"
+      register: beegfs_oss_dev_current_mount
+      changed_when: false
+      failed_when: false
+      when: beegfs_force_format | bool
+
+    - name: Unmount storage devices if beegfs_force_format is true and they are currently mounted
+      become: true
+      ansible.posix.mount:
+        path: "{{ item }}"
+        state: unmounted
+      loop: "{{ beegfs_oss_dev_current_mount.results | map(attribute='stdout_lines', default=[]) | flatten }}"
+      when: beegfs_force_format | bool
+
+    - name: Attempt to format if the device isn't already provisioned or if beegfs_force_format is true
+      community.general.filesystem:
+        dev: "{{ item.dev }}"
+        fstype: "{{ beegfs_fstype }}"
+        force: "{{ beegfs_force_format | bool }}"
+        opts: "{{ beegfs_filesystem_opts }} -L {{ item.label }}"
+      loop: "{{ beegfs_oss_targets }}"
+      loop_control:
+        label: "{{ item.dev }}"
+      # item.provisioned (sourced from beegfs_oss_device_provisioned) means
+      # the device was resolved from its existing filesystem label, i.e. this
+      # disk was already formatted in a previous run - skip reformatting it
+      # even though its current device name may differ from last time
+      # (device names aren't stable across reboots). A statically configured
+      # device that never went through label resolution is treated as "not
+      # provisioned", preserving prior behavior.
+      when: (not item.provisioned) or (beegfs_force_format | bool)
+      become: true
+
+    # The mount below goes through /dev/disk/by-label, which udev only
+    # creates some time after mkfs returns. Returns at once if udev is idle.
+    - name: Wait for udev to create the new filesystem labels
+      ansible.builtin.command: udevadm settle
+      changed_when: false
+      become: true
+
+    - name: Mount filesystems, fail if the fstype doesn't match
+      become: true
+      ansible.posix.mount:
+        src: "/dev/disk/by-label/{{ item.label }}"
+        path: "{{ item.mount_path }}"
+        fstype: "{{ beegfs_fstype }}"
+        state: mounted
+        opts: "{{ beegfs_mount_opts }}"
+      loop: "{{ beegfs_oss_targets }}"
+      loop_control:
+        label: "{{ item.dev }}"
+
+# Relies on beegfs_oss_targets keeping each port's devices in order, so the
+# first device of a port (first_in_port, run with -r to replace the
+# storeStorageDirectory list) is set up before that port's other devices.
 - name: Run storage service setup script
-  vars:
-    oss_path: "{{ beegfs_oss_labels_mount_paths[oss_dev].mount_path }}"
-    oss_replace: "{{ '-r' if oss_idx == 0 else '' }}"
-  loop: "{{ oss_devices }}"
-  loop_control:
-    index_var: oss_idx
-    loop_var: oss_dev
   ansible.builtin.command: |
     /opt/beegfs/sbin/beegfs-setup-storage -f \
-    -p {{ oss_path }}  \
-    {{ oss_replace }} \
+    -p {{ item.mount_path }}  \
+    {{ '-r' if item.first_in_port else '' }} \
     -m {{ beegfs_mgmt_host }} \
-    -c /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf \
-    -s {{ beegfs_oss_labels_mount_paths[oss_dev].oss_storage_id | int }} \
-    -i {{ beegfs_oss_labels_mount_paths[oss_dev].oss_target_id | int }} \
+    -c /etc/beegfs/{{ item.port }}.d/beegfs-storage.conf \
+    -s {{ item.oss_storage_id | int }} \
+    -i {{ item.oss_target_id | int }} \
   args:
-    creates: "{{ oss_path }}/targetNumID"
+    creates: "{{ item.mount_path }}/targetNumID"
+  loop: "{{ beegfs_oss_targets }}"
+  loop_control:
+    label: "{{ item.dev }}"
   become: true
   notify: Restart BeeGFS storage service
-
 
 - name: Configure tunings for BeeGFS storage server
   become: true
   ansible.builtin.lineinfile:
-    path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
-    regexp: "^{{ item.key }}"
-    line: "{{ item.key }}{{ ' ' * ([1, 30 - item.key | length] | max) }}= {{ item.value }}"
+    path: /etc/beegfs/{{ item.0.port }}.d/beegfs-storage.conf
+    regexp: "^{{ item.1.key }}"
+    line: "{{ item.1.key }}{{ ' ' * ([1, 30 - item.1.key | length] | max) }}= {{ item.1.value }}"
   loop: >-
     {{
-      [
+      beegfs_oss_ports | product([
         {'key': 'tuneNumWorkers', 'value': beegfs_oss_tune_num_workers},
         {'key': 'connMaxInternodeNum', 'value': beegfs_conn_oss_max_internode_num},
         {'key': 'tuneFileReadSize', 'value': beegfs_oss_tune_file_read_size},
@@ -160,27 +261,19 @@
          'value': (beegfs_conn_restrict_outbound_interfaces | ternary('true', 'false'))
                   if beegfs_conn_restrict_outbound_interfaces is not none else none},
         {'key': 'connRDMATypeOfService', 'value': beegfs_conn_rdma_type_of_service},
-      ] | rejectattr('value', 'none') | list
+      ] | rejectattr('value', 'none') | list) | list
     }}
   loop_control:
-    label: "{{ item.key }}"
+    label: "port {{ item.0.port }} {{ item.1.key }}"
   notify: Restart BeeGFS storage service
 
-# Kept separate from the loop above: oss_tune_bind_to_numa_zone is sourced via
-# `numa_zone | default(omit)` in create.yml's vars: block. When numa_zone is
-# unset, that omit sentinel is NOT equivalent to Jinja "none" here - embedding
-# it in a dict literal's value (as the loop above does) silently renders as an
-# empty string instead of being filtered out by rejectattr('value', 'none'),
-# which would blank this line instead of leaving it untouched. The explicit
-# `is defined`/`is not none` checks below are the only combination that
-# correctly detects both the omitted and unset cases.
 - name: Configure tuneBindToNumaZone for BeeGFS storage server
   become: true
   ansible.builtin.lineinfile:
-    path: /etc/beegfs/{{ oss_port }}.d/beegfs-storage.conf
+    path: /etc/beegfs/{{ item.port }}.d/beegfs-storage.conf
     regexp: ^tuneBindToNumaZone
-    line: tuneBindToNumaZone           = {{ oss_tune_bind_to_numa_zone }}
-  when:
-    - oss_tune_bind_to_numa_zone is defined
-    - oss_tune_bind_to_numa_zone is not none
+    line: tuneBindToNumaZone           = {{ item.numa_zone }}
+  loop: "{{ beegfs_oss_ports | rejectattr('numa_zone', 'none') | list }}"
+  loop_control:
+    label: "port {{ item.port }}"
   notify: Restart BeeGFS storage service

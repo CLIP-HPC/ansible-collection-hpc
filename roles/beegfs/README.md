@@ -48,7 +48,7 @@ for meta, `ST-<port>-<index>` per OSS target). Labels live in the on-disk superb
 reboots; `/dev/disk/by-label/<label>` always resolves to whatever device currently holds that
 label. `beegfs_meta_dev`/`beegfs_oss[*].devices` auto-discovery checks for an existing label
 **first** - fresh NUMA/name-based discovery only ever runs for a slot that was never labeled (first
-bootstrap, or a genuinely new disk). The format tasks in `meta.yml`/`fs.yml` skip reformatting any
+bootstrap, or a genuinely new disk). The format tasks in `meta.yml`/`oss.yml` skip reformatting any
 device that was resolved from an existing label, regardless of its current name, unless
 `beegfs_force_format` is set - which reformats the *label-resolved* device in place, never a
 fresh-discovery guess. Moving an already-labeled role to different physical hardware on purpose
@@ -131,3 +131,26 @@ A host can mount more than one BeeGFS filesystem, including filesystems served b
             port: 8005
             mgmt_host: "beegfs-mgmt.other-cluster.example.org"
 ```
+
+### Deploying many nodes in parallel
+
+The role is written to run on every BeeGFS node of a play at the same time: per-port and per-device
+work loops inside a task rather than looping `include_tasks`, so the default `linear` strategy keeps all
+hosts in step. Ansible itself only talks to `forks` hosts at once (5 by default), so set it to at least
+the number of BeeGFS nodes, and enable pipelining, e.g. in `ansible.cfg`:
+
+```ini
+[defaults]
+forks = 50
+
+[ssh_connection]
+pipelining = True
+ssh_args = -o ControlMaster=auto -o ControlPersist=60s
+```
+
+Formatting new NVMe devices can spend most of its time discarding blocks. If the devices are new or
+already trimmed, adding `-K` to `beegfs_filesystem_opts` (and `beegfs_meta_filesystem_opts`) skips that
+for XFS.
+
+To see where time is spent, enable the `ansible.posix.profile_tasks` and `ansible.posix.timer`
+callbacks (`ANSIBLE_CALLBACKS_ENABLED=ansible.posix.profile_tasks,ansible.posix.timer`).

@@ -35,7 +35,9 @@ argument_specs:
         default: 2.3.0.1-26.08.00
       dell_dsu_rpm_url:
         type: str
-        description: URL the dell-system-update RPM is installed from. Derived from `dell_dsu_version` by default.
+        description: >-
+          URL the dell-system-update RPM is installed from, only when the package is not installed yet.
+          Derived from `dell_dsu_version` by default.
       dell_dsu_rpm_disable_gpg_check:
         type: bool
         description: Skip RPM signature verification when installing from the URL (Dell's key is not imported yet on a first install).

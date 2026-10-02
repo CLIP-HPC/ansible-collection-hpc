@@ -17,7 +17,7 @@ This role does not touch the scheduler. Drain nodes (e.g. in Slurm) before apply
 - `dell_dsu_package`: Package installed from the repositories configured by the bootstrap script, only when it is not installed yet (initial bootstrapping); an installed DSU is never upgraded or reinstalled by the role. Default: `dell-system-update`.
 - `dell_dsu_binary`: Path of the `dsu` binary. Default: `/usr/sbin/dsu`.
 - `dell_dsu_run_bootstrap` / `dell_dsu_bootstrap_marker`: The role downloads and runs Dell's `bootstrap.cgi` (with `y` fed to its prompts), which configures the DSU yum repositories and GPG keys, and then installs the package from them. This replaces the `dell-system-update` RPM `%post` scriptlet, which runs the same script but fails inside the RPM transaction and leaves DSU unable to run ("Shared library integrity check failed"). It runs once per host, when the marker file is missing or the package is not installed. Default: `true`.
-- `dell_dsu_bootstrap_url` / `dell_dsu_bootstrap_dest`: Where the bootstrap script is fetched from and saved to. It is downloaded over HTTPS and run as root without a checksum, exactly like the RPM scriptlet does.
+- `dell_dsu_bootstrap_url`: Where the bootstrap script is fetched from. It is downloaded to a temporary file (removed afterwards), over HTTPS, and run as root without a checksum, exactly like the RPM scriptlet does.
 - `dell_dsu_catalog_location`: Optional catalog (`.xml`, `.gz`, `.cab`) passed as `--catalog-location`. Default: `""`.
 - `dell_dsu_component_types`: Restrict to component types (`--component-type`), e.g. `[FRMW, BIOS]`. Default: `[]` (all).
 - `dell_dsu_extra_args`: Extra raw DSU arguments. Default: `[]`.

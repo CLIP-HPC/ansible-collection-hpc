@@ -21,7 +21,6 @@ dell_dsu_binary: /usr/sbin/dsu
 dell_dsu_run_bootstrap: true
 dell_dsu_bootstrap_marker: /var/lib/dell_dsu_bootstrap_done
 dell_dsu_bootstrap_url: https://linux.dell.com/repo/hardware/dsu/bootstrap.cgi
-dell_dsu_bootstrap_dest: /opt/dell/dsu/bootstrap.cgi
 
 # DSU invocation
 # Optional catalog (.xml, .gz or .cab) to use instead of the online repository.

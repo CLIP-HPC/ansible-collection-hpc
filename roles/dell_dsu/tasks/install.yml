@@ -20,43 +20,57 @@
         and (not dell_dsu_bootstrap_marker_stat.stat.exists or 'dell-system-update' not in ansible_facts['packages'])
       }}
 
-- name: install | Download Dell DSU bootstrap script
-  ansible.builtin.get_url:
-    url: "{{ dell_dsu_bootstrap_url }}"
-    dest: "{{ dell_dsu_bootstrap_dest }}"
-    owner: root
-    group: root
-    mode: '0755'
-    force: true
-    timeout: 60
-  become: true
-  retries: 3
-  delay: 5
-  register: dell_dsu_bootstrap_download
-  until: dell_dsu_bootstrap_download is succeeded
+# The bootstrap script is only needed once, so it is downloaded to a temporary
+# file that is always removed again (/opt/dell/dsu does not exist before the
+# package is installed).
+- name: install | Run the Dell DSU bootstrap script
   when: _dell_dsu_run_bootstrap_now | bool
+  become: true
+  block:
+    - name: install | Create a temporary file for the bootstrap script
+      ansible.builtin.tempfile:
+        state: file
+        prefix: dell_dsu_bootstrap_
+        suffix: .sh
+      register: dell_dsu_bootstrap_tmp
 
-# The RPM scriptlet pipes "y" into the bootstrap script to answer its prompts.
-- name: install | Run Dell DSU bootstrap script (configures the DSU repositories)
-  ansible.builtin.command:
-    argv: ["bash", "{{ dell_dsu_bootstrap_dest }}"]
-    stdin: "{{ 'y\n' * 50 }}"
-    stdin_add_newline: false
-  become: true
-  changed_when: true
-  when: _dell_dsu_run_bootstrap_now | bool
+    - name: install | Download Dell DSU bootstrap script
+      ansible.builtin.get_url:
+        url: "{{ dell_dsu_bootstrap_url }}"
+        dest: "{{ dell_dsu_bootstrap_tmp.path }}"
+        owner: root
+        group: root
+        mode: '0700'
+        force: true
+        timeout: 60
+      retries: 3
+      delay: 5
+      register: dell_dsu_bootstrap_download
+      until: dell_dsu_bootstrap_download is succeeded
 
-- name: install | Record that the Dell bootstrap ran
-  ansible.builtin.file:
-    path: "{{ dell_dsu_bootstrap_marker }}"
-    state: touch
-    owner: root
-    group: root
-    mode: '0644'
-    modification_time: preserve
-    access_time: preserve
-  become: true
-  when: _dell_dsu_run_bootstrap_now | bool
+    # The RPM scriptlet pipes "y" into the bootstrap script to answer its prompts.
+    - name: install | Run Dell DSU bootstrap script (configures the DSU repositories)
+      ansible.builtin.command:
+        argv: ["bash", "{{ dell_dsu_bootstrap_tmp.path }}"]
+        stdin: "{{ 'y\n' * 50 }}"
+        stdin_add_newline: false
+      changed_when: true
+
+    - name: install | Record that the Dell bootstrap ran
+      ansible.builtin.file:
+        path: "{{ dell_dsu_bootstrap_marker }}"
+        state: touch
+        owner: root
+        group: root
+        mode: '0644'
+        modification_time: preserve
+        access_time: preserve
+  always:
+    - name: install | Remove the temporary bootstrap script
+      ansible.builtin.file:
+        path: "{{ dell_dsu_bootstrap_tmp.path }}"
+        state: absent
+      when: dell_dsu_bootstrap_tmp.path is defined
 
 # Only installed when missing (initial bootstrapping); an installed DSU is never
 # upgraded or reinstalled by this role.

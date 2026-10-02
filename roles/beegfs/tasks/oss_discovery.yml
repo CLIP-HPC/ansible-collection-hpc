@@ -30,38 +30,19 @@
 - name: Discover interfaces for beegfs_oss entries that don't specify them
   when: beegfs_oss_needs_nic_discovery
   block:
-    - name: Read NUMA node for each configured BeeGFS interface
-      ansible.builtin.slurp:
-        src: "/sys/class/net/{{ item }}/device/numa_node"
-      loop: "{{ beegfs_interfaces }}"
-      loop_control:
-        label: "{{ item }}"
-      register: beegfs_oss_nic_numa_raw
-      ignore_errors: true
+    - name: Map each configured BeeGFS interface to its NUMA node
+      ansible.builtin.import_tasks: nic_numa_map.yml
 
-    - name: Initialize the NIC-to-NUMA-node map
-      ansible.builtin.set_fact:
-        beegfs_oss_nic_numa_map: {}
-
-    - name: Record NUMA node per interface, negative/missing normalized to 0
-      ansible.builtin.set_fact:
-        beegfs_oss_nic_numa_map: >-
-          {{
-            beegfs_oss_nic_numa_map | combine({
-              item.item: ([0, (0 if (item.failed or item.content is not defined) else (item.content | b64decode | trim | int))] | max)
-            })
-          }}
-      loop: "{{ beegfs_oss_nic_numa_raw.results | default([]) }}"
-      loop_control:
-        label: "{{ item.item }}"
-
+    # beegfs_numa_nic_fallback decides whether the non-local NIC(s) follow as
+    # an HA fallback or are left out, so the OSS only ever uses local NIC(s).
     - name: Fill in interfaces for beegfs_oss entries that don't specify them, NUMA-local NIC(s) first
       ansible.builtin.set_fact:
-        beegfs_oss: "{{ beegfs_oss | combine({item.key: (item.value | combine({'interfaces': local_nics + other_nics}))}) }}"
+        beegfs_oss: "{{ beegfs_oss | combine({item.key: (item.value | combine({'interfaces': local_nics + fallback_nics}))}) }}"
       vars:
+        fallback_nics: "{{ other_nics if beegfs_numa_nic_fallback | bool else [] }}"
         local_nic_names: >-
           {{
-            beegfs_oss_nic_numa_map
+            beegfs_nic_numa_map
             | dict2items(key_name='nic', value_name='numa')
             | selectattr('numa', 'equalto', item.value.numa_zone | int)
             | map(attribute='nic') | list
@@ -75,6 +56,25 @@
         - item.value.interfaces | default([]) | length == 0
         - item.value.numa_zone is defined
         - item.value.numa_zone is not none
+
+    # An empty connInterfacesFile would let BeeGFS use every interface, the
+    # opposite of what beegfs_numa_nic_fallback=false asks for.
+    - name: Fail if a beegfs_oss entry has no NUMA-local NIC while fallback is disabled
+      ansible.builtin.fail:
+        msg: >-
+          beegfs_oss port {{ item.key }} (numa_zone {{ item.value.numa_zone }})
+          has no NIC in beegfs_interfaces {{ beegfs_interfaces }} attached to
+          its NUMA zone, and beegfs_numa_nic_fallback is false - add a local
+          NIC, set `interfaces` for this entry, or enable the fallback.
+      loop: "{{ beegfs_oss | dict2items }}"
+      loop_control:
+        label: "port {{ item.key }}"
+      when:
+        - not (beegfs_numa_nic_fallback | bool)
+        - beegfs_interfaces | length > 0
+        - item.value.numa_zone is defined
+        - item.value.numa_zone is not none
+        - item.value.interfaces | default([]) | length == 0
 
 - name: Fail if the same device ended up assigned to more than one beegfs_oss entry
   ansible.builtin.fail:

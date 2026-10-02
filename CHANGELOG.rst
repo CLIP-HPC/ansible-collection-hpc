@@ -12,6 +12,9 @@ v3.9.0
 v3.8.1
 ======
 - slurm: Retry the initial ``sacctmgr`` cluster registration on the controller (``slurm_dbd_connect_retries``, default 30 x 10s) so a controller configured concurrently with the database node tolerates slurmdbd not being up yet
+- beegfs: Give the metadata service its own ``connInterfacesFile`` (``beegfs_meta_conn_interfaces_file``) with the NIC(s) local to ``beegfs_meta_tune_bind_to_numa_zone`` first, the same way each ``beegfs_oss`` entry's interfaces are ordered, instead of the global file's ``beegfs_interfaces`` order - the meta service could otherwise prefer a NIC on the other NUMA zone than the one it's bound to. Adds ``beegfs_meta_interfaces`` to override the list. Changes ``connInterfacesFile`` in ``beegfs-meta.conf``, so the meta service restarts once on upgrade, and now fails, like the OSS services already did, if the meta service's preferred NIC isn't NUMA-local
+- beegfs: Add ``beegfs_numa_nic_fallback`` (default ``true``, the previous behavior) to choose whether the NUMA-bound meta and OSS services keep the non-local NIC(s) after the local one(s) as an HA fallback, or (``false``) use only NUMA-local NIC(s) - every NIC is then validated to be NUMA-local, and a service without a local NIC fails the run instead of getting an empty ``connInterfacesFile``
+- beegfs: Add ``beegfs_meta_tune_num_comm_slaves`` (``tuneNumCommSlaves``) and ``beegfs_meta_tune_default_chunk_size``/``beegfs_meta_tune_default_num_stripe_targets`` (``tuneDefaultChunkSize``/``tuneDefaultNumStripeTargets``) to the metadata server tunings, unset by default to keep the package defaults. The two stripe settings only apply when the root directory is created on a new file system
 
 v3.8.0
 ======

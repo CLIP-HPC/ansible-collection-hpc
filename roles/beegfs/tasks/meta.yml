@@ -56,11 +56,84 @@
   become: true
   notify: Restart BeeGFS meta service
 
+- name: Default the metadata service's interfaces to beegfs_meta_interfaces or beegfs_interfaces
+  ansible.builtin.set_fact:
+    beegfs_meta_resolved_interfaces: "{{ beegfs_meta_interfaces | default([], true) or beegfs_interfaces }}"
+
+# Mirrors the per-OSS NIC ordering in oss_discovery.yml: without it the meta
+# service would prefer whichever NIC happens to come first in
+# beegfs_interfaces, even if it sits on the other NUMA zone than the one
+# tuneBindToNumaZone pins the service to.
+- name: Order the metadata service's interfaces NUMA-local NIC(s) first
+  when:
+    - beegfs_meta_interfaces | default([], true) | length == 0
+    - beegfs_meta_tune_bind_to_numa_zone is not none
+    - beegfs_meta_tune_bind_to_numa_zone | string | length > 0
+    - beegfs_interfaces | length > 0
+  block:
+    - name: Map each configured BeeGFS interface to its NUMA node
+      ansible.builtin.import_tasks: nic_numa_map.yml
+
+    # beegfs_numa_nic_fallback decides whether the non-local NIC(s) follow as
+    # an HA fallback or are left out, so meta only ever uses local NIC(s).
+    - name: Put the NIC(s) local to the metadata service's NUMA zone first
+      ansible.builtin.set_fact:
+        beegfs_meta_resolved_interfaces: >-
+          {{ local_nics + ((beegfs_interfaces | reject('in', local_nics) | list) if beegfs_numa_nic_fallback | bool else []) }}
+      vars:
+        local_nic_names: >-
+          {{
+            beegfs_nic_numa_map
+            | dict2items(key_name='nic', value_name='numa')
+            | selectattr('numa', 'equalto', beegfs_meta_tune_bind_to_numa_zone | int)
+            | map(attribute='nic') | list
+          }}
+        local_nics: "{{ beegfs_interfaces | select('in', local_nic_names) | list }}"
+
+    # An empty connInterfacesFile would let BeeGFS use every interface, the
+    # opposite of what beegfs_numa_nic_fallback=false asks for.
+    - name: Fail if no configured NIC is local to the metadata service's NUMA zone while fallback is disabled
+      ansible.builtin.fail:
+        msg: >-
+          None of beegfs_interfaces {{ beegfs_interfaces }} is attached to NUMA
+          zone {{ beegfs_meta_tune_bind_to_numa_zone }}, which the metadata
+          service is bound to, and beegfs_numa_nic_fallback is false - add a
+          local NIC, set beegfs_meta_interfaces, or enable the fallback.
+      when: beegfs_meta_resolved_interfaces | length == 0
+
+# With beegfs_numa_nic_fallback the remaining NICs are an HA fallback, so only
+# the preferred one must be local; without it every NIC must be.
+- name: Validate metadata NIC(s) are attached to the configured NUMA zone
+  ansible.builtin.include_tasks: numa_check.yml
+  vars:
+    numa_check_path: "/sys/class/net/{{ meta_nic }}/device/numa_node"
+    numa_check_label: "{{ 'Preferred NIC' if beegfs_numa_nic_fallback | bool else 'NIC' }} {{ meta_nic }}"
+    numa_check_zone: "{{ beegfs_meta_tune_bind_to_numa_zone }}"
+    numa_check_service: "the BeeGFS metadata service"
+  loop: "{{ beegfs_meta_resolved_interfaces[:1] if beegfs_numa_nic_fallback | bool else beegfs_meta_resolved_interfaces }}"
+  loop_control:
+    loop_var: meta_nic
+  when:
+    - beegfs_meta_tune_bind_to_numa_zone is not none
+    - beegfs_meta_tune_bind_to_numa_zone | string | length > 0
+
+- name: Create connInterfacesFile for BeeGFS metadata server
+  vars:
+    beegfs_interfaces: "{{ beegfs_meta_resolved_interfaces }}"
+  ansible.builtin.template:
+    src: connInterfacesFile.j2
+    dest: "{{ beegfs_meta_conn_interfaces_file }}"
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+  notify: Restart BeeGFS meta service
+
 - name: Specify connInterfacesFile for BeeGFS metadata server
   ansible.builtin.lineinfile:
     path: /etc/beegfs/beegfs-meta.conf
     regexp: "^connInterfacesFile"
-    line: "connInterfacesFile           = /etc/beegfs/connInterfacesFile"
+    line: "connInterfacesFile           = {{ beegfs_meta_conn_interfaces_file }}"
   become: true
   notify: Restart BeeGFS meta service
 
@@ -75,6 +148,9 @@
       [
         {'key': 'tuneTargetChooser', 'value': beegfs_meta_tune_target_chooser},
         {'key': 'tuneNumWorkers', 'value': beegfs_meta_tune_num_workers},
+        {'key': 'tuneNumCommSlaves', 'value': beegfs_meta_tune_num_comm_slaves},
+        {'key': 'tuneDefaultChunkSize', 'value': beegfs_meta_tune_default_chunk_size},
+        {'key': 'tuneDefaultNumStripeTargets', 'value': beegfs_meta_tune_default_num_stripe_targets},
         {'key': 'connMaxInternodeNum', 'value': beegfs_conn_meta_max_internode_num},
         {'key': 'tuneBindToNumaZone', 'value': beegfs_meta_tune_bind_to_numa_zone},
         {'key': 'tuneNumStreamListeners', 'value': beegfs_meta_tune_num_stream_listeners},

@@ -29,36 +29,27 @@ argument_specs:
         type: bool
         description: Install the DSU package before use.
         default: true
-      dell_dsu_version:
+      dell_dsu_package:
         type: str
-        description: DSU package version (version-release) used to build the default RPM URL.
-        default: 2.3.0.1-26.08.00
-      dell_dsu_rpm_url:
-        type: str
-        description: >-
-          URL the dell-system-update RPM is installed from, only when the package is not installed yet.
-          Derived from `dell_dsu_version` by default.
-      dell_dsu_rpm_disable_gpg_check:
-        type: bool
-        description: Skip RPM signature verification when installing from the URL (Dell's key is not imported yet on a first install).
-        default: true
+        description: Name of the DSU package installed from the repositories configured by the bootstrap script.
+        default: dell-system-update
       dell_dsu_binary:
         type: str
         description: Path of the dsu binary on the target host.
         default: /usr/sbin/dsu
-      dell_dsu_run_postinstall:
+      dell_dsu_run_bootstrap:
         type: bool
         description: >-
-          Re-run the steps of the dell-system-update post-install scriptlet (ldconfig, bootstrap script)
-          as tasks. Works around the scriptlet failing inside the RPM transaction.
+          Run Dell's bootstrap script (configures the DSU repositories and keys) before installing the package.
+          Replaces the dell-system-update post-install scriptlet, which fails inside the RPM transaction.
         default: true
-      dell_dsu_postinstall_marker:
+      dell_dsu_bootstrap_marker:
         type: str
-        description: Marker file recording that the post-install workaround completed.
-        default: /var/lib/dell_dsu_postinstall_done
+        description: Marker file recording that the bootstrap script completed.
+        default: /var/lib/dell_dsu_bootstrap_done
       dell_dsu_bootstrap_url:
         type: str
-        description: URL of the Dell DSU bootstrap script run by the post-install workaround.
+        description: URL of the Dell DSU bootstrap script.
         default: https://linux.dell.com/repo/hardware/dsu/bootstrap.cgi
       dell_dsu_bootstrap_dest:
         type: str

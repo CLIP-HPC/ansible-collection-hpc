@@ -1,68 +1,26 @@
 ---
-# The Dell DSU repositories are configured by Dell's bootstrap.cgi (see the
-# post-install workaround below), so the RPM is installed straight from its URL.
-# It is only installed when missing (initial bootstrapping); an installed DSU is
-# never upgraded or reinstalled by this role.
+# Dell's bootstrap.cgi configures the DSU yum repositories (and imports their
+# GPG keys); the package is then installed from those repositories. Running
+# the bootstrap here also replaces the dell-system-update %post scriptlet,
+# which runs the same script but fails inside the RPM transaction.
 - name: install | Gather installed packages
   ansible.builtin.package_facts:
     manager: auto
 
-- name: install | Install Dell System Update from URL
-  ansible.builtin.dnf:
-    name: "{{ dell_dsu_rpm_url }}"
-    state: present
-    disable_gpg_check: "{{ dell_dsu_rpm_disable_gpg_check }}"
-  become: true
-  register: dell_dsu_package_install
-  when: "'dell-system-update' not in ansible_facts['packages']"
-
-# Workaround for the dell-system-update %post scriptlet, which fails in the RPM
-# transaction and leaves DSU without its public keys ("Shared library integrity
-# check failed"). The steps below reproduce the scriptlet as Ansible tasks.
-- name: install | Check whether the DSU post-install workaround already ran
+- name: install | Check whether the Dell bootstrap already ran
   ansible.builtin.stat:
-    path: "{{ dell_dsu_postinstall_marker }}"
-  register: dell_dsu_postinstall_marker_stat
-  when: dell_dsu_run_postinstall | bool
+    path: "{{ dell_dsu_bootstrap_marker }}"
+  register: dell_dsu_bootstrap_marker_stat
 
-- name: install | Check whether running from a live ISO
-  ansible.builtin.stat:
-    path: /run/overlay/live
-  register: dell_dsu_live_iso
-  when: dell_dsu_run_postinstall | bool
-
-- name: install | Set the DSU post-install workaround condition
+- name: install | Set the Dell bootstrap condition
   ansible.builtin.set_fact:
-    _dell_dsu_run_postinstall_now: >-
+    _dell_dsu_run_bootstrap_now: >-
       {{
-        dell_dsu_run_postinstall | bool
-        and not dell_dsu_live_iso.stat.exists
-        and (dell_dsu_package_install is changed or not dell_dsu_postinstall_marker_stat.stat.exists)
+        dell_dsu_run_bootstrap | bool
+        and (not dell_dsu_bootstrap_marker_stat.stat.exists or 'dell-system-update' not in ansible_facts['packages'])
       }}
-  when: dell_dsu_run_postinstall | bool
 
-- name: install | Post-install | Remove obsolete dsulib ld.so configuration
-  ansible.builtin.file:
-    path: /etc/ld.so.conf.d/dsulib.conf
-    state: absent
-  become: true
-  register: dell_dsu_ldconf
-  when: _dell_dsu_run_postinstall_now | default(false) | bool
-
-- name: install | Post-install | Refresh the dynamic linker cache
-  ansible.builtin.command: /sbin/ldconfig
-  become: true
-  changed_when: true
-  when: _dell_dsu_run_postinstall_now | default(false) | bool
-
-- name: install | Post-install | Make getOEMSystemId executable
-  ansible.builtin.file:
-    path: /opt/dell/dsu/getOEMSystemId
-    mode: 'a+x'
-  become: true
-  when: _dell_dsu_run_postinstall_now | default(false) | bool
-
-- name: install | Post-install | Download Dell DSU bootstrap script
+- name: install | Download Dell DSU bootstrap script
   ansible.builtin.get_url:
     url: "{{ dell_dsu_bootstrap_url }}"
     dest: "{{ dell_dsu_bootstrap_dest }}"
@@ -76,21 +34,21 @@
   delay: 5
   register: dell_dsu_bootstrap_download
   until: dell_dsu_bootstrap_download is succeeded
-  when: _dell_dsu_run_postinstall_now | default(false) | bool
+  when: _dell_dsu_run_bootstrap_now | bool
 
 # The RPM scriptlet pipes "y" into the bootstrap script to answer its prompts.
-- name: install | Post-install | Run Dell DSU bootstrap script
+- name: install | Run Dell DSU bootstrap script (configures the DSU repositories)
   ansible.builtin.command:
     argv: ["bash", "{{ dell_dsu_bootstrap_dest }}"]
     stdin: "{{ 'y\n' * 50 }}"
     stdin_add_newline: false
   become: true
   changed_when: true
-  when: _dell_dsu_run_postinstall_now | default(false) | bool
+  when: _dell_dsu_run_bootstrap_now | bool
 
-- name: install | Post-install | Record that the workaround ran
+- name: install | Record that the Dell bootstrap ran
   ansible.builtin.file:
-    path: "{{ dell_dsu_postinstall_marker }}"
+    path: "{{ dell_dsu_bootstrap_marker }}"
     state: touch
     owner: root
     group: root
@@ -98,4 +56,13 @@
     modification_time: preserve
     access_time: preserve
   become: true
-  when: _dell_dsu_run_postinstall_now | default(false) | bool
+  when: _dell_dsu_run_bootstrap_now | bool
+
+# Only installed when missing (initial bootstrapping); an installed DSU is never
+# upgraded or reinstalled by this role.
+- name: install | Install Dell System Update from the configured repositories
+  ansible.builtin.package:
+    name: "{{ dell_dsu_package }}"
+    state: present
+  become: true
+  when: "'dell-system-update' not in ansible_facts['packages']"

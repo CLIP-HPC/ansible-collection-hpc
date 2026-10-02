@@ -14,10 +14,9 @@ This role does not touch the scheduler. Drain nodes (e.g. in Slurm) before apply
 - `dell_dsu_reboot`: Reboot when DSU reports a reboot is required (return code 8). Default: `false`.
 - `dell_dsu_reboot_timeout`: Seconds to wait for the host after reboot. Default: `1800`.
 - `dell_dsu_install`: Install DSU before use. Default: `true`.
-- `dell_dsu_version` / `dell_dsu_rpm_url`: The `dell-system-update` RPM is installed directly from Dell's URL (default `https://linux.dell.com/repo/hardware/dsu/os_independent/x86_64/dell-system-update-<version>.x86_64.rpm`); the Dell repositories themselves are configured by `bootstrap.cgi`. The RPM is only installed when `dell-system-update` is not installed yet (initial bootstrapping); an installed DSU is never upgraded or reinstalled by the role. Dell only keeps the latest RPM there, so the pinned version eventually 404s - bump `dell_dsu_version` or override the URL. Default version: `2.3.0.1-26.08.00`.
-- `dell_dsu_rpm_disable_gpg_check`: Skip RPM signature verification for that install (Dell's key is only imported by the bootstrap). Default: `true`.
+- `dell_dsu_package`: Package installed from the repositories configured by the bootstrap script, only when it is not installed yet (initial bootstrapping); an installed DSU is never upgraded or reinstalled by the role. Default: `dell-system-update`.
 - `dell_dsu_binary`: Path of the `dsu` binary. Default: `/usr/sbin/dsu`.
-- `dell_dsu_run_postinstall` / `dell_dsu_postinstall_marker`: The `dell-system-update` RPM `%post` scriptlet can fail inside the transaction, which leaves DSU unable to run ("Shared library integrity check failed"). This workaround re-runs its steps as tasks (remove `/etc/ld.so.conf.d/dsulib.conf`, `ldconfig`, `chmod +x getOEMSystemId`, then download and run Dell's `bootstrap.cgi`), once per host when the package changed or the marker file is missing. Skipped when running from a live ISO. Default: `true`.
+- `dell_dsu_run_bootstrap` / `dell_dsu_bootstrap_marker`: The role downloads and runs Dell's `bootstrap.cgi` (with `y` fed to its prompts), which configures the DSU yum repositories and GPG keys, and then installs the package from them. This replaces the `dell-system-update` RPM `%post` scriptlet, which runs the same script but fails inside the RPM transaction and leaves DSU unable to run ("Shared library integrity check failed"). It runs once per host, when the marker file is missing or the package is not installed. Default: `true`.
 - `dell_dsu_bootstrap_url` / `dell_dsu_bootstrap_dest`: Where the bootstrap script is fetched from and saved to. It is downloaded over HTTPS and run as root without a checksum, exactly like the RPM scriptlet does.
 - `dell_dsu_catalog_location`: Optional catalog (`.xml`, `.gz`, `.cab`) passed as `--catalog-location`. Default: `""`.
 - `dell_dsu_component_types`: Restrict to component types (`--component-type`), e.g. `[FRMW, BIOS]`. Default: `[]` (all).
@@ -46,5 +45,5 @@ ansible-playbook clip.hpc.dell_dsu_update -e dell_dsu_hosts=node01 -e dell_dsu_r
 
 - "Updates available" is decided by `dsu --preview` return code 34 ("No Applicable Updates Found"); any other accepted code counts as updates available.
 - DSU return codes 25 and 26 (partial failure / partial failure and reboot required) mean some updates were applied: the role still reboots when requested, and then fails the host.
-- If `dsu --inventory` fails because DSU cannot verify its libraries (return code 40, or "integrity check failed"), the role stops with a hint to check the post-install bootstrap. This is the check that the bootstrap workaround worked.
+- If `dsu --inventory` fails because DSU cannot verify its libraries (return code 40, or "integrity check failed"), the role stops with a hint to check the bootstrap. This is also the check that the bootstrap worked.
 - Dell's guide suggests rebooting the iDRAC and retrying when DSU intermittently fails to apply updates; the role does not do this.

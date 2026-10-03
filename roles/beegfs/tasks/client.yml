@@ -1,5 +1,8 @@
 ---
-
+# BeeGFS reads a client's cfgFile only at mount time, so every config change
+# below notifies "Remount BeeGFS client mounts". That handler only unmounts
+# (and only with beegfs_client_remount_on_change); "Mount beegfs storage"
+# after the flush mounts again with the new config.
 
 - name: Make of copy of BeeGFS client config file if it doesn't exist
   become: true
@@ -21,6 +24,7 @@
     regexp: ^sysMgmtdHost
     line: sysMgmtdHost = {{ item.mgmt_host | default(beegfs_mgmt_host) }}
   loop: "{{ beegfs_client_mounts | default([]) }}"
+  notify: Remount BeeGFS client mounts
 
 
 - name: Configure Port for BeeGFS Client
@@ -32,6 +36,7 @@
     regexp: ^connClientPort
     line: connClientPort                = {{ item.port }}
   loop: "{{ beegfs_client_mounts | default([]) }}"
+  notify: Remount BeeGFS client mounts
 
 - name: Configure connInterfacesFile for BeeGFS client
   become: true
@@ -42,6 +47,8 @@
     regexp: "^connInterfacesFile"
     line: connInterfacesFile            = /etc/beegfs/connInterfacesFile
   loop: "{{ beegfs_client_mounts | default([]) }}"
+  tags: interfaces
+  notify: Remount BeeGFS client mounts
 
 
 - name: Configure connRDMAInterfacesFile for BeeGFS client
@@ -53,6 +60,8 @@
     regexp: "^connRDMAInterfacesFile"
     line: connRDMAInterfacesFile        = /etc/beegfs/connRDMAInterfacesFile
   loop: "{{ beegfs_client_mounts | default([]) }}"
+  tags: interfaces
+  notify: Remount BeeGFS client mounts
 
 - name: Configure quotaEnabled for BeeGFS client
   become: true
@@ -63,14 +72,19 @@
     regexp: ^quotaEnabled
     line: quotaEnabled                  = {{ (beegfs_enable_quota | bool) | ternary('true', 'false') }}
   loop: "{{ beegfs_client_mounts | default([]) }}"
+  tags: [client_config, config]
+  notify: Remount BeeGFS client mounts
 
 
+# The task inside client_mount_tunings.yml carries client_config/config
+# itself: an include's own tags aren't inherited by the tasks it includes.
 - name: Configure tunings for each BeeGFS client mount
   ansible.builtin.include_tasks: client_mount_tunings.yml
   loop: "{{ beegfs_client_mounts | default([]) }}"
   loop_control:
     loop_var: beegfs_client_mount
     label: "{{ beegfs_client_mount.port }}"
+  tags: [client_config, config]
 
 
 - name: Make sure to load beegfs module after reboot
@@ -88,8 +102,11 @@
     name: beegfs
     state: present
 
+# Tagged like the config tasks above so a remount triggered under
+# --tags client_config/config/interfaces also mounts again.
 - name: Flush handlers
   ansible.builtin.meta: flush_handlers
+  tags: [client_config, config, interfaces]
 
 - name: Mount beegfs storage
   become: true
@@ -102,3 +119,4 @@
     src: beegfs_nodev
     state: mounted
   loop: "{{ beegfs_client_mounts | default([]) }}"
+  tags: [client_config, config, interfaces]

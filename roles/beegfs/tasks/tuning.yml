@@ -27,6 +27,7 @@
   loop_control:
     label: "{{ item.key }}"
   become: true
+  tags: sysctl
 
 - name: Tune beegfs_oss_tunable devices
   become: true

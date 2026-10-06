@@ -32,6 +32,18 @@
   become: true
   when: beegfs_enable.mon | default(false) | bool
 
+# Only unmounts: client.yml's "Mount beegfs storage", which runs after its
+# handler flush, mounts again with the changed config.
+- name: Remount BeeGFS client mounts
+  ansible.posix.mount:
+    path: "{{ item.path }}"
+    state: unmounted
+  become: true
+  loop: "{{ beegfs_client_mounts | default([]) }}"
+  when:
+    - beegfs_enable.client | default(false) | bool
+    - beegfs_client_remount_on_change | bool
+
 - name: Restart BeeGFS tuning service
   ansible.builtin.service:
     name: beegfs-oss-tuning

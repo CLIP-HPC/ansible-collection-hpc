@@ -4,7 +4,7 @@
 # that slot regardless of its current name - device names are not stable
 # across reboots. Fresh NUMA/name-based discovery only fills slots that were
 # never labeled (first bootstrap, or genuinely new disks). Tracks
-# beegfs_oss_device_provisioned (device path -> bool) so fs.yml's format
+# beegfs_oss_device_provisioned (device path -> bool) so oss.yml's format
 # guard can tell which devices are safe to skip.
 
 - name: Compute shared BeeGFS disk/NUMA facts

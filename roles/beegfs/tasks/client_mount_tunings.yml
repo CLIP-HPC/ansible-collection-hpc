@@ -6,6 +6,8 @@
 # corresponding global beegfs_client_* default when the mount doesn't set it.
 - name: Configure tunings for this BeeGFS client mount
   become: true
+  tags: [client_config, config]
+  notify: Remount BeeGFS client mounts
   vars:
     beegfs_client_config_file: "beegfs-client-{{ beegfs_client_mount.port }}.conf"
   ansible.builtin.lineinfile:

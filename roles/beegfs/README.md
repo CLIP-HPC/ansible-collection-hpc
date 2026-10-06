@@ -48,7 +48,7 @@ for meta, `ST-<port>-<index>` per OSS target). Labels live in the on-disk superb
 reboots; `/dev/disk/by-label/<label>` always resolves to whatever device currently holds that
 label. `beegfs_meta_dev`/`beegfs_oss[*].devices` auto-discovery checks for an existing label
 **first** - fresh NUMA/name-based discovery only ever runs for a slot that was never labeled (first
-bootstrap, or a genuinely new disk). The format tasks in `meta.yml`/`fs.yml` skip reformatting any
+bootstrap, or a genuinely new disk). The format tasks in `meta.yml`/`oss.yml` skip reformatting any
 device that was resolved from an existing label, regardless of its current name, unless
 `beegfs_force_format` is set - which reformats the *label-resolved* device in place, never a
 fresh-discovery guess. Moving an already-labeled role to different physical hardware on purpose
@@ -131,3 +131,55 @@ A host can mount more than one BeeGFS filesystem, including filesystems served b
             port: 8005
             mgmt_host: "beegfs-mgmt.other-cluster.example.org"
 ```
+
+### Tags
+
+Device/NUMA discovery and fact building always run; everything else can be selected with `--tags`:
+
+| Tag | Runs | Restarts / reloads |
+|---|---|---|
+| `mgmt`, `mon`, `meta`, `oss`, `client` | everything for that service (config, format/mount, setup) | that service |
+| `fs` | OSS format and mount | - |
+| `meta_config` | metadata server tunings (`beegfs_meta_tune_*`, ...) | meta |
+| `oss_config` | storage server tunings (`beegfs_oss_tune_*`, `tuneBindToNumaZone`, ...) | storage, all ports |
+| `client_config` | client tunings and `quotaEnabled` | client remount, see below |
+| `interfaces` | every `connInterfacesFile` (global, meta, per OSS port) and the NIC NUMA checks | matching services |
+| `tuning` | sysctls and the `beegfs-oss-tuning` device tuning service | tuning service |
+| `sysctl` | only the sysctls | - (applied directly) |
+| `install`, `repos`, `rdma`, `alias` | packages, repo, RDMA packages, aliases on mgmt | - |
+
+BeeGFS reads a client's config only at mount time. Set `beegfs_client_remount_on_change: true` to have
+changed client config (`client`, `client_config`, `config`, `interfaces`) unmount and mount again; this fails while
+processes still hold the mount. Restart handlers act on every selected host at once, so use `--limit` to
+try a change on a single node first, e.g.:
+
+```sh
+ansible-playbook beegfs.yml --tags oss_config --limit oss01 -e beegfs_oss_tune_num_workers=24
+```
+
+The role must be pulled in so that its own tags decide: a static `roles:`/`import_role`, or an
+`include_role` tagged `always`. An untagged `include_role` is skipped entirely under `--tags`, and `apply`
+would give every task the same tags.
+
+### Deploying many nodes in parallel
+
+The role is written to run on every BeeGFS node of a play at the same time: per-port and per-device
+work loops inside a task rather than looping `include_tasks`, so the default `linear` strategy keeps all
+hosts in step. Ansible itself only talks to `forks` hosts at once (5 by default), so set it to at least
+the number of BeeGFS nodes, and enable pipelining, e.g. in `ansible.cfg`:
+
+```ini
+[defaults]
+forks = 50
+
+[ssh_connection]
+pipelining = True
+ssh_args = -o ControlMaster=auto -o ControlPersist=60s
+```
+
+Formatting new NVMe devices can spend most of its time discarding blocks. If the devices are new or
+already trimmed, adding `-K` to `beegfs_filesystem_opts` (and `beegfs_meta_filesystem_opts`) skips that
+for XFS.
+
+To see where time is spent, enable the `ansible.posix.profile_tasks` and `ansible.posix.timer`
+callbacks (`ANSIBLE_CALLBACKS_ENABLED=ansible.posix.profile_tasks,ansible.posix.timer`).

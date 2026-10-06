@@ -12,7 +12,7 @@ v3.10.0
 - multirail: Move ``multirail_net_*`` and ``multirail_nmcli_connection_prefix`` from ``vars`` to ``defaults`` so they can be overridden, and add ``multirail_ipv4_gateways`` to set the IPv4 gateway per interface instead of assuming the first usable address of the subnet
 - multirail: Add a routing rule for every IPv4 address (including secondaries) and every global IPv6 address of an interface instead of only the first one
 - multirail: Name the routing tables in ``/etc/iproute2/rt_tables.d/multirail.conf`` and remove the block previously written to ``rt_tables`` (``/usr/share/iproute2/rt_tables`` on EL10, which belongs to the iproute package)
-- multirail: Verify after configuration that traffic from each interface's IPv4 address is routed out of that interface (``multirail_verify``, default ``true``). Both interfaces are now reapplied by one ``Reapply multirail interfaces`` handler
+- multirail: Verify after configuration that traffic from each interface's IPv4 address is routed out of that interface (``multirail_verify``, default ``true``). Apply the changes with ``nmcli device modify`` (only the routes, routing rules and ``ipv4.never-default``) instead of ``nmcli device reapply``, which failed when the profile had a pending ethtool change, e.g. ring sizes set by ``rocev2``
 
 v3.9.0
 ======

@@ -17,8 +17,10 @@ For each interface (in list order) the role:
 - checks that traffic from each interface's IPv4 address is routed out of that interface (`multirail_verify`)
 
 The routes and rules are built from the gathered facts, so facts (at least the `network` subset) must be
-gathered before the role runs. When the NetworkManager connections change, both interfaces are reapplied
-with `nmcli device reapply`.
+gathered before the role runs. When the NetworkManager connections change, the routes, routing rules and
+`ipv4.never-default` of the profiles are applied to the active connections with `nmcli device modify`. Unlike
+`nmcli device reapply`, this doesn't fail when the profile has other changes that can't be reapplied, such as
+the ethtool ring sizes set by `clip.hpc.rocev2`, and leaves them pending.
 
 ## Role Variables
 

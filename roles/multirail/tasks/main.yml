@@ -53,11 +53,9 @@
 
 - name: Name the multirail routing tables
   become: true
-  ansible.builtin.copy:
+  ansible.builtin.template:
+    src: multirail_rt_tables.conf.j2
     dest: "{{ multirail_rt_tables_file }}"
-    content: |
-      # Managed by Ansible (clip.hpc.multirail)
-      {{ range(multirail_table_base, multirail_table_base + multirail_interfaces | length) | zip(multirail_interfaces) | map('join', ' ') | join('\n') }}
     owner: root
     group: root
     mode: "0644"

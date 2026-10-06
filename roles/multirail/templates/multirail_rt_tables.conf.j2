@@ -1,0 +1,4 @@
+# {{ ansible_managed }}
+{% for interface in multirail_interfaces %}
+{{ multirail_table_base + loop.index0 }} {{ interface }}
+{% endfor %}

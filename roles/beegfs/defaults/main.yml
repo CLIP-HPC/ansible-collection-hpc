@@ -162,11 +162,19 @@ beegfs_meta_path: "/data/beegfs/beegfs_meta"
 # resolution"), falling back to fresh NUMA/name-based discovery only for a
 # genuinely unprovisioned host.
 beegfs_meta_dev:  # /dev/sdb
-# ext4, not beegfs_fstype (xfs) - BeeGFS recommends ext4 for metadata
-# targets, and beegfs_meta_filesystem_opts below is ext4-specific mkfs syntax.
-beegfs_meta_fstype: "ext4"
-beegfs_meta_filesystem_opts: "-i 2048 -I 1024 -J size=400 -O dir_index,filetype"
+# Filesystem of the metadata target. Existing ext4 metadata targets must keep
+# beegfs_meta_fstype: "ext4" (and the ext4 mkfs options, e.g.
+# "-i 2048 -I 1024 -J size=400 -O dir_index,filetype"), since a provisioned
+# disk is never reformatted and is mounted with this fstype.
+beegfs_meta_fstype: "xfs"
+# Extra mkfs options for beegfs_meta_fstype, passed before "-L <label>".
+# 1024 inode size gives best performance
+beegfs_meta_filesystem_opts: "-i size=1024"
 beegfs_meta_mount_opts: "noatime,nodiratime,auto"
+# Reformat only the metadata device: stops beegfs-meta, unmounts and
+# reformats it, leaving mgmtd, OSS and client alone (unlike
+# beegfs_force_format). Destroys all metadata - enable for a single run only.
+beegfs_meta_force_format: false
 # Network interfaces for the metadata service, in order of preference,
 # overriding beegfs_interfaces. If empty and beegfs_meta_tune_bind_to_numa_zone
 # is set, this is beegfs_interfaces reordered so the NIC(s) local to that NUMA

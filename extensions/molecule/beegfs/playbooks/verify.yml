@@ -18,6 +18,16 @@
       loop_control:
         label: "{{ item }}"
 
+    - name: Get filesystem type of the BeeGFS metadata target
+      ansible.builtin.command: findmnt -n -o FSTYPE --mountpoint /data/beegfs/beegfs_meta
+      register: beegfs_meta_fstype_result
+      changed_when: false
+
+    - name: Assert the BeeGFS metadata target is XFS
+      ansible.builtin.assert:
+        that:
+          - beegfs_meta_fstype_result.stdout == 'xfs'
+
     - name: Check BeeGFS mount paths exist
       ansible.builtin.stat:
         path: "{{ item }}"

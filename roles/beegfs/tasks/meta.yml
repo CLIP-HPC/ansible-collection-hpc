@@ -15,7 +15,48 @@
   when:
     - beegfs_meta_dev is defined
     - beegfs_meta_dev != None
+  vars:
+    meta_force_format: "{{ (beegfs_force_format | bool) or (beegfs_meta_force_format | bool) }}"
   block:
+    # beegfs_force_format already stops every service and unmounts the meta
+    # path in create.yml; beegfs_meta_force_format has to do it here, for the
+    # meta service and device only.
+    - name: Stop and unmount the metadata service and device before reformatting
+      when: beegfs_meta_force_format | bool
+      block:
+        - name: Probe installed services
+          ansible.builtin.service_facts:
+
+        - name: Stop BeeGFS meta service
+          ansible.builtin.service:
+            name: beegfs-meta.service
+            state: stopped
+          when: "'beegfs-meta.service' in ansible_facts.services"
+
+        # Unmount by device rather than by beegfs_meta_path, which need not be
+        # where the device is currently mounted - see the same step in oss.yml.
+        # mgmtd only accepts this node again (same nodeNumID) with the
+        # registration token it stored when the node first registered; a
+        # reformatted target gets a new one and is rejected, and mgmtd also
+        # refuses to delete the node that owns the root inode.
+        - name: Save the metadata node's registration token
+          ansible.builtin.slurp:
+            src: "{{ beegfs_meta_path }}/registrationToken"
+          register: beegfs_meta_registration_token
+          failed_when: false
+
+        - name: Find the metadata device's current mount point, if any
+          ansible.builtin.command: findmnt -n -o TARGET --source {{ beegfs_meta_dev }}
+          register: beegfs_meta_dev_current_mount
+          changed_when: false
+          failed_when: false
+
+        - name: Unmount the metadata device
+          ansible.posix.mount:
+            path: "{{ item }}"
+            state: unmounted
+          loop: "{{ beegfs_meta_dev_current_mount.stdout_lines }}"
+
     - name: Format filesystem
       vars:
         meta_fstype: "{{ beegfs_meta_fstype | default(beegfs_fstype, true) }}"
@@ -23,7 +64,7 @@
         dev: "{{ beegfs_meta_dev }}"
         fstype: "{{ meta_fstype }}"
         opts: "{{ beegfs_meta_filesystem_opts }} -L {{ beegfs_meta_dev_label }}"
-        force: "{{ beegfs_force_format }}"
+        force: "{{ meta_force_format }}"
       # beegfs_meta_already_provisioned (set by resolve_meta_device.yml) means
       # beegfs_meta_dev was resolved from its existing filesystem label, i.e.
       # this disk was already formatted in a previous run - skip reformatting
@@ -31,7 +72,7 @@
       # (device names aren't stable across reboots). Undefined (a statically
       # configured beegfs_meta_dev that never went through label resolution)
       # is treated as "not provisioned", preserving prior behavior.
-      when: (not (beegfs_meta_already_provisioned | default(false) | bool)) or (beegfs_force_format | bool)
+      when: (not (beegfs_meta_already_provisioned | default(false) | bool)) or (meta_force_format | bool)
       notify: Restart BeeGFS meta service
 
     # The mount below goes through /dev/disk/by-label, which udev only
@@ -60,6 +101,19 @@
   args:
     creates: "{{ beegfs_meta_path }}/nodeNumID"
   become: true
+  notify: Restart BeeGFS meta service
+
+- name: Restore the metadata node's registration token on the reformatted target
+  ansible.builtin.copy:
+    content: "{{ beegfs_meta_registration_token.content | b64decode }}"
+    dest: "{{ beegfs_meta_path }}/registrationToken"
+    mode: "0600"
+    owner: root
+    group: root
+  become: true
+  when:
+    - beegfs_meta_force_format | bool
+    - beegfs_meta_registration_token.content is defined
   notify: Restart BeeGFS meta service
 
 - name: Default the metadata service's interfaces to beegfs_meta_interfaces or beegfs_interfaces

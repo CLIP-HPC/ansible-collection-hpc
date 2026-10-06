@@ -6,146 +6,172 @@
       - multirail_interfaces != None
       - multirail_interfaces | length == 2
       - multirail_interfaces | unique | length == 2
-    fail_msg: "multirail_interfaces must contain exactly two unique interface names."
+      - multirail_ipv4_gateways is mapping
+    fail_msg: "multirail_interfaces must contain exactly two unique interface names and multirail_ipv4_gateways must be a mapping."
 
-- name: ARP Settings for Multi Homing
+- name: Validate that every multirail interface has an IPv4 address
+  ansible.builtin.assert:
+    that:
+      - ansible_facts[item] is defined
+      - ansible_facts[item]['ipv4'] is defined
+    fail_msg: "No facts or no IPv4 address found for interface {{ item }}. Check the interface name and make sure facts are gathered."
+    quiet: true
+  loop: "{{ multirail_interfaces }}"
+
+# The kernel uses the higher of the 'all' and the per-interface value for arp_ignore, arp_announce
+# and rp_filter, so 'all' alone can't lower a value a NIC already has (e.g. rp_filter=1 from boot).
+# The keys are therefore also set for every multirail NIC; systemd-sysctl re-applies them when the NIC
+# appears. Dots in interface names (VLANs) are written as '/' in sysctl keys.
+- name: ARP, reverse path filter and local source settings for multi homing
   become: true
   ansible.posix.sysctl:
-    name: "{{ item.key }}"
-    value: "{{ item.value }}"
+    name: "net.ipv4.conf.{{ item.0 }}.{{ item.1.key }}"
+    value: "{{ item.1.value }}"
     state: present
     reload: true
     sysctl_set: true
     sysctl_file: /etc/sysctl.d/99-multirail-ipv4.conf
-  loop:
-    - {key: 'net.ipv4.conf.all.arp_ignore', value: '{{ multirail_net_arp_ignore }}'}
-    - {key: 'net.ipv4.conf.all.arp_announce', value: '{{ multirail_net_arp_announce }}'}
-    - {key: 'net.ipv4.conf.all.rp_filter', value: '{{ multirail_net_rp_filter }}'}
-    - {key: 'net.ipv4.conf.all.arp_filter', value: '{{ multirail_net_arp_filter }}'}
-    - {key: 'net.ipv4.conf.default.arp_ignore', value: '{{ multirail_net_arp_ignore }}'}
-    - {key: 'net.ipv4.conf.default.arp_announce', value: '{{ multirail_net_arp_announce }}'}
-    - {key: 'net.ipv4.conf.default.rp_filter', value: '{{ multirail_net_rp_filter }}'}
-    - {key: 'net.ipv4.conf.default.arp_filter', value: '{{ multirail_net_arp_filter }}'}
+  loop: "{{ (['all', 'default'] + multirail_interfaces | map('replace', '.', '/') | list) | product(multirail_sysctl_settings | dict2items) | list }}"
+  loop_control:
+    label: "net.ipv4.conf.{{ item.0 }}.{{ item.1.key }}={{ item.1.value }}"
+  vars:
+    multirail_sysctl_settings:
+      arp_ignore: "{{ multirail_net_arp_ignore }}"
+      arp_announce: "{{ multirail_net_arp_announce }}"
+      arp_filter: "{{ multirail_net_arp_filter }}"
+      rp_filter: "{{ multirail_net_rp_filter }}"
+      accept_local: "{{ multirail_net_accept_local }}"
 
+- name: Create the iproute2 rt_tables.d directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ multirail_rt_tables_file | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
 
-- name: Add custom routing tables to rt_tables
+- name: Name the multirail routing tables
+  become: true
+  ansible.builtin.template:
+    src: multirail_rt_tables.conf.j2
+    dest: "{{ multirail_rt_tables_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Remove routing table names written to rt_tables by earlier versions of this role
   become: true
   ansible.builtin.blockinfile:
-    path: "{{ '/usr/share/iproute2/rt_tables' if ansible_facts['distribution_major_version'] == '10' else '/etc/iproute2/rt_tables' }}"
-    block: |
-      201 {{ multirail_interfaces | first }}
-      202 {{ multirail_interfaces | last }}
+    path: "{{ multirail_legacy_rt_tables_file }}"
     marker: "# {mark} ANSIBLE MANAGED ROUTING TABLES"
+    state: absent
 
-
-- name: Get IPv6 default gateway for {{ multirail_interfaces | first }}
+- name: Get the IPv6 default gateway of each multirail interface
   become: true
   ansible.builtin.command:
-    cmd: "ip -6 route show dev {{ multirail_interfaces | first }} default"
-  register: multirail_ipv6_route_first
+    cmd: "ip -6 route show dev {{ item }} default"
+  register: multirail_ipv6_routes
   changed_when: false
-  when: >-
-    hostvars[inventory_hostname]['ansible_facts'][(multirail_interfaces | first)].get('ipv6')
-    | default([])
-    | selectattr('scope', 'equalto', 'global')
-    | list
-    | length > 0
+  check_mode: false
+  loop: "{{ multirail_interfaces }}"
+  when: ansible_facts[item].get('ipv6', []) | selectattr('scope', 'equalto', 'global') | list | length > 0
 
-- name: Get IPv6 default gateway for {{ multirail_interfaces | last }}
+# Each NIC gets its own table with its subnet(s) and a default route, and a rule per address that sends
+# traffic from that address to the table. Only the first NIC keeps a default route in the main table.
+- name: Configure source routing on the NetworkManager connection of each multirail interface
   become: true
-  ansible.builtin.command:
-    cmd: "ip -6 route show dev {{ multirail_interfaces | last }} default"
-  register: multirail_ipv6_route_last
-  changed_when: false
-  when: >-
-    hostvars[inventory_hostname]['ansible_facts'][(multirail_interfaces | last)].get('ipv6')
-    | default([])
-    | selectattr('scope', 'equalto', 'global')
-    | list
-    | length > 0
-
-- name: Set IPv6 gateway facts
-  ansible.builtin.set_fact:
-    multirail_ipv6_gw_first: >-
-      {{ multirail_ipv6_route_first.stdout | default('') | regex_search('via ([\w:]+)', '\1') | first | default('') }}
-    multirail_ipv6_gw_last: >-
-      {{ multirail_ipv6_route_last.stdout | default('') | regex_search('via ([\w:]+)', '\1') | first | default('') }}
-    multirail_ipv6_enabled_first: >-
-      {{
-        hostvars[inventory_hostname]['ansible_facts'][(multirail_interfaces | first)].get('ipv6')
-        | default([])
-        | selectattr('scope', 'equalto', 'global')
-        | list
-        | length > 0
-      }}
-    multirail_ipv6_enabled_last: >-
-      {{
-        hostvars[inventory_hostname]['ansible_facts'][(multirail_interfaces | last)].get('ipv6')
-        | default([])
-        | selectattr('scope', 'equalto', 'global')
-        | list
-        | length > 0
-      }}
-
-
-- name: Modify NetworkManager connection for {{ multirail_interfaces | first }}
-  become: true
-  vars:
-    multirail_interface_info: "{{ hostvars[inventory_hostname]['ansible_facts'][(multirail_interfaces | first)] }}"
-    multirail_ipv6_global_addrs: "{{ multirail_interface_info.get('ipv6', []) | selectattr('scope', 'equalto', 'global') | list }}"
   community.general.nmcli:
-    conn_name: "{{ multirail_nmcli_connection_prefix }} {{ multirail_interfaces | first }}"
+    conn_name: "{{ multirail_nmcli_connection_prefix }} {{ item }}"
     state: present
-    routes4_extended:
-      - ip: "0.0.0.0/0"
-        next_hop: "{{ (multirail_interface_info['ipv4']['network'] + '/' + multirail_interface_info['ipv4']['prefix']) | ansible.utils.ipaddr('next_usable') }}"
-        table: "201"
-    routing_rules4:
-      - "priority 201 from {{ multirail_interface_info['ipv4']['address'] }} table 201"
-    routes6_extended: >-
-      {{
-        [
-          {'ip': '::/0', 'next_hop': multirail_ipv6_gw_first, 'table': '201'}
-        ]
-        if (multirail_ipv6_enabled_first | bool and multirail_ipv6_gw_first != '')
-        else omit
-      }}
-    routing_rules6: >-
-      {{
-        ['priority 201 from ' + multirail_ipv6_global_addrs[0]['address'] + ' table 201']
-        if (multirail_ipv6_enabled_first | bool and multirail_ipv6_global_addrs | length > 0)
-        else omit
-      }}
-    never_default4: false
-  notify: Reload first interface
-
-- name: Modify NetworkManager connection for {{ multirail_interfaces | last }}
-  become: true
+    never_default4: "{{ multirail_index > 0 }}"
+    routes4_extended: "{{ multirail_routes4 }}"
+    routing_rules4: "{{ multirail_rules4 }}"
+    routes6_extended: "{{ multirail_routes6 if multirail_routes6 | length > 0 else omit }}"
+    routing_rules6: "{{ multirail_rules6 if multirail_rules6 | length > 0 else omit }}"
+  loop: "{{ multirail_interfaces }}"
+  loop_control:
+    index_var: multirail_index
   vars:
-    multirail_interface_info: "{{ hostvars[inventory_hostname]['ansible_facts'][(multirail_interfaces | last)] }}"
-    multirail_ipv6_global_addrs: "{{ multirail_interface_info.get('ipv6', []) | selectattr('scope', 'equalto', 'global') | list }}"
-  community.general.nmcli:
-    conn_name: "{{ multirail_nmcli_connection_prefix }} {{ multirail_interfaces | last }}"
-    state: present
-    routes4_extended:
-      - ip: "0.0.0.0/0"
-        next_hop: "{{ (multirail_interface_info['ipv4']['network'] + '/' + multirail_interface_info['ipv4']['prefix']) | ansible.utils.ipaddr('next_usable') }}"
-        table: "202"
-    routing_rules4:
-      - "priority 202 from {{ multirail_interface_info['ipv4']['address'] }} table 202"
-    never_default4: true
-    routes6_extended: >-
+    multirail_table: "{{ multirail_table_base + multirail_index }}"
+    multirail_ipv4_addrs: "{{ [ansible_facts[item]['ipv4']] + ansible_facts[item].get('ipv4_secondaries', []) }}"
+    multirail_ipv4_cidrs: >-
+      {{ multirail_ipv4_addrs | map(attribute='address') | zip(multirail_ipv4_addrs | map(attribute='prefix')) | map('join', '/') | list }}
+    multirail_ipv4_gateway: >-
       {{
-        [
-          {'ip': '::/0', 'next_hop': multirail_ipv6_gw_last, 'table': '202'}
-        ]
-        if (multirail_ipv6_enabled_last | bool and multirail_ipv6_gw_last != '')
-        else omit
+        multirail_ipv4_gateways[item]
+        | default((ansible_facts[item]['ipv4']['network'] ~ '/' ~ ansible_facts[item]['ipv4']['prefix']) | ansible.utils.ipaddr('next_usable'))
       }}
-    routing_rules6: >-
+    multirail_routes4: >-
       {{
-        ['priority 202 from ' + multirail_ipv6_global_addrs[0]['address'] + ' table 202']
-        if (multirail_ipv6_enabled_last | bool and multirail_ipv6_global_addrs | length > 0)
-        else omit
+        (multirail_ipv4_cidrs | ansible.utils.ipaddr('network/prefix') | unique
+         | map('community.general.dict_kv', 'ip') | map('combine', {'table': multirail_table}) | list)
+        + [{'ip': '0.0.0.0/0', 'next_hop': multirail_ipv4_gateway, 'table': multirail_table}]
       }}
-  notify: Reload second interface
+    multirail_rules4: >-
+      {{
+        multirail_ipv4_addrs | map(attribute='address') | unique
+        | map('regex_replace', '^', 'priority ' ~ multirail_table ~ ' from ')
+        | map('regex_replace', '$', ' table ' ~ multirail_table) | list
+      }}
+    multirail_ipv6_addrs: "{{ ansible_facts[item].get('ipv6', []) | selectattr('scope', 'equalto', 'global') | list }}"
+    multirail_ipv6_cidrs: >-
+      {{ multirail_ipv6_addrs | map(attribute='address') | zip(multirail_ipv6_addrs | map(attribute='prefix')) | map('join', '/') | list }}
+    multirail_ipv6_gateway: >-
+      {{ multirail_ipv6_routes.results[multirail_index].stdout | default('') | regex_findall('via (\S+)') | first | default('') }}
+    multirail_routes6: >-
+      {{
+        (multirail_ipv6_cidrs | ansible.utils.ipaddr('network/prefix') | unique
+         | map('community.general.dict_kv', 'ip') | map('combine', {'table': multirail_table}) | list)
+        + ([{'ip': '::/0', 'next_hop': multirail_ipv6_gateway, 'table': multirail_table}] if multirail_ipv6_gateway != '' else [])
+      }}
+    multirail_rules6: >-
+      {{
+        multirail_ipv6_addrs | map(attribute='address') | unique
+        | map('regex_replace', '^', 'priority ' ~ multirail_table ~ ' from ')
+        | map('regex_replace', '$', ' table ' ~ multirail_table) | list
+      }}
+  notify: Reapply multirail interfaces
+
+- name: Verify multirail source routing
+  when: multirail_verify | bool
+  block:
+    - name: Apply pending NetworkManager changes before verification
+      ansible.builtin.meta: flush_handlers
+
+    # 192.0.2.1 (TEST-NET-1) stands for any off-subnet destination; 'ip route get' only does a lookup
+    - name: Look up the route for traffic from each multirail IPv4 address
+      ansible.builtin.command:
+        cmd: "ip -4 route get 192.0.2.1 from {{ ansible_facts[item]['ipv4']['address'] }}"
+      register: multirail_route_get
+      changed_when: false
+      check_mode: false
+      loop: "{{ multirail_interfaces }}"
+
+    - name: Look up the subnet route in the table of each multirail interface
+      ansible.builtin.command:
+        cmd: >-
+          ip -4 route show table {{ multirail_table_base + multirail_index }}
+          {{ (ansible_facts[item]['ipv4']['network'] ~ '/' ~ ansible_facts[item]['ipv4']['prefix']) | ansible.utils.ipaddr('network/prefix') }}
+      register: multirail_route_table
+      changed_when: false
+      check_mode: false
+      loop: "{{ multirail_interfaces }}"
+      loop_control:
+        index_var: multirail_index
+
+    - name: Assert that each multirail interface routes its own traffic
+      ansible.builtin.assert:
+        that:
+          - ('dev ' ~ item.0.item ~ ' ') in item.0.stdout
+          - "' table ' in item.0.stdout"
+          - ('dev ' ~ item.1.item ~ ' ') in item.1.stdout
+        fail_msg: >-
+          Source routing for {{ item.0.item }} is not in place. 'ip route get' returned '{{ item.0.stdout | trim }}' and
+          the table has '{{ item.1.stdout | trim }}' for the subnet. Check 'ip rule show' and the
+          {{ multirail_nmcli_connection_prefix }} {{ item.0.item }} connection.
+        quiet: true
+      loop: "{{ multirail_route_get.results | zip(multirail_route_table.results) | list }}"
+      loop_control:
+        label: "{{ item.0.item }}"
+      when: not ansible_check_mode

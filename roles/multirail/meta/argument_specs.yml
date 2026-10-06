@@ -7,6 +7,51 @@ argument_specs:
     options:
       multirail_interfaces:
         type: list
-        description: A list of network interfaces to configure for multirail.
+        description: >-
+          The two network interfaces to configure for multirail. The first one keeps the default route
+          in the main routing table; the routing tables are numbered 201 and 202 in list order.
         elements: "str"
         required: true
+      multirail_ipv4_gateways:
+        type: dict
+        description: >-
+          IPv4 gateway per interface name, used for the default route in that interface's routing table.
+          Interfaces without an entry use the first usable address of their primary IPv4 subnet.
+        default: {}
+      multirail_net_arp_ignore:
+        type: int
+        description: Value for net.ipv4.conf.{all,default,<interface>}.arp_ignore.
+        default: 2
+      multirail_net_arp_announce:
+        type: int
+        description: Value for net.ipv4.conf.{all,default,<interface>}.arp_announce.
+        default: 2
+      multirail_net_arp_filter:
+        type: int
+        description: Value for net.ipv4.conf.{all,default,<interface>}.arp_filter.
+        default: 1
+      multirail_net_rp_filter:
+        type: int
+        description: >-
+          Value for net.ipv4.conf.{all,default,<interface>}.rp_filter. 2 (loose) still drops packets from
+          unroutable sources but accepts packets arriving on a different rail than the reply would use.
+        choices: [0, 1, 2]
+        default: 2
+      multirail_net_accept_local:
+        type: int
+        description: >-
+          Value for net.ipv4.conf.{all,default,<interface>}.accept_local. 1 accepts packets with a local
+          source address, needed for traffic between the rails of the same host.
+        choices: [0, 1]
+        default: 1
+      multirail_nmcli_connection_prefix:
+        type: str
+        description: >-
+          Prefix of the NetworkManager connection names; the connection of an interface is
+          "<prefix> <interface>". Defaults to "cloud-init" on EL10 and "System" otherwise.
+      multirail_verify:
+        type: bool
+        description: >-
+          Whether to check after configuration that traffic from each interface's IPv4 address is routed
+          out of that interface. This flushes pending handlers of the play so the changes are applied first.
+        default: true

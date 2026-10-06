@@ -1,16 +1,22 @@
 ---
 # handlers file for clip.hpc.multirail
-- name: Restart NetworkManager
-  ansible.builtin.service:
-    name: NetworkManager
-    state: restarted
-
-- name: Reload first interface
-  ansible.builtin.command: "/usr/bin/nmcli dev reapply {{ multirail_interfaces | first }}"
+# 'nmcli device reapply' applies every pending change of the connection profile and refuses all of them if one
+# can't be reapplied (e.g. an ethtool setting written by clip.hpc.rocev2), so only the settings managed by this
+# role are copied from the profile to the active connection with 'nmcli device modify'. The shell is needed
+# for the command substitution; setting a value the active connection already has is a no-op.
+- name: Reapply multirail interfaces
+  ansible.builtin.shell:
+    cmd: |
+      set -euo pipefail
+      args=()
+      for setting in ipv4.never-default ipv4.routes ipv4.routing-rules ipv6.routes ipv6.routing-rules; do
+        args+=("$setting" "$(/usr/bin/nmcli --escape no --get-values "$setting" connection show "$MULTIRAIL_CONNECTION")")
+      done
+      /usr/bin/nmcli device modify "$MULTIRAIL_DEVICE" "${args[@]}"
+    executable: /bin/bash
+  environment:
+    MULTIRAIL_DEVICE: "{{ item }}"
+    MULTIRAIL_CONNECTION: "{{ multirail_nmcli_connection_prefix }} {{ item }}"
   become: true
   changed_when: true
-
-- name: Reload second interface
-  ansible.builtin.command: "/usr/bin/nmcli dev reapply {{ multirail_interfaces | last }}"
-  become: true
-  changed_when: true
+  loop: "{{ multirail_interfaces }}"

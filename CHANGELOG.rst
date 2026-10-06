@@ -5,6 +5,15 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.10.0
+=======
+- multirail: Add a route for each of the interface's subnets to its routing table (IPv4 and IPv6), so traffic from a rail address to a host in the same subnet goes out directly instead of through the gateway
+- multirail: Set the ARP and ``rp_filter`` sysctls also per interface, since the kernel uses the higher of the ``all`` and the per-interface value and the ``all`` setting alone left ``rp_filter=1`` (strict) on the rail NICs. Change the ``rp_filter`` default from ``0`` to ``2`` (loose) and add ``accept_local=1`` (``multirail_net_accept_local``) for traffic between the rails of the same host
+- multirail: Move ``multirail_net_*`` and ``multirail_nmcli_connection_prefix`` from ``vars`` to ``defaults`` so they can be overridden, and add ``multirail_ipv4_gateways`` to set the IPv4 gateway per interface instead of assuming the first usable address of the subnet
+- multirail: Add a routing rule for every IPv4 address (including secondaries) and every global IPv6 address of an interface instead of only the first one
+- multirail: Name the routing tables in ``/etc/iproute2/rt_tables.d/multirail.conf`` and remove the block previously written to ``rt_tables`` (``/usr/share/iproute2/rt_tables`` on EL10, which belongs to the iproute package)
+- multirail: Verify after configuration that traffic from each interface's IPv4 address is routed out of that interface (``multirail_verify``, default ``true``). Apply the changes with ``nmcli device modify`` (only the routes, routing rules and ``ipv4.never-default``) instead of ``nmcli device reapply``, which failed when the profile had a pending ethtool change, e.g. ring sizes set by ``rocev2``
+
 v3.9.0
 ======
 - dell_dsu: Add role to install Dell System Update (DSU), inventory/preview firmware and driver updates on Dell servers, and optionally apply them (``dell_dsu_apply``, with opt-in reboot via ``dell_dsu_reboot``). Also add standalone ``dell_dsu_report`` and ``dell_dsu_update`` playbooks

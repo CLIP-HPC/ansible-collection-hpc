@@ -60,6 +60,7 @@
       loop_control:
         loop_var: oss_item
         index_var: oss_index
+        label: "{{ alias }}"
 
 
     - name: Create aliases BeeGFS storage targets
@@ -76,3 +77,4 @@
       loop_control:
         loop_var: oss_item
         index_var: oss_index
+        label: "{{ alias }}"

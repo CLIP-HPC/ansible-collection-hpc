@@ -28,6 +28,7 @@
   loop: "{{ beegfs_oss | dict2items }}"
   loop_control:
     index_var: ix
+    label: "{{ item.key }}"
   tags: always
 
 - name: Reset the flattened OSS port and target lists
@@ -67,6 +68,7 @@
   loop: "{{ beegfs_oss | dict2items | subelements('value.devices') }}"
   loop_control:
     index_var: ix
+    label: "{{ item.0.key }}: {{ item.1 }}"
   tags: always
 
 # beegfs_oss_ports/beegfs_oss_targets are flat per-host lists that oss.yml's

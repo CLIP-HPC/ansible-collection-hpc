@@ -33,6 +33,8 @@
     name: "{{ service_name }}"
     state: stopped
   loop: "{{ beegfs_oss | dict2items }}"
+  loop_control:
+    label: "{{ service_name }}"
   when: service_name in ansible_facts.services
 
 - name: Ensure meta device is not currently mounted
@@ -66,6 +68,8 @@
     path: "/etc/beegfs/{{ item.key }}.d/"
     state: absent
   loop: "{{ beegfs_oss | dict2items }}"
+  loop_control:
+    label: "/etc/beegfs/{{ item.key }}.d/"
 
 - name: Unmount BeeGFS oss paths if mounted
   become: true

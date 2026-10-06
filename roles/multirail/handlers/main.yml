@@ -1,16 +1,8 @@
 ---
 # handlers file for clip.hpc.multirail
-- name: Restart NetworkManager
-  ansible.builtin.service:
-    name: NetworkManager
-    state: restarted
-
-- name: Reload first interface
-  ansible.builtin.command: "/usr/bin/nmcli dev reapply {{ multirail_interfaces | first }}"
+# Reapplying a connection without changes is a no-op, so both interfaces are reapplied together
+- name: Reapply multirail interfaces
+  ansible.builtin.command: "/usr/bin/nmcli device reapply {{ item }}"
   become: true
   changed_when: true
-
-- name: Reload second interface
-  ansible.builtin.command: "/usr/bin/nmcli dev reapply {{ multirail_interfaces | last }}"
-  become: true
-  changed_when: true
+  loop: "{{ multirail_interfaces }}"

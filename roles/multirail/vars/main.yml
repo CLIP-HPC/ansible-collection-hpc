@@ -1,7 +1,6 @@
 ---
 # vars file for clip.hpc.multirail
-multirail_net_arp_ignore: 2
-multirail_net_arp_announce: 2
-multirail_net_rp_filter: 0
-multirail_net_arp_filter: 1
-multirail_nmcli_connection_prefix: "{{ 'cloud-init' if ansible_facts['distribution_major_version'] == '10' else 'System' }}"
+multirail_table_base: 201
+multirail_rt_tables_file: /etc/iproute2/rt_tables.d/multirail.conf
+# Location of the block written by earlier versions of this role, removed in favour of multirail_rt_tables_file
+multirail_legacy_rt_tables_file: "{{ '/usr/share/iproute2/rt_tables' if ansible_facts['distribution_major_version'] == '10' else '/etc/iproute2/rt_tables' }}"

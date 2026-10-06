@@ -1,3 +1,11 @@
 ---
 # defaults file for clip.hpc.multirail
 multirail_interfaces:
+multirail_ipv4_gateways: {}
+multirail_net_arp_ignore: 2
+multirail_net_arp_announce: 2
+multirail_net_arp_filter: 1
+multirail_net_rp_filter: 2
+multirail_net_accept_local: 1
+multirail_nmcli_connection_prefix: "{{ 'cloud-init' if ansible_facts['distribution_major_version'] == '10' else 'System' }}"
+multirail_verify: true

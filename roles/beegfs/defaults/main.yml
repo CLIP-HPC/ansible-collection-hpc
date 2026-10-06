@@ -145,6 +145,9 @@ beegfs_oss_tunable: "{{ beegfs_oss | dict2items | selectattr('value.devices', 'd
 # Management options
 beegfs_mgmt_path: "/data/beegfs/beegfs_mgmtd"
 beegfs_mgmt_host:  # Example: "{{ groups['cluster_beegfs_mgmt'] | first }}"
+# gRPC port of the management service (beegfs-mgmtd.toml "grpc-port"), used by
+# the beegfs CLI via --mgmtd-addr when setting node/target aliases.
+beegfs_mgmt_grpc_port: 8010
 
 # BeeGFS license file content (obtained from ThinkParQ, e.g. via licensing@thinkparq.com
 # or the self-service portal). Deployed to /etc/beegfs/license.pem only on the management

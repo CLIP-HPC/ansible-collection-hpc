@@ -27,6 +27,7 @@
         {'key': 'connTCPRcvBufSize', 'value': beegfs_client_mount.conn_tcp_rcv_buf_size | default(beegfs_client_conn_tcp_rcv_buf_size)},
         {'key': 'connUDPRcvBufSize', 'value': beegfs_client_mount.conn_udp_rcv_buf_size | default(beegfs_client_conn_udp_rcv_buf_size)},
         {'key': 'tuneFileCacheType', 'value': beegfs_client_mount.tune_file_cache_type | default(beegfs_client_tune_file_cache_type)},
+        {'key': 'tuneFileCacheBufSize', 'value': beegfs_client_mount.tune_file_cache_buf_size | default(beegfs_client_tune_file_cache_buf_size)},
         {'key': 'tuneFileOpenRetryTimeoutMS',
          'value': beegfs_client_mount.tune_file_open_retry_timeout_ms
                   | default(beegfs_client_tune_file_open_retry_timeout_ms)},

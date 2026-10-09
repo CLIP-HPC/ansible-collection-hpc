@@ -42,6 +42,8 @@ Provision an existing cluster to support [BeeGFS](https://www.beegfs.io/) manage
   - `mgmt_host`: Optional. Overrides `beegfs_mgmt_host` for this mount, for connecting to a different BeeGFS cluster.
   Each mount gets its own `/etc/beegfs/beegfs-client-<port>.conf`.
 
+- `beegfs_client_tune_file_cache_buf_size`: Optional. Sets `tuneFileCacheBufSize` in each client config. Override per mount with `tune_file_cache_buf_size` in `beegfs_client_mounts`. Default: unset (preserves the package setting).
+
 ### Reboot-safe device resolution
 
 `/dev/nvmeXnY` names are assigned by asynchronous PCIe probe order and are **not** stable across

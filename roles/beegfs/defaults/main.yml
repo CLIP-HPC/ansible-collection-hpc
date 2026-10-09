@@ -373,6 +373,9 @@ beegfs_client_conn_tcp_fallback_enabled:
 beegfs_client_conn_tcp_rcv_buf_size:
 beegfs_client_conn_udp_rcv_buf_size:
 beegfs_client_tune_file_cache_type:
+# tuneFileCacheBufSize: size (in bytes) of the per-file cache buffer used by
+# the "buffered" file cache type.
+beegfs_client_tune_file_cache_buf_size:
 beegfs_client_tune_file_open_retry_timeout_ms:
 beegfs_client_tune_file_open_retry_interval_ms:
 beegfs_client_tune_remote_fsync:

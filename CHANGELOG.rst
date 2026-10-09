@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.11.0
+=======
+- beegfs: Add ``beegfs_client_tune_file_cache_buf_size`` to configure ``tuneFileCacheBufSize`` on the client, with a per-mount ``tune_file_cache_buf_size`` override. Unset by default to preserve the package setting
+
 v3.10.0
 =======
 - beegfs: Format the metadata target as XFS instead of ext4 by default (``beegfs_meta_fstype``) and default ``beegfs_meta_filesystem_opts`` to ``""`` (``mkfs`` defaults), since the previous ext4-specific options don't apply to XFS. **Breaking:** hosts with an existing ext4 metadata target must set ``beegfs_meta_fstype: ext4``, otherwise the mount task fails; set ``beegfs_meta_filesystem_opts`` too if newly formatted ext4 targets should keep the previous options

@@ -5,6 +5,11 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.12.0
+=======
+- beegfs: Run the NVFS/NVIDIA include path detection also in check mode, so a dry run on GPU nodes with nvidia-fs no longer shows a false diff for ``beegfs-client-build.mk`` that replaces the detected ``NVFS_INCLUDE_PATH``/``NVIDIA_INCLUDE_PATH`` with the commented-out examples
+
+
 v3.11.0
 =======
 - beegfs: Add ``beegfs_client_tune_file_cache_buf_size`` to configure ``tuneFileCacheBufSize`` on the client, with a per-mount ``tune_file_cache_buf_size`` override. Unset by default to preserve the package setting

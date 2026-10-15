@@ -29,6 +29,7 @@
       register: beegfs_nvfs_include_path_result
       failed_when: beegfs_nvfs_include_path_result.rc > 1
       changed_when: false
+      check_mode: false
       tags: install
 
     - name: Set NVFS include path
@@ -52,6 +53,7 @@
   register: beegfs_nvidia_include_path_result
   failed_when: beegfs_nvidia_include_path_result.rc > 1
   changed_when: false
+  check_mode: false
   tags: install
 
 - name: Set NVIDIA include path

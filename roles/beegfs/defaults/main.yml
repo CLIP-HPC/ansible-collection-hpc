@@ -369,6 +369,8 @@ beegfs_client_conn_rdma_buf_num:
 beegfs_client_conn_rdma_fragment_size:
 beegfs_client_conn_rdma_meta_buf_size:
 beegfs_client_conn_rdma_meta_buf_num:
+# connRDMAMetaFragmentSize: like connRDMAFragmentSize, for beegfs-meta connections.
+beegfs_client_conn_rdma_meta_fragment_size:
 beegfs_client_conn_tcp_fallback_enabled:
 beegfs_client_conn_tcp_rcv_buf_size:
 beegfs_client_conn_udp_rcv_buf_size:

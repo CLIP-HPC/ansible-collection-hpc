@@ -43,6 +43,7 @@ Provision an existing cluster to support [BeeGFS](https://www.beegfs.io/) manage
   Each mount gets its own `/etc/beegfs/beegfs-client-<port>.conf`.
 
 - `beegfs_client_tune_file_cache_buf_size`: Optional. Sets `tuneFileCacheBufSize` in each client config. Override per mount with `tune_file_cache_buf_size` in `beegfs_client_mounts`. Default: unset (preserves the package setting).
+- `beegfs_client_conn_rdma_meta_fragment_size`: Optional. Sets `connRDMAMetaFragmentSize` in each client config. Override per mount with `conn_rdma_meta_fragment_size` in `beegfs_client_mounts`. Default: unset (the package default `default` inherits `connRDMAFragmentSize`).
 
 ### Reboot-safe device resolution
 

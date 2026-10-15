@@ -7,8 +7,8 @@ clip.hpc Release Notes
 
 v3.12.0
 =======
+- beegfs: Add ``beegfs_client_conn_rdma_meta_fragment_size`` to configure ``connRDMAMetaFragmentSize`` on the client, with a per-mount ``conn_rdma_meta_fragment_size`` override. Unset by default to preserve the package setting (inherits ``connRDMAFragmentSize``)
 - beegfs: Run the NVFS/NVIDIA include path detection also in check mode, so a dry run on GPU nodes with nvidia-fs no longer shows a false diff for ``beegfs-client-build.mk`` that replaces the detected ``NVFS_INCLUDE_PATH``/``NVIDIA_INCLUDE_PATH`` with the commented-out examples
-
 
 v3.11.0
 =======

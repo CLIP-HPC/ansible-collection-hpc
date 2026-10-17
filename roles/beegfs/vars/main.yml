@@ -2,6 +2,9 @@
 beegfs_packages:
   mgmt:
     - beegfs-mgmtd
+    # The beegfs CLI (/usr/sbin/beegfs): alias.yml runs it on the mgmt host,
+    # which isn't necessarily a client.
+    - beegfs-tools
   mon:
     - beegfs-mon
   meta:

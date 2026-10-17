@@ -84,7 +84,7 @@
   become: true
   tags: install
   ansible.builtin.dnf:
-    name: "{{ beegfs_pkglist | reject('eq', '') | flatten }}"
+    name: "{{ beegfs_pkglist | flatten | reject('eq', '') | unique }}"
     state: "{{ beegfs_package_action }}"
     install_weak_deps: false # avoids getting recommended packages
   when: beegfs_pkglist | length > 0

@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.12.1
+=======
+- beegfs: Install ``beegfs-tools`` (the ``beegfs`` CLI) on management hosts too, not only on clients. The alias tasks run ``/usr/sbin/beegfs`` on ``beegfs_mgmt_host``, so a management host that isn't a client failed with ``No such file or directory: /usr/sbin/beegfs`` (#82). Duplicate package names in the merged per-host list are now removed
+
 v3.12.0
 =======
 - beegfs: Add ``beegfs_client_conn_rdma_meta_fragment_size`` to configure ``connRDMAMetaFragmentSize`` on the client, with a per-mount ``conn_rdma_meta_fragment_size`` override. Unset by default to preserve the package setting (inherits ``connRDMAFragmentSize``)

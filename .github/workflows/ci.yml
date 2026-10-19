@@ -11,7 +11,7 @@ jobs:
   ci:
     uses: vbc-it/github-action-workflows/.github/workflows/ansible-collection.yml@v1.0.0
     secrets:
-      automationhub_token: ${{ secrets.AAP_HUB_API_TOKEN }}
+      automationhub_token: ${{ secrets.SVC_TOWER_GITHUB_WRITE_API_TOKEN }}
     with:
       platform: self-hosted
       molecule_env_file: ansible.env

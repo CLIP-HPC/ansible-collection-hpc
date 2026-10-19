@@ -40,6 +40,7 @@ Provision an existing cluster to support [BeeGFS](https://www.beegfs.io/) manage
   - `path`: Mount path. Must be unique per mount.
   - `port`: `connClientPort` for this mount. Must be unique per mount.
   - `mgmt_host`: Optional. Overrides `beegfs_mgmt_host` for this mount, for connecting to a different BeeGFS cluster.
+  - `auth_secret`: Optional. Base64-encoded auth secret of this mount's cluster, for a cluster whose secret differs from `beegfs_auth_secret`. Written to `/etc/beegfs/conn-<port>.auth` and set as `connAuthFile` of this mount. Without it, `connAuthFile` points at the global `/etc/beegfs/conn.auth` (from `beegfs_auth_secret`) and a previously written `/etc/beegfs/conn-<port>.auth` is removed. Keep it in Ansible Vault.
   Each mount gets its own `/etc/beegfs/beegfs-client-<port>.conf`.
 
 - `beegfs_client_tune_file_cache_buf_size`: Optional. Sets `tuneFileCacheBufSize` in each client config. Override per mount with `tune_file_cache_buf_size` in `beegfs_client_mounts`. Default: unset (preserves the package setting).
@@ -138,6 +139,7 @@ A host can mount more than one BeeGFS filesystem, including filesystems served b
           - path: "/mnt/beegfs-other"
             port: 8005
             mgmt_host: "beegfs-mgmt.other-cluster.example.org"
+            auth_secret: "{{ vault_beegfs_other_cluster_auth_secret }}"
 ```
 
 ### Tags

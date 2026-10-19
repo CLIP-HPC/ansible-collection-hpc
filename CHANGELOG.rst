@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.13.0
+=======
+- beegfs: Add an optional per-mount ``auth_secret`` to ``beegfs_client_mounts``, so a client can mount BeeGFS clusters with different auth secrets. It's written to ``/etc/beegfs/conn-<port>.auth`` and set as ``connAuthFile`` of that mount. ``connAuthFile`` of mounts without it is now set explicitly to the global ``/etc/beegfs/conn.auth`` (the BeeGFS 8 package default)
+
 v3.12.1
 =======
 - beegfs: Install ``beegfs-tools`` (the ``beegfs`` CLI) on management hosts too, not only on clients. The alias tasks run ``/usr/sbin/beegfs`` on ``beegfs_mgmt_host``, so a management host that isn't a client failed with ``No such file or directory: /usr/sbin/beegfs`` (#82). Duplicate package names in the merged per-host list are now removed

@@ -71,3 +71,20 @@
       loop: "{{ beegfs_mount_fstype.results }}"
       loop_control:
         label: "{{ item.item }}"
+
+    - name: Check the per-mount BeeGFS client auth file exists
+      ansible.builtin.stat:
+        path: /etc/beegfs/conn-8004.auth
+      register: beegfs_client_auth_file
+
+    - name: Read connAuthFile of the BeeGFS client config
+      ansible.builtin.command: grep -E '^connAuthFile' /etc/beegfs/beegfs-client-8004.conf
+      register: beegfs_client_conn_auth_file
+      changed_when: false
+
+    - name: Assert the BeeGFS client mount uses its own auth file
+      ansible.builtin.assert:
+        that:
+          - beegfs_client_auth_file.stat.exists
+          - beegfs_client_auth_file.stat.mode == '0640'
+          - beegfs_client_conn_auth_file.stdout is search('= /etc/beegfs/conn-8004.auth$')

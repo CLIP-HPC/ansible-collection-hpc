@@ -192,6 +192,9 @@ beegfs_client_mounts: []
 # - path: "/mnt/beegfs" # If there are multiple clients, use different path for each client.
 #   port: 8004 # If there are multiple clients, use different port for each client.
 #   mgmt_host: # Use this to override the default beegfs_mgmt_host in cases there are multiple clients.
+#   auth_secret: # Optional. Base64 auth secret of this mount's cluster, written to
+#   # /etc/beegfs/conn-<port>.auth and set as connAuthFile. Defaults to the
+#   # global /etc/beegfs/conn.auth from beegfs_auth_secret.
 #   # Any of the beegfs_client_tune_*/beegfs_client_conn_*/beegfs_conn_client_max_internode_num/
 #   # beegfs_conn_restrict_outbound_interfaces tuning defaults (see below) can
 #   # also be overridden per mount here, minus their beegfs_client_/beegfs_

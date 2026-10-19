@@ -15,7 +15,7 @@ Provision an existing cluster to support [BeeGFS](https://www.beegfs.io/) manage
 - `beegfs_interfaces`: List of network interfaces in order of preference, written one per line into `connInterfacesFile`. Leaving empty means InfiniBand and RDMA-enabled devices are preferred. Each entry is written verbatim, so besides plain interface names it also accepts BeeGFS's [advanced filter syntax](https://doc.beegfs.io/latest/advanced_topics/network_configuration.html#configure-allowed-network-interfaces) (e.g. `! eth0, *` or `* * 6`) for name/address/protocol matching. Default: `[]`.
 - `beegfs_conn_interfaces_addr` / `beegfs_conn_interfaces_protocol`: Optional. When either is set, every plain interface name in `beegfs_interfaces` is rewritten as `<name> <addr> <protocol>` (a field left unset is written as `*`) - a structured shortcut for the advanced filter syntax above, for when `beegfs_interfaces` holds plain names (e.g. from NUMA auto-discovery) rather than raw filter-syntax entries. `beegfs_conn_interfaces_addr` is a single IP address; `beegfs_conn_interfaces_protocol` is `4` or `6`. Applies globally - the global `connInterfacesFile`, `connRDMAInterfacesFile`, the metadata service's and every `beegfs_oss` entry's own `connInterfacesFile` - not overridable per `beegfs_oss` entry. Default: unset (interfaces written as plain names, unchanged).
 - `beegfs_numa_nic_fallback`: How the NUMA-bound metadata and OSS services use NICs on other NUMA zones. `true`: the NUMA-local NIC(s) come first and the other NIC(s) follow as an HA fallback; the preferred (first) NIC must be NUMA-local. `false`: only NUMA-local NIC(s) are used, with no fallback; every NIC must be NUMA-local, and a service without a local NIC fails the run. Explicit `beegfs_meta_interfaces`/`beegfs_oss[*].interfaces` lists are used as given but validated the same way. To also keep outbound connections off the non-local NIC with `false`, set `beegfs_conn_restrict_outbound_interfaces: true`. Default: `true`.
-- `beegfs_conn_auth_beegfs_group`: Whether `/etc/beegfs/conn.auth` is owned by `root:beegfs` with group-read permission (mode `0640`), matching the group the beegfs package's own config files use. When `false`, it's owned by `root:root` with mode `0600` instead - set this to `false` for hosts where the beegfs system group doesn't exist (e.g. beegfs packages not yet installed) or where group access to the auth secret is unwanted. Default: `true`.
+- `beegfs_conn_auth_beegfs_group`: Whether `/etc/beegfs/conn.auth` is owned by `root:beegfs` with group-read permission (mode `0640`), matching the group the beegfs package's own config files use. When `false`, it's owned by `root:root` with mode `0600` instead - set this to `false` for hosts where the beegfs system group doesn't exist (e.g. beegfs packages not yet installed) or where group access to the auth secret is unwanted. Applies to the per-mount `/etc/beegfs/conn-<port>.auth` files too. Default: `false`.
 - `beegfs_target_id_multiplier`: Multiplier applied to node ID when computing target IDs. Default: `100`.
 - `beegfs_node_num_id`: Numeric node ID used for target ID calculation.
 - `beegfs_oss`: Dict of object storage server configurations, keyed by port. Each entry:
@@ -40,6 +40,7 @@ Provision an existing cluster to support [BeeGFS](https://www.beegfs.io/) manage
   - `path`: Mount path. Must be unique per mount.
   - `port`: `connClientPort` for this mount. Must be unique per mount.
   - `mgmt_host`: Optional. Overrides `beegfs_mgmt_host` for this mount, for connecting to a different BeeGFS cluster.
+  - `auth_secret`: Optional. Base64-encoded auth secret of this mount's cluster, for a cluster whose secret differs from `beegfs_auth_secret`. Written to `/etc/beegfs/conn-<port>.auth` and set as `connAuthFile` of this mount. Without it, `connAuthFile` points at the global `/etc/beegfs/conn.auth` (from `beegfs_auth_secret`) and a previously written `/etc/beegfs/conn-<port>.auth` is removed. Keep it in Ansible Vault.
   Each mount gets its own `/etc/beegfs/beegfs-client-<port>.conf`.
 
 - `beegfs_client_tune_file_cache_buf_size`: Optional. Sets `tuneFileCacheBufSize` in each client config. Override per mount with `tune_file_cache_buf_size` in `beegfs_client_mounts`. Default: unset (preserves the package setting).
@@ -138,6 +139,7 @@ A host can mount more than one BeeGFS filesystem, including filesystems served b
           - path: "/mnt/beegfs-other"
             port: 8005
             mgmt_host: "beegfs-mgmt.other-cluster.example.org"
+            auth_secret: "{{ vault_beegfs_other_cluster_auth_secret }}"
 ```
 
 ### Tags

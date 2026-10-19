@@ -30,7 +30,7 @@
       ansible.posix.mount:
         name: "{{ item.path }}"
         state: absent
-      loop: "{{ beegfs_client_mounts | default([]) }}"
+      loop: "{{ beegfs_client_mounts_public }}"
       when: beegfs_enable.client | default(false) | bool
 
 

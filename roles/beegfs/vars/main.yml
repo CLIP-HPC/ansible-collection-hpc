@@ -20,3 +20,15 @@ beegfs_packages:
     - beegfs-utils
 
 beegfs_meta_dev_label: "beegfs-meta"
+
+# beegfs_client_mounts without auth_secret. Every loop over the mounts uses
+# this except the no_log task writing conn-<port>.auth: a verbose run prints
+# each loop item in full, whatever its loop label.
+beegfs_client_mounts_public: >-
+  {{ beegfs_client_mounts | default([])
+     | map('dict2items') | map('rejectattr', 'key', 'equalto', 'auth_secret')
+     | map('items2dict') | list }}
+# Ports of the beegfs_client_mounts entries with their own auth_secret.
+beegfs_client_auth_secret_ports: >-
+  {{ beegfs_client_mounts | default([]) | selectattr('auth_secret', 'defined')
+     | rejectattr('auth_secret', 'none') | map(attribute='port') | list }}

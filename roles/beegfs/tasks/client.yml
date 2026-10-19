@@ -12,7 +12,7 @@
     src: /etc/beegfs/beegfs-client.conf
     dest: /etc/beegfs/beegfs-client-{{ item.port }}.conf
     force: false
-  loop: "{{ beegfs_client_mounts | default([]) }}"
+  loop: "{{ beegfs_client_mounts_public }}"
 
 
 # A mount with its own auth_secret (e.g. one of another BeeGFS cluster) gets
@@ -40,10 +40,10 @@
   ansible.builtin.file:
     path: /etc/beegfs/conn-{{ item.port }}.auth
     state: absent
-  loop: "{{ beegfs_client_mounts | default([]) }}"
+  loop: "{{ beegfs_client_mounts_public }}"
   loop_control:
     label: /etc/beegfs/conn-{{ item.port }}.auth
-  when: (item.auth_secret | default(none)) is none
+  when: item.port not in beegfs_client_auth_secret_ports
   tags: [client_config, config]
   notify: Remount BeeGFS client mounts
 
@@ -54,13 +54,13 @@
     beegfs_client_config_file: "beegfs-client-{{ item.port }}.conf"
     beegfs_client_auth_file: >-
       {{ ('/etc/beegfs/conn-' ~ item.port ~ '.auth')
-         if (item.auth_secret | default(none)) is not none
+         if item.port in beegfs_client_auth_secret_ports
          else '/etc/beegfs/conn.auth' }}
   ansible.builtin.lineinfile:
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: ^connAuthFile
     line: connAuthFile                  = {{ beegfs_client_auth_file }}
-  loop: "{{ beegfs_client_mounts | default([]) }}"
+  loop: "{{ beegfs_client_mounts_public }}"
   tags: [client_config, config]
   notify: Remount BeeGFS client mounts
 
@@ -73,7 +73,7 @@
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: ^sysMgmtdHost
     line: sysMgmtdHost = {{ item.mgmt_host | default(beegfs_mgmt_host) }}
-  loop: "{{ beegfs_client_mounts | default([]) }}"
+  loop: "{{ beegfs_client_mounts_public }}"
   notify: Remount BeeGFS client mounts
 
 
@@ -85,7 +85,7 @@
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: ^connClientPort
     line: connClientPort                = {{ item.port }}
-  loop: "{{ beegfs_client_mounts | default([]) }}"
+  loop: "{{ beegfs_client_mounts_public }}"
   notify: Remount BeeGFS client mounts
 
 - name: Configure connInterfacesFile for BeeGFS client
@@ -96,7 +96,7 @@
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: "^connInterfacesFile"
     line: connInterfacesFile            = /etc/beegfs/connInterfacesFile
-  loop: "{{ beegfs_client_mounts | default([]) }}"
+  loop: "{{ beegfs_client_mounts_public }}"
   tags: interfaces
   notify: Remount BeeGFS client mounts
 
@@ -109,7 +109,7 @@
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: "^connRDMAInterfacesFile"
     line: connRDMAInterfacesFile        = /etc/beegfs/connRDMAInterfacesFile
-  loop: "{{ beegfs_client_mounts | default([]) }}"
+  loop: "{{ beegfs_client_mounts_public }}"
   tags: interfaces
   notify: Remount BeeGFS client mounts
 
@@ -121,7 +121,7 @@
     dest: /etc/beegfs/{{ beegfs_client_config_file }}
     regexp: ^quotaEnabled
     line: quotaEnabled                  = {{ (beegfs_enable_quota | bool) | ternary('true', 'false') }}
-  loop: "{{ beegfs_client_mounts | default([]) }}"
+  loop: "{{ beegfs_client_mounts_public }}"
   tags: [client_config, config]
   notify: Remount BeeGFS client mounts
 
@@ -130,7 +130,7 @@
 # itself: an include's own tags aren't inherited by the tasks it includes.
 - name: Configure tunings for each BeeGFS client mount
   ansible.builtin.include_tasks: client_mount_tunings.yml
-  loop: "{{ beegfs_client_mounts | default([]) }}"
+  loop: "{{ beegfs_client_mounts_public }}"
   loop_control:
     loop_var: beegfs_client_mount
     label: "{{ beegfs_client_mount.port }}"
@@ -168,5 +168,5 @@
     opts: rw,relatime,cfgFile=/etc/beegfs/{{ beegfs_client_config_file }},_netdev
     src: beegfs_nodev
     state: mounted
-  loop: "{{ beegfs_client_mounts | default([]) }}"
+  loop: "{{ beegfs_client_mounts_public }}"
   tags: [client_config, config, interfaces]

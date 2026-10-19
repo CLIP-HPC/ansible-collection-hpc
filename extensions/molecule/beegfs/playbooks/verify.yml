@@ -86,5 +86,6 @@
       ansible.builtin.assert:
         that:
           - beegfs_client_auth_file.stat.exists
-          - beegfs_client_auth_file.stat.mode == '0640'
+          # 0600: beegfs_conn_auth_beegfs_group defaults to false
+          - beegfs_client_auth_file.stat.mode == '0600'
           - beegfs_client_conn_auth_file.stdout is search('= /etc/beegfs/conn-8004.auth$')

@@ -7,7 +7,8 @@ clip.hpc Release Notes
 
 v3.13.0
 =======
-- beegfs: Add an optional per-mount ``auth_secret`` to ``beegfs_client_mounts``, so a client can mount BeeGFS clusters with different auth secrets. It's written to ``/etc/beegfs/conn-<port>.auth`` and set as ``connAuthFile`` of that mount. ``connAuthFile`` of mounts without it is now set explicitly to the global ``/etc/beegfs/conn.auth`` (the BeeGFS 8 package default)
+- beegfs: Add an optional per-mount ``auth_secret`` to ``beegfs_client_mounts``, so a client can mount BeeGFS clusters with different auth secrets. It's written to ``/etc/beegfs/conn-<port>.auth`` and set as ``connAuthFile`` of that mount. ``connAuthFile`` of mounts without it is now set explicitly to the global ``/etc/beegfs/conn.auth`` (the BeeGFS 8 package default). Tasks looping over ``beegfs_client_mounts`` use a copy without ``auth_secret``, so the secret isn't logged, also in verbose runs
+- beegfs: Fix the documented default of ``beegfs_conn_auth_beegfs_group`` in the README (``false``, not ``true``)
 
 v3.12.1
 =======

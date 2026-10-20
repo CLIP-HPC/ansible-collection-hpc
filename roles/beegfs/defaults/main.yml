@@ -148,6 +148,13 @@ beegfs_mgmt_host:  # Example: "{{ groups['cluster_beegfs_mgmt'] | first }}"
 # gRPC port of the management service (beegfs-mgmtd.toml "grpc-port"), used by
 # the beegfs CLI via --mgmtd-addr when setting node/target aliases.
 beegfs_mgmt_grpc_port: 8010
+# Address the beegfs CLI uses to reach mgmtd in the alias tasks. With TLS
+# enabled it must match a name in the mgmtd certificate, e.g. the FQDN.
+beegfs_cli_mgmtd_addr: "{{ beegfs_mgmt_host }}:{{ beegfs_mgmt_grpc_port }}"
+# Certificate or CA bundle the CLI verifies mgmtd against when TLS is enabled.
+# The default is the BeeGFS default for a self-signed certificate; use the
+# system bundle (/etc/pki/tls/certs/ca-bundle.crt) for a CA-issued one.
+beegfs_cli_tls_cert_file: /etc/beegfs/cert.pem
 
 # BeeGFS license file content (obtained from ThinkParQ, e.g. via licensing@thinkparq.com
 # or the self-service portal). Deployed to /etc/beegfs/license.pem only on the management
@@ -275,7 +282,7 @@ beegfs_thp_defrag_mode: defer+madvise
 # Set to a non-empty string to enable authentication
 beegfs_auth_secret:
 
-# Disable TLS authentication
+# Disable TLS on the mgmtd gRPC port (tls-disable) and in the alias tasks' CLI
 beegfs_disable_tls: false
 
 # Tunings

@@ -3,12 +3,15 @@
 - name: Set Aliases
   become: true
   delegate_to: "{{ beegfs_mgmt_host }}"
+  # Same TLS setting as mgmtd (tls-disable in beegfs-mgmtd.toml): a CLI with
+  # TLS disabled can't talk to an mgmtd with TLS enabled, and vice versa.
   environment:
-    BEEGFS_TLS_DISABLE: "true"
+    BEEGFS_TLS_DISABLE: "{{ beegfs_disable_tls | bool | string | lower }}"
+    BEEGFS_TLS_CERT_FILE: "{{ beegfs_cli_tls_cert_file }}"
   vars:
     # Pass the mgmtd address explicitly: the CLI otherwise auto-detects it from
     # a mounted BeeGFS, which the mgmt host doesn't necessarily have.
-    beegfs_mgmtd_addr: "{{ beegfs_mgmt_host }}:{{ beegfs_mgmt_grpc_port }}"
+    beegfs_mgmtd_addr: "{{ beegfs_cli_mgmtd_addr }}"
   block:
     - name: Create alias for BeeGFS management server
       vars:

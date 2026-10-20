@@ -5,6 +5,11 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.15.0
+=======
+- beegfs: The alias tasks now set ``BEEGFS_TLS_DISABLE`` from ``beegfs_disable_tls`` instead of always ``true``, so the ``beegfs`` CLI matches mgmtd's ``tls-disable`` and aliases can be set with TLS enabled. **Behavior change:** with the default ``beegfs_disable_tls: false`` the CLI now uses TLS and needs a valid mgmtd certificate
+- beegfs: Add ``beegfs_cli_mgmtd_addr`` (default ``<beegfs_mgmt_host>:<beegfs_mgmt_grpc_port>``) and ``beegfs_cli_tls_cert_file`` (default ``/etc/beegfs/cert.pem``) for the alias tasks, so the CLI can reach mgmtd by a name in its certificate and verify it, e.g. against the system trust store for a CA-issued certificate
+
 v3.14.0
 =======
 - slurm: Add partition slices: a partition in ``slurm_partitions`` can list nodes in ``nodes`` (names or Slurm hostlist expressions, e.g. ``cbe-c3-[13-18]``), so partition membership can change in the variables alone instead of moving nodes between nodegroup inventory groups. The nodes get the feature ``partition_<name>`` and the partition adds ``NodeSet=partition_<name>``. A slice is exclusive unless ``exclusive: false``: its nodes don't get ``nodegroup_<nodegroup>`` and leave the partitions built from their nodegroup. Partitions without ``nodes`` and nodes outside slices render as before. Validation fails if a node is in more than one exclusive slice and warns about slice nodes outside all nodegroups

@@ -23,6 +23,35 @@ This Ansible role is used to have a fully functional SLURM Cluster
 * `batch`: whether to enable compute nodes
 * `runtime`: whether to enable SLURM runtime
 
+Partitions and slices
+---------------------
+
+Nodes are grouped into `slurm_nodegroups`, one per inventory group `<slurm_cluster_name>_<nodegroup>`.
+Each node gets the feature `nodegroup_<nodegroup>` and `NodeSet=nodegroup_<nodegroup>` selects it. A partition
+in `slurm_partitions` takes the nodegroups in `nodegroups` (default: the nodegroup with the partition's name).
+
+A partition can also list nodes directly in `nodes`, as names or Slurm hostlist expressions. This makes it a
+slice that can be changed in the variables alone, without moving nodes between inventory groups:
+
+    slurm_partitions:
+      - name: c
+        nodegroups: [c3]
+      - name: grid
+        nodes: cbe-c3-[13-18]
+      - name: debug
+        nodes: [cbe-c3-1, cbe-g5-1]
+        exclusive: false
+
+The nodes of a slice get the feature `partition_<name>` and the partition uses `NodeSet=partition_<name>`, plus
+the nodegroups in `nodegroups` if set (default: none). A slice is exclusive unless `exclusive: false`: its nodes
+don't get the `nodegroup_<nodegroup>` feature, so they leave the partitions built from their nodegroup (`c` above
+then has c3-1 to c3-12). A node can be in only one exclusive slice. A shared slice adds its nodes without removing
+them from other partitions.
+
+Dynamic nodes register their features when slurmd registers, so a node moving in or out of a slice keeps its old
+partitions until its node record is deleted (`scontrol delete nodename=<node>`) and slurmd restarted with the new
+`/etc/sysconfig/slurmd`. Static nodes pick up the change with the next `slurm.conf` update.
+
 Example Playbook
 ----------------
 

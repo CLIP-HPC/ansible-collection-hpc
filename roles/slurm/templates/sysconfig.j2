@@ -11,7 +11,11 @@
 {% if ns.nodegroup is not none and ns.nodegroup.get('dynamic', slurm_dynamic_nodes) | bool %}
 {%   set ram_mb = ns.nodegroup.ram_mb | default(ansible_facts['memory_mb']['real']['total']) | int %}
 {%   set mem_spec_limit = (ram_mb * ns.nodegroup.get('mem_spec_percent', slurm_mem_spec_percent | default(0))) | int %}
-{%   set conf = ['Features=' ~ ((['nodegroup_' ~ ns.nodegroup.name] + ns.nodegroup.features | default([])) | join(','))]
+{%   set slice = (slurm_partitions | default([]) | clip.hpc.slurm_slices).get(node_name, {'exclusive': [], 'shared': []}) %}
+{%   set features = ([] if slice.exclusive else ['nodegroup_' ~ ns.nodegroup.name])
+                   + ns.nodegroup.features | default([])
+                   + (slice.exclusive + slice.shared) | map('regex_replace', '^', 'partition_') | list %}
+{%   set conf = ['Features=' ~ (features | join(','))]
                + (['MemSpecLimit=' ~ mem_spec_limit] if mem_spec_limit else [])
                + (['Gres=' ~ (ns.nodegroup.gres | map(attribute='conf') | join(','))] if 'gres' in ns.nodegroup else [])
                + ([ns.nodegroup.node_params | clip.hpc.dict2parameters] if ns.nodegroup.node_params | default({}) else []) %}

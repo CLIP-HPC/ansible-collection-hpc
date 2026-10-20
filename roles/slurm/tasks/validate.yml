@@ -56,3 +56,33 @@
   delegate_to: localhost
   loop: "{{ slurm_nodegroups }}"
   run_once: true
+
+- name: validate | Check no node is in more than one exclusive partition slice
+  tags:
+    - always
+    - validate
+  ansible.builtin.assert:
+    that: _slurm_multi_claimed | length == 0
+    fail_msg: |
+      Some nodes are listed in the nodes of more than one exclusive partition (set exclusive: false on the others):
+      {{ _slurm_multi_claimed | to_nice_yaml }}
+  vars:
+    _slurm_multi_claimed: "{{ slurm_partitions | clip.hpc.slurm_slices | dict2items | selectattr('value.exclusive.1', 'defined') | items2dict }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: validate | Warn about partition slice nodes outside all nodegroups
+  tags:
+    - always
+    - validate
+  ansible.builtin.debug:
+    msg: >-
+      Nodes listed in partition slices but not in any of the inventory groups {{ _slurm_node_inventory_groups | join(', ') }},
+      they will not join these partitions: {{ _slurm_unknown_slice_nodes | join(', ') }}
+  when: _slurm_unknown_slice_nodes | length > 0
+  vars:
+    _slurm_node_inventory_groups: "{{ slurm_nodegroups | map(attribute='name') | map('regex_replace', '^', slurm_cluster_name ~ '_') }}"
+    _slurm_nodegroup_hosts: "{{ groups | dict2items | selectattr('key', 'in', _slurm_node_inventory_groups) | map(attribute='value') | flatten | map('split', '.') | map('first') }}" # noqa: yaml[line-length]
+    _slurm_unknown_slice_nodes: "{{ slurm_partitions | clip.hpc.slurm_slices | list | difference(_slurm_nodegroup_hosts) }}"
+  delegate_to: localhost
+  run_once: true

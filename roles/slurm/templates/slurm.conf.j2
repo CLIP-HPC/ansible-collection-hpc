@@ -3,6 +3,7 @@ ClusterName={{ slurm_cluster_name }}
 
 {% set _merged_config = slurm_default_config | combine(slurm_config) %}
 {% set _dynamic_nodegroups = [] %}
+{% set _slices = slurm_partitions | default([]) | clip.hpc.slurm_slices %}
 {% for nodegroup in slurm_nodegroups | default([]) %}
 {%   if nodegroup.get('dynamic', slurm_dynamic_nodes) | bool %}
 {%     set _ = _dynamic_nodegroups.append(nodegroup.name) %}
@@ -74,10 +75,18 @@ NodeName={{ node }}
 {%          set slurmd_topo = slurmd_topo if slurmd_topo is mapping else {} %}{# guard: fact may be a raw string if the interpreter was missing on a previous run #}
 {%          set ram_mb = slurmd_topo.get('RealMemory', first_host_hv['ansible_facts']['memory_mb']['real']['total']) | int %}
 {%          set mem_spec_limit = (ram_mb * nodegroup.get('mem_spec_percent', slurm_mem_spec_percent | default(0))) | int %}
-{%          set hostlists = (inventory_group_hosts | clip.hpc.hostlist_expression) %}{# hosts in inventory group aren't necessarily a single hostlist expression #}
+{%          set _host_features = [] %}
+{%          for h in inventory_group_hosts %}
+{%            set _slice = _slices.get(h.split('.') | first, {'exclusive': [], 'shared': []}) %}
+{%            set _ = _host_features.append({'host': h, 'features': (([] if _slice.exclusive else ['nodegroup_' ~ nodegroup.name])
+                                                                    + nodegroup.features | default([])
+                                                                    + (_slice.exclusive + _slice.shared) | map('regex_replace', '^', 'partition_') | list) | join(',')}) %}
+{%          endfor %}
 # Node config source ({{ first_host }}): {{ slurmd_topo | ternary('slurmd_topology facts', 'fallback to ansible_facts') }}
+{%          for features, members in _host_features | groupby('features') %}
+{%            set hostlists = (members | map(attribute='host') | list | clip.hpc.hostlist_expression) %}{# hosts in inventory group aren't necessarily a single hostlist expression #}
 NodeName={{ hostlists | join(',') }} {{ '' -}}
-    Features={{ (['nodegroup_' ~ nodegroup.name] + nodegroup.features | default([]) ) | join(',') }} {{ '' -}}
+    Features={{ features }} {{ '' -}}
     State=UNKNOWN {{ '' -}}
     RealMemory={{ nodegroup.ram_mb | default(ram_mb) }} {{ '' -}}
     {%- if mem_spec_limit %}MemSpecLimit={{ mem_spec_limit }}{% endif %} {{ '' -}}
@@ -87,10 +96,19 @@ NodeName={{ hostlists | join(',') }} {{ '' -}}
     {{ nodegroup.node_params | default({}) | clip.hpc.dict2parameters }} {{ '' -}}
     {% if 'gres' in nodegroup %}Gres={{ ','.join(nodegroup.gres | map(attribute='conf')) }}{% endif %}
 
+{%          endfor %}{# feature groups #}
 {%      endif %}{# 1 or more hosts in inventory #}
 {%  endif %}{# not dynamic #}
 NodeSet=nodegroup_{{ nodegroup.name }} Feature=nodegroup_{{ nodegroup.name }}
 
+{% endfor %}
+{% for partition in slurm_partitions | selectattr('nodes', 'defined') %}
+{%   if loop.first %}
+
+# PARTITION SLICES
+{%   endif %}
+# slice: {{ partition.name }} ({{ 'exclusive' if partition.get('exclusive', true) | bool else 'shared' }})
+NodeSet=partition_{{ partition.name }} Feature=partition_{{ partition.name }}
 {% endfor %}
 
 # Define a non-existent node, in no partition, so that slurmctld starts even with all partitions empty
@@ -102,6 +120,7 @@ PartitionName={{partition.name}} {{ '' -}}
     Default={{ partition.get('default', 'NO') }} {{ '' -}}
     MaxTime={{ partition.get('maxtime', slurm_job_maxtime | default('UNLIMITED')) }} {{ '' -}}
     State=UP  {{ '' -}}
-    Nodes={{ partition.get('nodegroups', [partition.name]) | map('regex_replace', '^', 'nodegroup_') | join(',') }} {{ '' -}}
+    Nodes={{ (partition.get('nodegroups', [] if 'nodes' in partition else [partition.name]) | map('regex_replace', '^', 'nodegroup_') | list
+              + (['partition_' ~ partition.name] if 'nodes' in partition else [])) | join(',') }} {{ '' -}}
     {{ partition.partition_params | default({}) | clip.hpc.dict2parameters }}
 {% endfor %}

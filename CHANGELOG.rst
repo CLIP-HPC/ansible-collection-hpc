@@ -5,6 +5,11 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.14.0
+=======
+- slurm: Add partition slices: a partition in ``slurm_partitions`` can list nodes in ``nodes`` (names or Slurm hostlist expressions, e.g. ``cbe-c3-[13-18]``), so partition membership can change in the variables alone instead of moving nodes between nodegroup inventory groups. The nodes get the feature ``partition_<name>`` and the partition adds ``NodeSet=partition_<name>``. A slice is exclusive unless ``exclusive: false``: its nodes don't get ``nodegroup_<nodegroup>`` and leave the partitions built from their nodegroup. Partitions without ``nodes`` and nodes outside slices render as before. Validation fails if a node is in more than one exclusive slice and warns about slice nodes outside all nodegroups
+- slurm: Static nodegroups render one ``NodeName`` line per distinct feature set, so their nodes can be in different slices
+
 v3.13.0
 =======
 - beegfs: Add an optional per-mount ``auth_secret`` to ``beegfs_client_mounts``, so a client can mount BeeGFS clusters with different auth secrets. It's written to ``/etc/beegfs/conn-<port>.auth`` and set as ``connAuthFile`` of that mount. ``connAuthFile`` of mounts without it is now set explicitly to the global ``/etc/beegfs/conn.auth`` (the BeeGFS 8 package default). Tasks looping over ``beegfs_client_mounts`` use a copy without ``auth_secret``, so the secret isn't logged, also in verbose runs

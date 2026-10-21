@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.17.1
+=======
+- slurm: Set ``nodename=<short hostname>`` on the ``pam_slurm_adopt`` line on dynamic nodes. They have no ``NodeName`` in ``slurm.conf``, so since Slurm 25.11.2 pam_slurm_adopt looked up job steps under the FQDN from ``gethostname()`` while slurmd runs as ``-N <short hostname>``, and denied SSH to users with running jobs (`SchedMD bug 26042 <https://support.schedmd.com/show_bug.cgi?id=26042>`_). Static nodes are unchanged
+
 v3.17.0
 =======
 - beegfs: Install ``beegfs-copy`` on clients, so ``beegfs copy`` works there. Without it the CLI fails with ``to use this mode first install the beegfs-copy package``. Hosts that get BeeGFS packages from their own repository (``beegfs_add_repos: false``, e.g. Satellite) need ``beegfs-copy`` available there, otherwise the package install fails

@@ -31,6 +31,19 @@
         fail_msg: /usr/sbin/beegfs (beegfs-tools) is missing; alias.yml runs it on the mgmt host.
       when: inventory_hostname in groups['cluster_beegfs_mgmt']
 
+    - name: Check beegfs-copy exists on clients
+      ansible.builtin.stat:
+        path: /opt/beegfs/sbin/beegfs-copy
+      register: beegfs_copy
+      when: inventory_hostname in groups['cluster_beegfs_client']
+
+    - name: Assert beegfs-copy is installed on clients
+      ansible.builtin.assert:
+        that:
+          - beegfs_copy.stat.exists
+        fail_msg: /opt/beegfs/sbin/beegfs-copy (beegfs-copy) is missing; `beegfs copy` needs it on clients.
+      when: inventory_hostname in groups['cluster_beegfs_client']
+
     - name: Check the CLI certificate link on management hosts
       ansible.builtin.stat:
         path: /etc/beegfs/cert.pem

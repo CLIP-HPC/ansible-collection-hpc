@@ -5,6 +5,11 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.16.0
+=======
+- beegfs: Add ``beegfs_client_cli_ca_file`` to link ``/etc/beegfs/cert.pem``, the ``beegfs`` CLI's default ``tls-cert-file``, to a CA bundle on clients that aren't the management host. With TLS enabled the CLI failed there with ``reading certificate file failed: open /etc/beegfs/cert.pem: no such file or directory``. Unset by default
+- beegfs: Run ``beegfs license --reload`` on the management node when ``/etc/beegfs/license.pem`` changes, so mgmtd loads a new license without a restart. It uses ``beegfs_cli_mgmtd_addr`` and the TLS settings of the alias tasks, and retries while mgmtd is starting
+
 v3.15.0
 =======
 - beegfs: The alias tasks now set ``BEEGFS_TLS_DISABLE`` from ``beegfs_disable_tls`` instead of always ``true``, so the ``beegfs`` CLI matches mgmtd's ``tls-disable`` and aliases can be set with TLS enabled. **Behavior change:** with the default ``beegfs_disable_tls: false`` the CLI now uses TLS and needs a valid mgmtd certificate

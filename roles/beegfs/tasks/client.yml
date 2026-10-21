@@ -77,6 +77,25 @@
   notify: Remount BeeGFS client mounts
 
 
+# The beegfs CLI reads its TLS certificate only from --tls-cert-file or
+# BEEGFS_TLS_CERT_FILE (default /etc/beegfs/cert.pem), not from the client
+# config, and fails if that file is missing. It always trusts the system pool
+# and adds the file's certificates, so pointing the default at a CA bundle lets
+# root, sudo and other users run it against an mgmtd with a CA-issued
+# certificate, across renewals. Never on the mgmt host: there cert.pem is
+# mgmtd's own certificate. An existing regular file is not replaced.
+- name: Link the beegfs CLI default certificate to the CA bundle
+  become: true
+  ansible.builtin.file:
+    src: "{{ beegfs_client_cli_ca_file }}"
+    dest: /etc/beegfs/cert.pem
+    state: link
+  when:
+    - beegfs_client_cli_ca_file | default('', true) | length > 0
+    - not (beegfs_enable.mgmt | default(false) | bool)
+  tags: [client_config, config]
+
+
 - name: Configure Port for BeeGFS Client
   become: true
   vars:

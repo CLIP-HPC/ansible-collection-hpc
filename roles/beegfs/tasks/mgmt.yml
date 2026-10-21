@@ -10,6 +10,7 @@
   become: true
   no_log: true
   when: beegfs_license_content | default('', true) | length > 0
+  notify: Reload BeeGFS license
 
 - name: Disable TLS authentication (Development)
   ansible.builtin.lineinfile:

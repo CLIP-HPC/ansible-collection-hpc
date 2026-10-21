@@ -155,11 +155,16 @@ beegfs_cli_mgmtd_addr: "{{ beegfs_mgmt_host }}:{{ beegfs_mgmt_grpc_port }}"
 # The default is the BeeGFS default for a self-signed certificate; use the
 # system bundle (/etc/pki/tls/certs/ca-bundle.crt) for a CA-issued one.
 beegfs_cli_tls_cert_file: /etc/beegfs/cert.pem
+# CA bundle (e.g. /etc/pki/tls/certs/ca-bundle.crt) that /etc/beegfs/cert.pem,
+# the beegfs CLI's default tls-cert-file, links to on clients that aren't the
+# mgmt host, so the CLI works there without flags. Empty: leave it alone.
+beegfs_client_cli_ca_file: ""
 
 # BeeGFS license file content (obtained from ThinkParQ, e.g. via licensing@thinkparq.com
 # or the self-service portal). Deployed to /etc/beegfs/license.pem only on the management
 # node, since licensing is enforced by the management service. Leave unset to run without
-# a license. https://doc.beegfs.io/latest/advanced_topics/licensing.html
+# a license. A changed file is loaded with `beegfs license --reload`, without
+# restarting mgmtd. https://doc.beegfs.io/latest/advanced_topics/licensing.html
 beegfs_license_content:
 
 # Metadata storage options

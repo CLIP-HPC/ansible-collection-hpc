@@ -22,6 +22,8 @@
       beegfs_oss_max_sectors_kb: 128
       beegfs_auth_secret: X6IGuCpALmIy72AJbiozZ8/i+bV5Lpj7qOgCmvNZRZiMi0JkspcJwKVFR+Q9XfPVr4Bmg1An28CjtIbQM28a1+ZyDpwOUq4qVgx+/zy/AacNGiZ3zw7PVM4QDWjg0G5eQxiTidAMiuZO0IZ644ZKaTdoT3IOl0SiCkOBP5aS4VU= # yamllint disable-line rule:line-length
       beegfs_disable_tls: true
+      # The single test host is the mgmt host, so this must leave cert.pem alone.
+      beegfs_client_cli_ca_file: /etc/pki/tls/certs/ca-bundle.crt
       beegfs_meta_max_sectors_kb: 128
       beegfs_mgmt_host: "{{ groups['cluster_beegfs_mgmt'] | first }}"
       beegfs_fstype: "xfs"

@@ -18,6 +18,9 @@ beegfs_packages:
     - beegfs-client-dkms
     - beegfs-tools
     - beegfs-utils
+    # /opt/beegfs/sbin/beegfs-copy, run by `beegfs copy`, which otherwise fails
+    # with "to use this mode first install the beegfs-copy package"
+    - beegfs-copy
 
 beegfs_meta_dev_label: "beegfs-meta"
 

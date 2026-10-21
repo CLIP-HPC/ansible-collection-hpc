@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.17.0
+=======
+- beegfs: Install ``beegfs-copy`` on clients, so ``beegfs copy`` works there. Without it the CLI fails with ``to use this mode first install the beegfs-copy package``. Hosts that get BeeGFS packages from their own repository (``beegfs_add_repos: false``, e.g. Satellite) need ``beegfs-copy`` available there, otherwise the package install fails
+
 v3.16.0
 =======
 - beegfs: Add ``beegfs_client_cli_ca_file`` to link ``/etc/beegfs/cert.pem``, the ``beegfs`` CLI's default ``tls-cert-file``, to a CA bundle on clients that aren't the management host. With TLS enabled the CLI failed there with ``reading certificate file failed: open /etc/beegfs/cert.pem: no such file or directory``. Unset by default

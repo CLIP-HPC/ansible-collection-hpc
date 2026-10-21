@@ -163,7 +163,8 @@ beegfs_client_cli_ca_file: ""
 # BeeGFS license file content (obtained from ThinkParQ, e.g. via licensing@thinkparq.com
 # or the self-service portal). Deployed to /etc/beegfs/license.pem only on the management
 # node, since licensing is enforced by the management service. Leave unset to run without
-# a license. https://doc.beegfs.io/latest/advanced_topics/licensing.html
+# a license. A changed file is loaded with `beegfs license --reload`, without
+# restarting mgmtd. https://doc.beegfs.io/latest/advanced_topics/licensing.html
 beegfs_license_content:
 
 # Metadata storage options

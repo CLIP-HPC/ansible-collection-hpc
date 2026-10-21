@@ -7,6 +7,23 @@
   become: true
   when: beegfs_enable.mgmt | default(false) | bool
 
+# After the restart handler: mgmtd also reads the license at startup, so when
+# both are notified the reload just re-reads it. Same CLI settings as the alias
+# tasks; retried because mgmtd may still be starting after a restart.
+- name: Reload BeeGFS license
+  ansible.builtin.command: >
+    /usr/sbin/beegfs license --reload --mgmtd-addr {{ beegfs_cli_mgmtd_addr }}
+  environment:
+    BEEGFS_TLS_DISABLE: "{{ beegfs_disable_tls | bool | string | lower }}"
+    BEEGFS_TLS_CERT_FILE: "{{ beegfs_cli_tls_cert_file }}"
+  register: beegfs_license_reload
+  changed_when: true
+  until: beegfs_license_reload.rc == 0
+  retries: 5
+  delay: 5
+  become: true
+  when: beegfs_enable.mgmt | default(false) | bool
+
 - name: Restart BeeGFS meta service
   ansible.builtin.service:
     name: beegfs-meta

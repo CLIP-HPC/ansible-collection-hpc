@@ -3,11 +3,29 @@
 - name: pam | Add pam_slurm_adopt and pam_access to SSH PAM configuration
   tags:
     - pam
+  vars:
+    # Same short name and nodegroup lookup as sysconfig.j2 (slurmd -N)
+    _slurm_pam_node_name: "{{ inventory_hostname.split('.') | first }}"
+    _slurm_pam_dynamic_node: >-
+      {%- set ns = namespace(dynamic=false) -%}
+      {%- for nodegroup in slurm_nodegroups | default([]) -%}
+      {%-   set members = groups.get(slurm_cluster_name ~ '_' ~ nodegroup.name, []) | map('split', '.') | map('first') | list -%}
+      {%-   if _slurm_pam_node_name in members -%}
+      {%-     set ns.dynamic = nodegroup.get('dynamic', slurm_dynamic_nodes) | bool -%}
+      {%-   endif -%}
+      {%- endfor -%}
+      {{ ns.dynamic }}
+    _slurm_pam_adopt_args: >-
+      {{ ['action_no_jobs=deny', 'action_unknown=newest', 'action_adopt_failure=deny', 'action_generic_failure=deny']
+         + (['nodename=' ~ _slurm_pam_node_name] if _slurm_pam_dynamic_node | bool else []) }}
   ansible.builtin.blockinfile:
     path: /etc/pam.d/sshd
     insertafter: '^account\s+include\s+password-auth'
+    # Dynamic nodes have no NodeName in slurm.conf, so pam_slurm_adopt falls
+    # back to gethostname() (the FQDN) and doesn't find the steps of slurmd
+    # running as the short -N name: https://support.schedmd.com/show_bug.cgi?id=26042
     block: |
-      account    sufficient   pam_slurm_adopt.so action_no_jobs=deny action_unknown=newest action_adopt_failure=deny action_generic_failure=deny
+      account    sufficient   pam_slurm_adopt.so {{ _slurm_pam_adopt_args | join(' ') }}
       account    required     pam_access.so
     backup: true
 

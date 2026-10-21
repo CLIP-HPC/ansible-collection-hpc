@@ -26,7 +26,6 @@
       beegfs_client_cli_ca_file: /etc/pki/tls/certs/ca-bundle.crt
       beegfs_meta_max_sectors_kb: 128
       beegfs_mgmt_host: "{{ groups['cluster_beegfs_mgmt'] | first }}"
-      beegfs_fstype: "xfs"
       beegfs_force_format: false
       beegfs_interfaces: "{{ ansible_facts['interfaces'] | reject('equalto', 'lo') | list }}"
       beegfs_rdma: false

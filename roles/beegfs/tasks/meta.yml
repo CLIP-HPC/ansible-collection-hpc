@@ -58,11 +58,9 @@
           loop: "{{ beegfs_meta_dev_current_mount.stdout_lines }}"
 
     - name: Format filesystem
-      vars:
-        meta_fstype: "{{ beegfs_meta_fstype | default(beegfs_fstype, true) }}"
       community.general.filesystem:
         dev: "{{ beegfs_meta_dev }}"
-        fstype: "{{ meta_fstype }}"
+        fstype: "{{ beegfs_meta_fstype }}"
         opts: "{{ beegfs_meta_filesystem_opts }} -L {{ beegfs_meta_dev_label }}"
         force: "{{ meta_force_format }}"
       # beegfs_meta_already_provisioned (set by resolve_meta_device.yml) means
@@ -82,12 +80,10 @@
       changed_when: false
 
     - name: Mount filesystem
-      vars:
-        meta_fstype: "{{ beegfs_meta_fstype | default(beegfs_fstype, true) }}"
       ansible.posix.mount:
         src: "/dev/disk/by-label/{{ beegfs_meta_dev_label }}"
         path: "{{ beegfs_meta_path }}"
-        fstype: "{{ meta_fstype }}"
+        fstype: "{{ beegfs_meta_fstype }}"
         opts: "{{ beegfs_meta_mount_opts }}"
         state: mounted
       notify: Restart BeeGFS meta service
@@ -213,6 +209,17 @@
     line: "connInterfacesFile           = {{ beegfs_meta_conn_interfaces_file }}"
   become: true
   tags: interfaces
+  notify: Restart BeeGFS meta service
+
+- name: Configure quotaEnableEnforcement for BeeGFS metadata server
+  become: true
+  tags: [meta_config, config]
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-meta.conf
+    regexp: ^quotaEnableEnforcement
+    line: quotaEnableEnforcement        = true
+    # Off is the package default, which only documents the setting
+    state: "{{ 'present' if beegfs_enforce_quota | bool else 'absent' }}"
   notify: Restart BeeGFS meta service
 
 - name: Configure tunings for BeeGFS metadata server

@@ -5,6 +5,13 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.18.0
+=======
+- beegfs: Add quota support. ``beegfs_enable_quota`` now also sets ``quota-enable`` in ``beegfs-mgmtd.toml`` (it only set the client's ``quotaEnabled`` before), ``beegfs_enforce_quota`` sets ``quota-enforce`` in ``beegfs-mgmtd.toml`` and ``quotaEnableEnforcement`` on metadata and storage servers, and ``beegfs_quota_update_interval`` sets ``quota-update-interval``. Settings that are off are removed from the config instead of written as ``false``, so hosts without quota keep their config unchanged. See the role README for enabling quota on an existing file system (``beegfs-fsck --enablequota``)
+- beegfs: Storage targets are always mounted with XFS user and group quota accounting (``uqnoenforce,gqnoenforce``), now added in front of ``beegfs_mount_opts`` instead of being part of its default, so overriding ``beegfs_mount_opts`` can no longer drop them. With the default options the mount options are unchanged. The role fails if a storage target's active mount has no user or group accounting, since XFS doesn't turn it on at remount
+- beegfs: **Breaking:** Remove ext4 support for storage targets and the ``beegfs_fstype`` variable: storage targets are always XFS. The role fails on storage hosts if ``beegfs_fstype`` is set to anything else. The metadata target still supports ext4 via ``beegfs_meta_fstype``
+- beegfs: Add the ``mgmt_config`` tag for the mgmtd quota settings
+
 v3.17.1
 =======
 - slurm: Set ``nodename=<short hostname>`` on the ``pam_slurm_adopt`` line on dynamic nodes. They have no ``NodeName`` in ``slurm.conf``, so since Slurm 25.11.2 pam_slurm_adopt looked up job steps under the FQDN from ``gethostname()`` while slurmd runs as ``-N <short hostname>``, and denied SSH to users with running jobs (`SchedMD bug 26042 <https://support.schedmd.com/show_bug.cgi?id=26042>`_). Static nodes are unchanged

@@ -16,6 +16,21 @@
   when: beegfs_enable.oss | default(false) | bool or beegfs_enable.meta | default(false) | bool
   tags: always
 
+- name: Check that storage targets are XFS
+  ansible.builtin.assert:
+    that: beegfs_fstype | default('xfs') == 'xfs'
+    fail_msg: >-
+      beegfs_fstype is {{ beegfs_fstype | default('') }}, but storage targets
+      are always XFS: ext4 support was removed. Remove beegfs_fstype.
+  when: beegfs_enable.oss | default(false) | bool
+  tags: always
+
+- name: Check that quota enforcement has quota tracking
+  ansible.builtin.assert:
+    that: beegfs_enable_quota | bool or not (beegfs_enforce_quota | bool)
+    fail_msg: beegfs_enforce_quota requires beegfs_enable_quota
+  tags: always
+
 - name: Configure BeeGFS repos
   ansible.builtin.import_tasks: repos.yml
   when: beegfs_add_repos | bool

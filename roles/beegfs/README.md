@@ -25,6 +25,8 @@ Provision an existing cluster to support [BeeGFS](https://www.beegfs.io/) manage
 
   A deployment can configure OSS ports/devices/interfaces statically, rely on NUMA-zone-based auto-discovery, or mix both on the same host.
 - `beegfs_disk_device_regex`: Regex matching candidate whole-disk device names eligible for BeeGFS OSS auto-discovery. Only used for `beegfs_oss` entries that omit `devices`. Default: `'^(nvme[0-9]+n[0-9]+|vd[a-z]|sd[a-z])$'`.
+- `beegfs_filesystem_opts`: Extra `mkfs.xfs` options for the storage targets, placed before `-L <label>`. Storage targets are always XFS. Default: `-K -l size=2038m`.
+- `beegfs_mount_opts`: Mount options of the storage targets. `uqnoenforce,gqnoenforce` (XFS user and group quota accounting without XFS enforcement, see "Quota" below) are always added in front, and duplicates are dropped. Default: `nodiscard,noatime,nodiratime,logbufs=8,logbsize=256k,inode64`.
 - `beegfs_meta_dev`: Optional. Metadata device path (e.g. `/dev/sdb`). If omitted and `beegfs_enable.meta` is true, it's resolved the same label-first way as `beegfs_oss` devices (see below), using `beegfs_meta_dev_label`.
 - `beegfs_meta_fstype`: Filesystem of the metadata target. Default: `xfs`. Hosts whose metadata target was formatted with the previous `ext4` default must set `beegfs_meta_fstype: ext4`: an already provisioned disk isn't reformatted (unless `beegfs_force_format`), but it is mounted with this fstype.
 - `beegfs_meta_filesystem_opts`: Extra `mkfs` options for the metadata target, placed before `-L <beegfs_meta_dev_label>`. Must match `beegfs_meta_fstype`, e.g. `-i 2048 -I 1024 -J size=400 -O dir_index,filetype` for ext4 or `-K` for xfs. Default: `""` (`mkfs` defaults).
@@ -49,6 +51,35 @@ Provision an existing cluster to support [BeeGFS](https://www.beegfs.io/) manage
 
 - `beegfs_client_tune_file_cache_buf_size`: Optional. Sets `tuneFileCacheBufSize` in each client config. Override per mount with `tune_file_cache_buf_size` in `beegfs_client_mounts`. Default: unset (preserves the package setting).
 - `beegfs_client_conn_rdma_meta_fragment_size`: Optional. Sets `connRDMAMetaFragmentSize` in each client config. Override per mount with `conn_rdma_meta_fragment_size` in `beegfs_client_mounts`. Default: unset (the package default `default` inherits `connRDMAFragmentSize`).
+
+- `beegfs_enable_quota`: Quota tracking: sets `quota-enable = true` in `beegfs-mgmtd.toml` and `quotaEnabled = true` in every client config. Default: `false`.
+- `beegfs_enforce_quota`: Quota enforcement: sets `quota-enforce = true` in `beegfs-mgmtd.toml` and `quotaEnableEnforcement = true` on the metadata and storage servers. Requires `beegfs_enable_quota`. Default: `false`.
+- `beegfs_quota_update_interval`: `quota-update-interval` in `beegfs-mgmtd.toml`, how often mgmtd collects quota usage and pushes the IDs over their limits to the servers, as a duration string, e.g. `5min`. Shorter intervals add load. Default: unset (BeeGFS default `30s`).
+
+### Quota
+
+See the [BeeGFS quota docs](https://doc.beegfs.io/latest/advanced_topics/quota.html). Storage targets are
+always XFS, mounted with `uqnoenforce,gqnoenforce`: XFS keeps user and group usage and BeeGFS enforces the
+limits itself. The role checks that every storage target has this accounting active. XFS only turns it on
+at mount time, not on remount, so a target mounted without it fails the run until it is unmounted and
+mounted again (with its `beegfs-storage@<port>` service stopped). mgmtd queries the usage of every ID found
+on the storage targets, so no user enumeration (`getent passwd`) is needed on the management host.
+
+A setting that is off is removed from the config rather than written as `false`, so the package default
+(off) applies and hosts without quota keep their config unchanged.
+
+To turn on quota for an existing file system:
+
+1. Set `beegfs_enable_quota: true` (and `beegfs_enforce_quota: true` for limits) and run the role. It
+   restarts mgmtd, and with enforcement every meta and storage service at once (no rolling restart), so
+   the file system pauses briefly. The meta and storage services only pick up mgmtd's quota settings at
+   start, so with tracking alone restart them by hand. Clients read `quotaEnabled` only at mount, so
+   remount them, or set `beegfs_client_remount_on_change: true`.
+2. Run `beegfs-fsck --enablequota` once on a client. Files written while clients had `quotaEnabled = false`
+   have chunk files owned by root, so their usage is counted for root until this sets the owners. It can
+   take a while, and the file system stays online. Rerun it if a client wrote files before it was
+   remounted.
+3. Check the usage with `beegfs quota list-usage` and set limits with `beegfs quota set-limits`.
 
 ### Reboot-safe device resolution
 
@@ -154,8 +185,9 @@ Device/NUMA discovery and fact building always run; everything else can be selec
 |---|---|---|
 | `mgmt`, `mon`, `meta`, `oss`, `client` | everything for that service (config, format/mount, setup) | that service |
 | `fs` | OSS format and mount | - |
-| `meta_config` | metadata server tunings (`beegfs_meta_tune_*`, ...) | meta |
-| `oss_config` | storage server tunings (`beegfs_oss_tune_*`, `tuneBindToNumaZone`, ...) | storage, all ports |
+| `mgmt_config` | mgmtd quota settings | mgmt |
+| `meta_config` | metadata server tunings (`beegfs_meta_tune_*`, ...) and `quotaEnableEnforcement` | meta |
+| `oss_config` | storage server tunings (`beegfs_oss_tune_*`, `tuneBindToNumaZone`, ...) and `quotaEnableEnforcement` | storage, all ports |
 | `client_config` | client tunings and `quotaEnabled` | client remount, see below |
 | `interfaces` | every `connInterfacesFile` (global, meta, per OSS port) and the NIC NUMA checks | matching services |
 | `tuning` | sysctls and the `beegfs-oss-tuning` device tuning service | tuning service |

@@ -54,7 +54,8 @@ Provision an existing cluster to support [BeeGFS](https://www.beegfs.io/) manage
 
 - `beegfs_enable_quota`: Quota tracking: sets `quota-enable = true` in `beegfs-mgmtd.toml` and `quotaEnabled = true` in every client config. Default: `false`.
 - `beegfs_enforce_quota`: Quota enforcement: sets `quota-enforce = true` in `beegfs-mgmtd.toml` and `quotaEnableEnforcement = true` on the metadata and storage servers. Requires `beegfs_enable_quota`. Default: `false`.
-- `beegfs_quota_update_interval`: `quota-update-interval` in `beegfs-mgmtd.toml`, how often mgmtd collects quota usage and pushes the IDs over their limits to the servers, as a duration string, e.g. `5min`. Shorter intervals add load. Default: unset (BeeGFS default `30s`).
+- `beegfs_quota_update_interval`: `quota-update-interval` in `beegfs-mgmtd.toml`, how often mgmtd collects quota usage and pushes the IDs over their limits to the servers, as a duration string, e.g. `5min`. Shorter intervals add load.
+- `beegfs_quota_user_system_ids_min` / `beegfs_quota_group_system_ids_min`: `quota-user-system-ids-min` / `quota-group-system-ids-min` in `beegfs-mgmtd.toml`, written only with `beegfs_enable_quota`. mgmtd then tracks the users/groups that `getent passwd`/`getent group` lists on the management host with an ID of at least this value, instead of every ID found on the storage targets. `0` includes root and system accounts. With SSSD this needs `enumerate = true` on the management host, otherwise only local accounts are tracked. `null` removes the setting (automatic mode, separately for users and groups). Default: `0`. Default: unset (BeeGFS default `30s`).
 
 ### Quota
 
@@ -62,8 +63,10 @@ See the [BeeGFS quota docs](https://doc.beegfs.io/latest/advanced_topics/quota.h
 always XFS, mounted with `uqnoenforce,gqnoenforce`: XFS keeps user and group usage and BeeGFS enforces the
 limits itself. The role checks that every storage target has this accounting active. XFS only turns it on
 at mount time, not on remount, so a target mounted without it fails the run until it is unmounted and
-mounted again (with its `beegfs-storage@<port>` service stopped). mgmtd queries the usage of every ID found
-on the storage targets, so no user enumeration (`getent passwd`) is needed on the management host.
+mounted again (with its `beegfs-storage@<port>` service stopped). By default mgmtd tracks the users and
+groups the management host enumerates (`getent passwd`/`getent group`, from ID 0). Set
+`beegfs_quota_user_system_ids_min`/`beegfs_quota_group_system_ids_min` to `null` to have it query every ID found on
+the storage targets instead, which needs no enumeration.
 
 A setting that is off is removed from the config rather than written as `false`, so the package default
 (off) applies and hosts without quota keep their config unchanged.

@@ -30,6 +30,33 @@
   become: true
   notify: Restart BeeGFS mgmt service
 
+# A setting that is off or unset is removed, leaving the package default, so
+# hosts without quota keep their config unchanged. The ID settings are only
+# written with quota tracking on.
+- name: Configure quota in the management service
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/beegfs-mgmtd.toml
+    regexp: "^{{ item.key }} ="
+    line: "{{ item.key }} = {{ item.value }}"
+    insertafter: "^# {{ item.key }} ="
+    state: "{{ 'present' if item.value | string | length > 0 else 'absent' }}"
+  loop:
+    - key: quota-enable
+      value: "{{ 'true' if beegfs_enable_quota | bool else '' }}"
+    - key: quota-enforce
+      value: "{{ 'true' if beegfs_enforce_quota | bool else '' }}"
+    - key: quota-update-interval
+      value: "{{ beegfs_quota_update_interval | string | to_json if beegfs_quota_update_interval else '' }}"
+    - key: quota-user-system-ids-min
+      value: "{{ beegfs_quota_user_system_ids_min if beegfs_enable_quota | bool and beegfs_quota_user_system_ids_min is not none else '' }}"
+    - key: quota-group-system-ids-min
+      value: "{{ beegfs_quota_group_system_ids_min if beegfs_enable_quota | bool and beegfs_quota_group_system_ids_min is not none else '' }}"
+  loop_control:
+    label: "{{ item.key }}"
+  become: true
+  tags: [mgmt_config, config]
+  notify: Restart BeeGFS mgmt service
+
 - name: Run management service setup script
   ansible.builtin.command: "/opt/beegfs/sbin/beegfs-mgmtd --init"
   args:

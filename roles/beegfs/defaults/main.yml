@@ -94,11 +94,12 @@ beegfs_repo_file: "{{ beegfs_distro_vars[ansible_os_family]['beegfs_repo_file'] 
 # Define to enable support for BeeGFS data transport over RDMA (IB, OPA, RoCE)
 beegfs_rdma: true
 
-# Default filesystem options
+# Storage targets are always XFS. mkfs.xfs options:
 beegfs_filesystem_opts: "-K -l size=2038m"
-beegfs_mount_opts: "uqnoenforce,gqnoenforce,nodiscard,noatime,nodiratime,logbufs=8,logbsize=256k,inode64"
+# Mount options of the storage targets. The quota accounting options
+# (beegfs_oss_quota_mount_opts in vars/main.yml) are always added in front.
+beegfs_mount_opts: "nodiscard,noatime,nodiratime,logbufs=8,logbsize=256k,inode64"
 beegfs_force_format: false
-beegfs_fstype: "xfs"
 
 # Storage server options
 beegfs_oss_path_prefix: "/data/beegfs/beegfs_oss"
@@ -227,8 +228,24 @@ beegfs_client_remount_on_change: false
 beegfs_update: false
 beegfs_package_action: "{{ 'latest' if beegfs_update | bool else 'present' }}"
 
-
+# Quota tracking: quota-enable in beegfs-mgmtd.toml and quotaEnabled in every
+# client config. Existing files need a one-time `beegfs-fsck --enablequota`
+# (see the README).
 beegfs_enable_quota: false
+# Quota enforcement: quota-enforce in beegfs-mgmtd.toml and
+# quotaEnableEnforcement on meta and storage servers. Requires
+# beegfs_enable_quota.
+beegfs_enforce_quota: false
+# quota-update-interval in beegfs-mgmtd.toml, e.g. "5min". Unset keeps the
+# BeeGFS default ("30s").
+beegfs_quota_update_interval:
+# quota-user-system-ids-min / quota-group-system-ids-min in beegfs-mgmtd.toml:
+# track the users/groups of the management host (getent passwd/group, which
+# needs enumeration with SSSD) with an ID of at least this value. 0 includes
+# root and system accounts. Set to null to remove the setting, so mgmtd falls
+# back to tracking every ID found on the storage targets.
+beegfs_quota_user_system_ids_min: 0
+beegfs_quota_group_system_ids_min: 0
 
 beegfs_client_scope_config: true
 

@@ -181,7 +181,7 @@
     - name: Attempt to format if the device isn't already provisioned or if beegfs_force_format is true
       community.general.filesystem:
         dev: "{{ item.dev }}"
-        fstype: "{{ beegfs_fstype }}"
+        fstype: xfs
         force: "{{ beegfs_force_format | bool }}"
         opts: "{{ beegfs_filesystem_opts }} -L {{ item.label }}"
       loop: "{{ beegfs_oss_targets }}"
@@ -209,12 +209,42 @@
       ansible.posix.mount:
         src: "/dev/disk/by-label/{{ item.label }}"
         path: "{{ item.mount_path }}"
-        fstype: "{{ beegfs_fstype }}"
+        fstype: xfs
         state: mounted
-        opts: "{{ beegfs_mount_opts }}"
+        opts: "{{ (beegfs_oss_quota_mount_opts.split(',') + beegfs_mount_opts.split(',')) | unique | join(',') }}"
       loop: "{{ beegfs_oss_targets }}"
       loop_control:
         label: "{{ item.dev }}"
+
+    # A target mounted before the quota options were added keeps running
+    # without accounting: XFS ignores them on the remount above.
+    - name: Read the active mount options of the storage targets
+      ansible.builtin.command: findmnt -n -o OPTIONS --mountpoint {{ item.mount_path }}
+      loop: "{{ beegfs_oss_targets }}"
+      loop_control:
+        label: "{{ item.mount_path }}"
+      register: beegfs_oss_active_mount_opts
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Check that user and group quota accounting is on for the storage targets
+      ansible.builtin.assert:
+        that:
+          - item.stdout.split(',') is contains('uqnoenforce') or item.stdout.split(',') is contains('usrquota')
+          - item.stdout.split(',') is contains('gqnoenforce') or item.stdout.split(',') is contains('grpquota')
+        fail_msg: >-
+          {{ item.item.mount_path }} has no user and group quota accounting
+          (findmnt rc {{ item.rc }}: {{ item.stdout or item.stderr }}). Stop
+          beegfs-storage@{{ item.item.port }}, unmount and mount it again, then
+          rerun the role and restart the BeeGFS services whose config it
+          changed before this failure.
+        quiet: true
+      loop: "{{ beegfs_oss_active_mount_opts.results }}"
+      loop_control:
+        label: "{{ item.item.mount_path }}"
+      # In check mode a new target isn't mounted yet
+      when: not (ansible_check_mode and item.rc != 0)
 
 # Relies on beegfs_oss_targets keeping each port's devices in order, so the
 # first device of a port (first_in_port, run with -r to replace the
@@ -272,6 +302,20 @@
     }}
   loop_control:
     label: "port {{ item.0.port }} {{ item.1.key }}"
+  notify: Restart BeeGFS storage service
+
+- name: Configure quotaEnableEnforcement for BeeGFS storage server
+  become: true
+  tags: [oss_config, config]
+  ansible.builtin.lineinfile:
+    path: /etc/beegfs/{{ item.port }}.d/beegfs-storage.conf
+    regexp: ^quotaEnableEnforcement
+    line: quotaEnableEnforcement        = true
+    # Off is the package default, which only documents the setting
+    state: "{{ 'present' if beegfs_enforce_quota | bool else 'absent' }}"
+  loop: "{{ beegfs_oss_ports }}"
+  loop_control:
+    label: "port {{ item.port }}"
   notify: Restart BeeGFS storage service
 
 - name: Configure tuneBindToNumaZone for BeeGFS storage server

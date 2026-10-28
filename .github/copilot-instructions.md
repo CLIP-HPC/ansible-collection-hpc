@@ -2,9 +2,9 @@
 
 Ansible automation for configuration management, deployment, and infrastructure operations.
 
-## Agent definition
+## Required routing
 
-#file:.agency/agents/stack/ansible-coder.md
+Use the `vbc-standards` skill before acting on a task, and the `vbc-ansible-standards` skill before changing Ansible content. `AGENTS.md` holds this repository's commands and layout.
 
 ## Commands
 
@@ -31,11 +31,11 @@ Ansible automation for configuration management, deployment, and infrastructure 
 
 ## File structure
 
-Varies by repo shape. See `.agency/rules/team/ansible/collection-structure.md` and `.agency/rules/team/ansible/playbook-patterns.md`.
+This is a collection repository; see `AGENTS.md` for the role and Molecule layout, and the `vbc-ansible-standards` skill for collection structure.
 
 ## Available skills
 
-Skills from `.agency/skills/` can be referenced in prompts:
+Agency skills (from the `it` and `it-ansible` plugins) can be referenced in prompts:
 - `code-review` — structured audit against organization rules
 - `ansible-review` — review Ansible changes for safety, idempotency, and validation gaps
 - `ansible-change-plan` — plan Ansible changes by repo shape, blast radius, and validation scope

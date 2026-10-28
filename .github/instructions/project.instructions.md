@@ -28,7 +28,7 @@ applyTo: "**/*"
 - Read git commits and PR diffs to extract what was actually changed.
 - Read the relevant playbooks, roles, and inventory for exact steps and config.
 - Check whether a Confluence RFC page already exists (via Jira remote links).
-- Create or update the Confluence page following the RFC page template in `.agency/rules/team/change-management/rfc-docs.md`.
+- Create or update the Confluence page following the RFC page template in the `vbc-change-management-standards` skill.
 - Create the Jira → Confluence remote link if one does not exist.
 - Use checkboxes for procedural steps, fenced code blocks for all commands and config.
 - Do not edit code files while in documentation mode.

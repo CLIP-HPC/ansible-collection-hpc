@@ -1,45 +1,54 @@
-# Ansible Project — Agency Configuration
+# clip.hpc Ansible collection
 
-This project uses the [agency](https://github.com/vbc-it/agency) framework for AI assistant configuration, mounted as a git submodule at `.agency/`.
+`clip.hpc` is an Ansible Collection (namespace `clip`, name `hpc`) with the roles that deploy the CBE HPC cluster. Roles live under `roles/` (`beegfs`, `dell_dsu`, `doca`, `multirail`, `rdma_exporter`, `rocev2`, `slurm`, `smartctl_exporter`); each role's `README.md` documents its variables, and the top-level `README.md` lists the roles.
 
-## Rule sources
+## Environment setup
 
-- **Organization-wide**: `.agency/rules/global/*.md` — coding standards, security policy, git conventions, CI/CD, agent operating contract
-- **Ansible team**: `.agency/rules/team/ansible/*.md` — Ansible-specific standards (start from `index.md`, the always-on router; load role/playbook/collection/execution-environment/Molecule guidance only when the task needs it)
-- **Project-local**: `.github/instructions/*.instructions.md` — this project's overrides and conventions
+- Python is pinned via `.python-version` (3.11); dev dependencies (`ansible-core`, `molecule`, `ansible-lint`, `molecule-plugins[vagrant]`) are declared in `pyproject.toml` and locked in `uv.lock`.
+- `.envrc` uses `direnv` + `uv` (creates `.venv` and runs `uv sync`) and sources `ansible.env`, which sets `ANSIBLE_ROLES_PATH`, `ANSIBLE_LIBRARY`, and `ANSIBLE_FILTER_PLUGINS` for Molecule. On Apple Silicon it also sets the Vagrant/VirtualBox variables (`VAGRANT_PROVIDER`, AlmaLinux 9/10 boxes, `DISABLE_SLURM_JOB_CONTAINER`). Without direnv, run `uv sync` and source `ansible.env` manually.
+- `flake.nix` with `nix/ansible-2_15/` and `nix/ansible-2_20/` provides Nix environments for the oldest and newest supported ansible-core.
 
-## The `.agency` submodule
+## Commands
 
-- Treat `.agency/` as an external, upstream-maintained repository: never edit files inside it directly.
-- `.agency` supplies generic, organization-wide and Ansible-domain-wide defaults. Project-local docs
-  (this file, `.github/instructions/*.instructions.md`) are the project-specific policy authority:
-  where a project-local rule is more specific than or differs from `.agency`, the project-local rule wins.
-- To check for or apply an update to the pinned submodule revision, use the `check-agency-update`
-  skill — it reports the available revision and requires explicit confirmation before changing
-  anything. Do not run `git submodule update --remote` (or an equivalent checkout/commit) without
-  that confirmation step.
-- Follow the agent operating contract in `.agency/rules/global/agent-behavior.md` for every change:
-  make the smallest in-scope change, run relevant validation, and treat destructive, external,
-  costly, irreversible, or scope-expanding actions as requiring explicit confirmation first.
-- For formal change reviews, apply `.agency/rules/team/ansible/review-checklist.md` (used by the
-  `ansible-review` skill) in addition to this repository's own conventions.
+- Lint: `ansible-lint` (also via pre-commit together with `black`, `shellcheck`, and standard `pre-commit-hooks`); run all hooks with `pre-commit run --all-files`.
+- Syntax check a playbook: `ansible-playbook --syntax-check playbooks/<playbook>.yml`
+- Dry run with diff: `ansible-playbook -C <playbook>.yml --diff`
+- Molecule scenarios live under `extensions/molecule/<role>/<platform>/` (e.g. `slurm/rhel9`, `slurm/rhel10`, `beegfs/rhel10`, `doca/rhel9`), not in `roles/<role>/molecule/`, and share `extensions/molecule/config.yml` (Galaxy requirements from `tests/requirements.yml`) and the inventory in `extensions/molecule/inventory/`. The default test sequence includes an idempotence step.
+- CI (`.github/workflows/ci.yml`) delegates to the reusable workflow `vbc-it/github-action-workflows/.github/workflows/ansible-collection.yml` on a self-hosted runner with `molecule_env_file: ansible.env`, and publishes to Automation Hub on success.
+- Run `ansible-lint` before every commit.
 
-## Available skills
+## Conventions
 
-Skills from `.agency/skills/` can be referenced in prompts. Curated for this repo's day-to-day work:
-- `ansible-review` — review Ansible changes for safety, idempotency, and validation gaps
-- `ansible-change-plan` — plan Ansible changes by repo shape, blast radius, and validation scope
+- This is a **collection** repository; apply collection-shaped guidance.
+- Use FQCN for all modules; every task needs a clear `name:`; use handlers for service restarts; never hardcode secrets (use Ansible Vault or an external secrets lookup).
+- Role variables are prefixed with the role name (e.g. `beegfs_enable_quota`, `slurm_*`).
+- Releases: each change that ships bumps `version` in `galaxy.yml` and adds a `vX.Y.Z` section to `CHANGELOG.rst` (one bullet per change, prefixed with the role name, and **Breaking:** where applicable). `meta/runtime.yml` sets `requires_ansible: '>=2.15.0'`.
+- Collection plugins live in `plugins/filter/` (`config2dict`, `dict2parameters`, `hostlist_expression`, `slurm_slices`, …) and `plugins/modules/slurm.py`; standalone playbooks in `playbooks/` (`dell_dsu_report.yml`, `dell_dsu_update.yml`).
+- Project-local docs (this file, `.github/instructions/*.instructions.md`) are the project-specific policy authority: where a project-local rule is more specific than or differs from the agency skills, the project-local rule wins.
+- When writing RFC or infrastructure documentation for changes here, prioritise reading playbooks, roles, and inventory files for technical detail.
+
+<!-- agency:managed:start source=templates/ansible/AGENTS.md.tmpl -->
+## Required routing
+
+Pushing, force-pushing, opening or commenting on a PR, merging, releasing, and deploying are external actions. A request to do one is not the confirmation: state the exact command, target, and effect, and wait for a yes before running it.
+
+Use the `vbc-standards` skill before acting on a task.
+
+Use the `vbc-ansible-standards` skill before changing Ansible content.
+
+## Skills
+
+When a task matches one of these, use the skill:
+
+- `ansible-review` — review Ansible changes for safety and best practices
+- `ansible-change-plan` — plan Ansible changes by blast radius
 - `code-review` — structured audit against organization rules
 - `open-pr` — open a PR with conventional format
-- `check-agency-update` — check whether the `.agency` submodule pin has an available update
+- `agentgateway-mcp` — query internal metrics, logs, inventory, and fabric state read-only
 
-The full skill set (`.agency/skills/{tactical,review,generation,meta}/`) covers additional workflows
-— issue filing, security scanning/audits, README/changelog/docs generation, accessibility review,
-cross-model PR review, and agency's own maintenance skills — reference any of them by name when the
-task fits.
+Use other skills only when their trigger matches the task.
+<!-- agency:managed:end -->
 
-## Customization
+## Project-local customization
 
-- Add project-specific instructions as new `.instructions.md` files in `.github/instructions/`.
-- Instruction files use YAML frontmatter with `applyTo` for file scoping.
-- Edit the commands in `.github/copilot-instructions.md` to match your actual build/test tooling.
+Keep this repository's actual commands and facts here; organization and domain behavior comes from the agency plugins (`it`, `it-infra`, `it-ansible`), enabled in `.claude/settings.json`. Add a nested `AGENTS.md` only for subtree-specific facts or routing, never to copy agency skill content.

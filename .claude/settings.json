@@ -1,5 +1,19 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "extraKnownMarketplaces": {
+    "agency": {
+      "source": {
+        "source": "github",
+        "repo": "vbc-it/agency",
+        "ref": "latest"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "it@agency": true,
+    "it-infra@agency": true,
+    "it-ansible@agency": true
+  },
   "permissions": {
     "allow": [
       "Bash(ansible-lint *)",

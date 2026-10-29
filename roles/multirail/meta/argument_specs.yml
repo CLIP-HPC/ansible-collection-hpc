@@ -47,8 +47,9 @@ argument_specs:
       multirail_nmcli_connection_prefix:
         type: str
         description: >-
-          Prefix of the NetworkManager connection names; the connection of an interface is
-          "<prefix> <interface>". Defaults to "cloud-init" on EL10 and "System" otherwise.
+          Prefix of the NetworkManager connection names; "<prefix> <interface>" is only used for an
+          interface without an active connection, otherwise the connection active on the interface is
+          configured. Defaults to "cloud-init" on EL10 and "System" otherwise.
       multirail_verify:
         type: bool
         description: >-

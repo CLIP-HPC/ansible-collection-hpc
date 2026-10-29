@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.18.1
+=======
+- multirail: Configure the NetworkManager connection that is active on each interface instead of the one named ``<prefix> <interface>``. cloud-init binds its ``cloud-init <interface>`` profiles to MAC addresses, so after NICs were swapped between slots the profile named after an interface was active on the other one: the role wrote each interface's routing rules into the other NIC's connection, traffic from an address left through the wrong NIC, and with ``arp_filter`` the host stopped answering ARP for both addresses (no DNS, gateway unreachable). ``multirail_nmcli_connection_prefix`` is now only used for an interface without an active connection
+
 v3.18.0
 =======
 - beegfs: Add quota support. ``beegfs_enable_quota`` now also sets ``quota-enable`` in ``beegfs-mgmtd.toml`` (it only set the client's ``quotaEnabled`` before), ``beegfs_enforce_quota`` sets ``quota-enforce`` in ``beegfs-mgmtd.toml`` and ``quotaEnableEnforcement`` on metadata and storage servers, and ``beegfs_quota_update_interval`` sets ``quota-update-interval``. Settings that are off are removed from the config instead of written as ``false``, so hosts without quota keep their config unchanged. See the role README for enabling quota on an existing file system (``beegfs-fsck --enablequota``)

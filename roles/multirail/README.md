@@ -17,7 +17,10 @@ For each interface (in list order) the role:
 - checks that traffic from each interface's IPv4 address is routed out of that interface (`multirail_verify`)
 
 The routes and rules are built from the gathered facts, so facts (at least the `network` subset) must be
-gathered before the role runs. When the NetworkManager connections change, the routes, routing rules and
+gathered before the role runs. The role configures the connection that is active on each interface, not
+the one named after it: cloud-init binds its `cloud-init <interface>` profiles to MAC addresses, so after
+NICs are swapped between slots the profile named after an interface is active on the other one. When the
+NetworkManager connections change, the routes, routing rules and
 `ipv4.never-default` of the profiles are applied to the active connections with `nmcli device modify`. Unlike
 `nmcli device reapply`, this doesn't fail when the profile has other changes that can't be reapplied, such as
 the ethtool ring sizes set by `clip.hpc.rocev2`, and leaves them pending.
@@ -33,7 +36,7 @@ the ethtool ring sizes set by `clip.hpc.rocev2`, and leaves them pending.
 | `multirail_net_arp_filter` | `1` | `arp_filter`: only answer ARP on the interface the reply would be routed through. |
 | `multirail_net_rp_filter` | `2` | `rp_filter`: `2` (loose) drops packets from unroutable sources but accepts packets that arrive on a different rail than the reply would use. `1` (strict) drops them. |
 | `multirail_net_accept_local` | `1` | `accept_local`: accept packets with a local source address, needed for traffic between the rails of the same host. |
-| `multirail_nmcli_connection_prefix` | `cloud-init` on EL10, `System` otherwise | Prefix of the NetworkManager connection names (`<prefix> <interface>`). |
+| `multirail_nmcli_connection_prefix` | `cloud-init` on EL10, `System` otherwise | Prefix of the NetworkManager connection names (`<prefix> <interface>`), only used for an interface without an active connection. |
 | `multirail_verify` | `true` | Check the resulting routing with `ip route get` after applying the changes. Flushes the play's pending handlers first. |
 
 The sysctls are also set per interface because the kernel uses the higher of the `all` and the

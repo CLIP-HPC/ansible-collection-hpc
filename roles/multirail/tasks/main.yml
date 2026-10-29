@@ -77,12 +77,30 @@
   loop: "{{ multirail_interfaces }}"
   when: ansible_facts[item].get('ipv6', []) | selectattr('scope', 'equalto', 'global') | list | length > 0
 
+# The profile is looked up from the device, not built from the interface name: cloud-init binds its
+# "cloud-init <interface>" profiles to MAC addresses, so after NICs are swapped between slots the profile
+# named after an interface is active on the other one. Editing it by name would cross the rules over.
+- name: Get the NetworkManager connection active on each multirail interface
+  ansible.builtin.command:
+    cmd: "nmcli --escape no --get-values GENERAL.CONNECTION device show {{ item }}"
+  register: multirail_device_connections
+  changed_when: false
+  check_mode: false
+  loop: "{{ multirail_interfaces }}"
+
+- name: Map each multirail interface to its NetworkManager connection
+  ansible.builtin.set_fact:
+    multirail_connections: >-
+      {{
+        dict(multirail_interfaces | zip(multirail_device_connections.results | map(attribute='stdout') | map('trim')))
+      }}
+
 # Each NIC gets its own table with its subnet(s) and a default route, and a rule per address that sends
 # traffic from that address to the table. Only the first NIC keeps a default route in the main table.
 - name: Configure source routing on the NetworkManager connection of each multirail interface
   become: true
   community.general.nmcli:
-    conn_name: "{{ multirail_nmcli_connection_prefix }} {{ item }}"
+    conn_name: "{{ multirail_connections[item] | default(multirail_nmcli_connection_prefix ~ ' ' ~ item, true) }}"
     state: present
     never_default4: "{{ multirail_index > 0 }}"
     routes4_extended: "{{ multirail_routes4 }}"
@@ -169,7 +187,8 @@
         fail_msg: >-
           Source routing for {{ item.0.item }} is not in place. 'ip route get' returned '{{ item.0.stdout | trim }}' and
           the table has '{{ item.1.stdout | trim }}' for the subnet. Check 'ip rule show' and the
-          {{ multirail_nmcli_connection_prefix }} {{ item.0.item }} connection.
+          '{{ multirail_connections[item.0.item] | default(multirail_nmcli_connection_prefix ~ ' ' ~ item.0.item, true) }}'
+          connection.
         quiet: true
       loop: "{{ multirail_route_get.results | zip(multirail_route_table.results) | list }}"
       loop_control:

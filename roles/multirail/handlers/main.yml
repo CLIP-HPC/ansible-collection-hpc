@@ -16,7 +16,7 @@
     executable: /bin/bash
   environment:
     MULTIRAIL_DEVICE: "{{ item }}"
-    MULTIRAIL_CONNECTION: "{{ multirail_nmcli_connection_prefix }} {{ item }}"
+    MULTIRAIL_CONNECTION: "{{ multirail_connections[item] | default(multirail_nmcli_connection_prefix ~ ' ' ~ item, true) }}"
   become: true
   changed_when: true
   loop: "{{ multirail_interfaces }}"

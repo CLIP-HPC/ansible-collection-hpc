@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.18.2
+=======
+- slurm: Create ``/etc/ansible/facts.d`` with mode ``0755`` instead of ``ugo=rwX`` (``0777``), and own ``slurm.fact`` by ``root`` instead of ``slurm``. Ansible's ``setup`` runs every executable ``*.fact`` file there as root, so any local user, or the ``slurm`` account through ``slurm.fact``, could run code as root at the next fact gathering. The next run of the role fixes the mode on existing hosts; check them for ``*.fact`` files the role doesn't deploy (it deploys ``slurm.fact`` and ``slurmd_topology.fact``)
+
 v3.18.1
 =======
 - multirail: Configure the NetworkManager connection that is active on each interface instead of the one named ``<prefix> <interface>``. cloud-init binds its ``cloud-init <interface>`` profiles to MAC addresses, so after NICs were swapped between slots the profile named after an interface was active on the other one: the role wrote each interface's routing rules into the other NIC's connection, traffic from an address left through the wrong NIC, and with ``arp_filter`` the host stopped answering ARP for both addresses (no DNS, gateway unreachable). ``multirail_nmcli_connection_prefix`` is now only used for an interface without an active connection

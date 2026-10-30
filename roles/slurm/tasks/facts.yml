@@ -12,14 +12,15 @@
     state: directory
     owner: root
     group: root
-    mode: ugo=rwX
+    # setup runs executable *.fact files here as root: only root may write
+    mode: "0755"
 
 - name: facts | Template slurm configuration facts
   ansible.builtin.copy:
     dest: /etc/ansible/facts.d/slurm.fact
     content: "{{ slurm_scontrol_config.stdout_lines | clip.hpc.config2dict | to_nice_json }}"
-    owner: slurm
-    group: slurm
-    mode: ug=rw,o=r # any user can run scontrol show config anyway
+    owner: root
+    group: root
+    mode: "0644" # any user can run scontrol show config anyway
   register: slurm_template_facts
   notify: Reload facts

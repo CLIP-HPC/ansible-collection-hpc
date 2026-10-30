@@ -45,7 +45,8 @@
     state: directory
     owner: root
     group: root
-    mode: ugo=rwX
+    # setup runs executable *.fact files here as root: only root may write
+    mode: "0755"
 
 - name: install | Deploy slurmd topology facts script
   tags: install

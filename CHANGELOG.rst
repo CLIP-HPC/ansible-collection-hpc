@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.18.3
+=======
+- slurm: Leave ``BOOT_TIME`` and ``NEXT_JOB_ID`` out of ``slurm.fact``. They change with every ``slurmctld`` restart and every submitted job, so the role reported a change on every run
+
 v3.18.2
 =======
 - slurm: Create ``/etc/ansible/facts.d`` with mode ``0755`` instead of ``ugo=rwX`` (``0777``), and own ``slurm.fact`` by ``root`` instead of ``slurm``. Ansible's ``setup`` runs every executable ``*.fact`` file there as root, so any local user, or the ``slurm`` account through ``slurm.fact``, could run code as root at the next fact gathering. The next run of the role fixes the mode on existing hosts; check them for ``*.fact`` files the role doesn't deploy (it deploys ``slurm.fact`` and ``slurmd_topology.fact``)

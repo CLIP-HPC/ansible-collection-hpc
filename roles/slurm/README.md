@@ -67,7 +67,10 @@ nodegroup, for example the GPU nodes whose GPUs are split into MIG slices:
     # inventory/group_vars/mig_b200/slurm.yml
     slurm_node_features: [mig]
 
-The node stays in its nodegroup and partitions. As with slices, a dynamic node keeps the features it registered
+Use an inventory variable (host or group): `slurm.conf` is rendered on the controller from `hostvars`, so a
+value set only in play `vars`, `include_role` vars or `set_fact` on the node is not seen there. Features listed
+both in the nodegroup and in `slurm_node_features` appear once. The node stays in its nodegroup and partitions. As
+with slices, a dynamic node keeps the features it registered
 with until its node record is deleted and slurmd is restarted.
 
 Example Playbook

@@ -81,7 +81,7 @@ NodeName={{ node }}
 {%            set _ = _host_features.append({'host': h, 'features': (([] if _slice.exclusive else ['nodegroup_' ~ nodegroup.name])
                                                                     + nodegroup.features | default([])
                                                                     + hostvars[h].slurm_node_features | default([])
-                                                                    + (_slice.exclusive + _slice.shared) | map('regex_replace', '^', 'partition_') | list) | join(',')}) %}
+                                                                    + (_slice.exclusive + _slice.shared) | map('regex_replace', '^', 'partition_') | list) | unique | join(',')}) %}
 {%          endfor %}
 # Node config source ({{ first_host }}): {{ slurmd_topo | ternary('slurmd_topology facts', 'fallback to ansible_facts') }}
 {%          for features, members in _host_features | groupby('features') %}

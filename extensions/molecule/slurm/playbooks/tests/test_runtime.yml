@@ -156,3 +156,13 @@
       ansible.builtin.assert:
         that: srun_features.stdout | trim == 'slurm-cluster-compute1-0'
         fail_msg: "Unexpected hostname from feature-constrained srun"
+
+    - name: Run srun with a per-node feature (slurm_node_features)
+      ansible.builtin.command: srun --qos=short -p compute2 -C nodeonly hostname
+      register: srun_node_features
+      changed_when: false
+
+    - name: Assert srun with per-node feature output
+      ansible.builtin.assert:
+        that: srun_node_features.stdout | trim == 'slurm-cluster-compute2-0'
+        fail_msg: "Per-node feature from slurm_node_features did not select only slurm-cluster-compute2-0"

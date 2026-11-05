@@ -52,6 +52,24 @@ Dynamic nodes register their features when slurmd registers, so a node moving in
 partitions until its node record is deleted (`scontrol delete nodename=<node>`) and slurmd restarted with the new
 `/etc/sysconfig/slurmd`. Static nodes pick up the change with the next `slurm.conf` update.
 
+Per-node features
+-----------------
+
+`slurm_node_features` (default `[]`) adds features to a single node on top of the `features` of its nodegroup.
+Set it as a host variable or as a group variable of an inventory group that only selects some nodes of a
+nodegroup, for example the GPU nodes whose GPUs are split into MIG slices:
+
+    # inventory/groups
+    [mig_b200]
+    cbe-g5-1
+    cbe-g5-2
+
+    # inventory/group_vars/mig_b200/slurm.yml
+    slurm_node_features: [mig]
+
+The node stays in its nodegroup and partitions. As with slices, a dynamic node keeps the features it registered
+with until its node record is deleted and slurmd is restarted.
+
 Example Playbook
 ----------------
 

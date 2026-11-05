@@ -14,6 +14,7 @@
 {%   set slice = (slurm_partitions | default([]) | clip.hpc.slurm_slices).get(node_name, {'exclusive': [], 'shared': []}) %}
 {%   set features = ([] if slice.exclusive else ['nodegroup_' ~ ns.nodegroup.name])
                    + ns.nodegroup.features | default([])
+                   + slurm_node_features | default([])
                    + (slice.exclusive + slice.shared) | map('regex_replace', '^', 'partition_') | list %}
 {%   set conf = ['Features=' ~ (features | join(','))]
                + (['MemSpecLimit=' ~ mem_spec_limit] if mem_spec_limit else [])

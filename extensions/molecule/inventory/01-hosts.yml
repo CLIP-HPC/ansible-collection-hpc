@@ -14,6 +14,8 @@ slurm:
       container_hostname: "slurm-cluster-compute1-0"
     slurm-cluster-compute2-0:
       container_hostname: "slurm-cluster-compute2-0"
+      slurm_node_features:
+        - nodeonly
     slurm-cluster-compute2-1:
       container_hostname: "slurm-cluster-compute2-1"
   vars:

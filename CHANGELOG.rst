@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.19.0
+=======
+- slurm: New variable ``slurm_node_features`` (host or group variable, default ``[]``) adds Slurm features to a single node on top of those of its nodegroup, for static nodes in ``slurm.conf`` and for dynamic nodes in ``/etc/sysconfig/slurmd``. Lets a node property such as a MIG layout be set from an inventory group without moving the node to another nodegroup
+
 v3.18.3
 =======
 - slurm: Leave ``BOOT_TIME`` and ``NEXT_JOB_ID`` out of ``slurm.fact``. They change with every ``slurmctld`` restart and every submitted job, so the role reported a change on every run

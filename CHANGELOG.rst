@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.19.1
+=======
+- slurm: With ``slurm_db_data_dir`` set, install the systemd drop-in ``mariadb.service.d/datadir-mount.conf`` with ``RequiresMountsFor=<slurm_db_data_dir>`` and reload systemd before ``geerlingguy.mysql`` starts MariaDB. MariaDB was only ordered after ``network.target``, so with the data directory on NFS it started on the empty mountpoint after a reboot, failed, and slurmdbd couldn't connect until MariaDB was started by hand. New variable ``slurm_db_service_name`` (default ``mariadb``) names the unit and is passed to ``geerlingguy.mysql`` as ``mysql_daemon``. Running MariaDB is not restarted; the ordering applies from the next start
+
 v3.19.0
 =======
 - slurm: New variable ``slurm_node_features`` (host or group variable, default ``[]``) adds Slurm features to a single node on top of those of its nodegroup, for static nodes in ``slurm.conf`` and for dynamic nodes in ``/etc/sysconfig/slurmd``. Lets a node property such as a MIG layout be set from an inventory group without moving the node to another nodegroup

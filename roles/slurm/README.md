@@ -73,6 +73,18 @@ both in the nodegroup and in `slurm_node_features` appear once. The node stays i
 with slices, a dynamic node keeps the features it registered
 with until its node record is deleted and slurmd is restarted.
 
+Database data directory
+-----------------------
+
+`slurm_db_data_dir` (default: unset) sets the MariaDB data directory on the database host. If set, the role
+installs the systemd drop-in `/etc/systemd/system/<slurm_db_service_name>.service.d/datadir-mount.conf` with
+`RequiresMountsFor=<slurm_db_data_dir>` before MariaDB is installed and started. MariaDB then starts only after
+the mount that holds the data directory, e.g. an NFS export, and not at all if that mount fails, instead of starting
+on the empty mountpoint after a reboot. For a data directory on the root file system the drop-in adds nothing.
+
+`slurm_db_service_name` (default `mariadb`) is the systemd unit of the database server. It names the drop-in
+directory and is passed to `geerlingguy.mysql` as `mysql_daemon`.
+
 Example Playbook
 ----------------
 

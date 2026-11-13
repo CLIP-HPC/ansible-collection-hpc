@@ -13,6 +13,41 @@
   tags: install
 
 
+- name: Order MariaDB after the mount of its data directory
+  when:
+    - slurm_enable.database | default(false) | bool
+    - slurm_db_data_dir | default('', true) | length > 0
+  tags:
+    - database
+  block:
+    - name: Create MariaDB systemd drop-in directory
+      ansible.builtin.file:
+        path: "/etc/systemd/system/{{ slurm_db_service_name }}.service.d"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Require the mount of the MariaDB data directory
+      ansible.builtin.copy:
+        content: |
+          # Managed by Ansible (clip.hpc.slurm)
+          [Unit]
+          RequiresMountsFor={{ slurm_db_data_dir }}
+        dest: "/etc/systemd/system/{{ slurm_db_service_name }}.service.d/datadir-mount.conf"
+        owner: root
+        group: root
+        mode: "0644"
+      register: slurm_db_datadir_dropin
+
+    # Not a handler: geerlingguy.mysql starts the service right after this,
+    # so the first start must already see the drop-in.
+    - name: Reload systemd for the MariaDB drop-in # noqa: no-handler
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: slurm_db_datadir_dropin is changed
+
+
 - name: Configure MySQL Database
   ansible.builtin.include_role:
     name: geerlingguy.mysql
@@ -21,6 +56,7 @@
     mysql_innodb_lock_wait_timeout: 900
     mysql_root_password: "{{ slurm_db_root_password | default(omit) }}"
     mysql_datadir: "{{ slurm_db_data_dir | default(omit) }}"
+    mysql_daemon: "{{ slurm_db_service_name }}"
     mysql_databases:
       - name: "{{ slurm_dbd_mysql_database }}"
     mysql_users:

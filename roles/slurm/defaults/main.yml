@@ -100,6 +100,8 @@ slurm_dbd_port: 6819
 slurm_dbd_conf_debug_flags: ""
 slurm_dbd_connect_retries: 30
 slurm_db_data_dir:
+# systemd unit of the database server, also passed to geerlingguy.mysql as mysql_daemon
+slurm_db_service_name: mariadb
 slurm_db_root_password: "{{ slurm_db_password }}"
 
 # ratio of the node's total memory that should be reserved for the system

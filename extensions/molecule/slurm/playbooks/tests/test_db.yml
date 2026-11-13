@@ -13,3 +13,14 @@
           - services['slurmdbd.service'].state == 'running'
           - services['slurmdbd.service'].status == 'enabled'
         fail_msg: "Slurmdbd service is not running and enabled"
+
+    - name: Read the MariaDB unit properties
+      ansible.builtin.systemd:
+        name: mariadb
+      register: test_db_mariadb_unit
+
+    - name: Check MariaDB requires the mount of its data directory
+      ansible.builtin.assert:
+        that:
+          - slurm_db_data_dir in test_db_mariadb_unit.status.RequiresMountsFor.split()
+        fail_msg: "mariadb.service doesn't require {{ slurm_db_data_dir }}: {{ test_db_mariadb_unit.status.RequiresMountsFor | default('') }}"

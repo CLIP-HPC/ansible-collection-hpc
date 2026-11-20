@@ -63,12 +63,20 @@
     group: root
     mode: "0644"
 
+- name: Check for the rt_tables file written to by earlier versions of this role
+  ansible.builtin.stat:
+    path: "{{ multirail_legacy_rt_tables_file }}"
+  register: multirail_legacy_rt_tables
+
+# blockinfile fails on a missing file even with state absent; newer iproute packages (e.g. EL 9.7) no
+# longer ship /etc/iproute2/rt_tables
 - name: Remove routing table names written to rt_tables by earlier versions of this role
   become: true
   ansible.builtin.blockinfile:
     path: "{{ multirail_legacy_rt_tables_file }}"
     marker: "# {mark} ANSIBLE MANAGED ROUTING TABLES"
     state: absent
+  when: multirail_legacy_rt_tables.stat.exists
 
 # The profile is looked up from the device, not built from the interface name: cloud-init binds its
 # "cloud-init <interface>" profiles to MAC addresses, so after NICs are swapped between slots the profile

@@ -1,0 +1,130 @@
+---
+- name: Verify the IPv6 source routing of the multirail interfaces
+  hosts: all
+  become: true
+  gather_facts: true
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Look up the IPv6 default route in the table of each multirail interface
+      ansible.builtin.command:
+        cmd: "ip -6 route show table {{ 201 + multirail_index }} default"
+      register: multirail_test_table_default
+      changed_when: false
+      loop: "{{ multirail_test_links }}"
+      loop_control:
+        index_var: multirail_index
+        label: "{{ item.name }}"
+
+    - name: Assert that each table's default route goes via the first address of the interface's subnet
+      ansible.builtin.assert:
+        that:
+          - ('via ' ~ item.item.ipv6_prefix ~ ':1 dev ' ~ item.item.name ~ ' ') in item.stdout
+        fail_msg: "Table of {{ item.item.name }} has '{{ item.stdout | trim }}' as IPv6 default route."
+      loop: "{{ multirail_test_table_default.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+
+    # Only the default route of the interface's own table leads to the router's loopback address. For the
+    # second interface the main table's default route may use the first interface, which would fail.
+    - name: Ping each router's loopback address from the global IPv6 address of its interface
+      ansible.builtin.command:
+        cmd: >-
+          ping -6 -c 1 -W 2
+          -I {{ ansible_facts[item.name]['ipv6'] | selectattr('scope', 'equalto', 'global') | map(attribute='address') | first }}
+          {{ item.remote_ipv6 }}
+      changed_when: false
+      loop: "{{ multirail_test_links }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+# Regression test for the IPv6 default route that followed the live route learned from router advertisements
+# (https://github.com/CLIP-HPC/ansible-collection-hpc/issues/97): that route is gone while the routers don't
+# advertise (e.g. at first boot) and right after NetworkManager reconnects the device, and the role must
+# still leave ipv6.routes unchanged.
+- name: Verify that the role keeps ipv6.routes without router advertisements
+  hosts: all
+  become: true
+  gather_facts: false
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Get ipv6.routes of each multirail connection before the run
+      ansible.builtin.command:
+        cmd: "nmcli --escape no --get-values ipv6.routes connection show 'multirail {{ item.name }}'"
+      register: multirail_test_routes_before
+      changed_when: false
+      loop: "{{ multirail_test_links }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Run the role while the routers don't advertise
+      block:
+        # radvd withdraws its default route with a last advertisement of lifetime 0 when it stops
+        - name: Stop radvd in each router namespace
+          ansible.builtin.shell:
+            cmd: "kill $(cat /run/radvd-{{ item.name }}.pid)"
+            removes: "/run/radvd-{{ item.name }}.pid"
+          loop: "{{ multirail_test_links }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        - name: Reapply the connection of each multirail interface
+          ansible.builtin.command:
+            cmd: "nmcli device reapply {{ item.name }}"
+          changed_when: true
+          loop: "{{ multirail_test_links }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        - name: Wait until no multirail interface has an IPv6 default route from router advertisements
+          ansible.builtin.command:
+            cmd: "ip -6 route show default dev {{ item.name }} proto ra"
+          register: multirail_test_ra_default
+          changed_when: false
+          until: multirail_test_ra_default.stdout == ''
+          retries: 15
+          delay: 2
+          loop: "{{ multirail_test_links }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        - name: Gather network facts
+          ansible.builtin.setup:
+            gather_subset:
+              - "!all"
+              - "!min"
+              - network
+
+        - name: Apply multirail role
+          ansible.builtin.include_role:
+            name: clip.hpc.multirail
+
+        - name: Get ipv6.routes of each multirail connection after the run
+          ansible.builtin.command:
+            cmd: "nmcli --escape no --get-values ipv6.routes connection show 'multirail {{ item.name }}'"
+          register: multirail_test_routes_after
+          changed_when: false
+          loop: "{{ multirail_test_links }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        - name: Assert that the run left ipv6.routes unchanged
+          ansible.builtin.assert:
+            that:
+              - item.1.stdout == item.0.stdout
+              - "'::/0' in item.1.stdout"
+            fail_msg: "ipv6.routes of {{ item.0.item.name }} changed from '{{ item.0.stdout }}' to '{{ item.1.stdout }}'."
+          loop: "{{ multirail_test_routes_before.results | zip(multirail_test_routes_after.results) | list }}"
+          loop_control:
+            label: "{{ item.0.item.name }}"
+      always:
+        - name: Start radvd in each router namespace again
+          ansible.builtin.command:
+            cmd: >-
+              ip netns exec {{ item.name }}-router
+              radvd -C /etc/multirail-test/radvd-{{ item.name }}.conf -p /run/radvd-{{ item.name }}.pid
+            creates: "/run/radvd-{{ item.name }}.pid"
+          loop: "{{ multirail_test_links }}"
+          loop_control:
+            label: "{{ item.name }}"

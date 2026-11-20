@@ -2,6 +2,7 @@
 # defaults file for clip.hpc.multirail
 multirail_interfaces:
 multirail_ipv4_gateways: {}
+multirail_ipv6_gateways: {}
 multirail_net_arp_ignore: 2
 multirail_net_arp_announce: 2
 multirail_net_arp_filter: 1

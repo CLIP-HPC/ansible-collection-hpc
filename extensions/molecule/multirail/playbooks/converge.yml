@@ -1,0 +1,11 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Apply multirail role
+      ansible.builtin.include_role:
+        name: clip.hpc.multirail

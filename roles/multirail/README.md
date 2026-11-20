@@ -7,7 +7,8 @@ For each interface (in list order) the role:
 
 - adds a routing table (`201`, `202`, named after the interface in `/etc/iproute2/rt_tables.d/multirail.conf`)
   with a route for each of the interface's subnets and a default route via the interface's gateway, for
-  IPv4 and, when the interface has a global IPv6 address, for IPv6
+  IPv4 and, when the interface has a global IPv6 address, for IPv6. The gateways are fixed (configured or
+  derived from the subnet), not read from the live routing table, so repeated runs give the same routes
 - adds a routing rule (priority `201`/`202`) for every IPv4 address (primary and secondary) and every
   global IPv6 address of the interface that sends traffic from that address to the interface's table
 - keeps the default route in the main routing table on the first interface only (`ipv4.never-default`
@@ -31,6 +32,7 @@ the ethtool ring sizes set by `clip.hpc.rocev2`, and leaves them pending.
 |----------|---------|-------------|
 | `multirail_interfaces` | required | The two interfaces to configure. The first one keeps the default route in the main routing table. |
 | `multirail_ipv4_gateways` | `{}` | IPv4 gateway per interface name for the default route in that interface's table, e.g. `{eth1: 10.0.2.254}`. Interfaces without an entry use the first usable address of their primary IPv4 subnet. |
+| `multirail_ipv6_gateways` | `{}` | IPv6 gateway per interface name for the default route in that interface's table, e.g. `{eth1: "2001:db8:2::fe"}`. Interfaces without an entry use the first usable address (`::1`) of their first global IPv6 subnet, sorted, skipping `/128` addresses. The role fails for an interface that has only `/128` addresses and no entry. |
 | `multirail_net_arp_ignore` | `2` | `arp_ignore`: only answer ARP for addresses on the receiving interface and from senders in the same subnet. |
 | `multirail_net_arp_announce` | `2` | `arp_announce`: always use the outgoing interface's address as ARP source. |
 | `multirail_net_arp_filter` | `1` | `arp_filter`: only answer ARP on the interface the reply would be routed through. |
@@ -42,6 +44,14 @@ the ethtool ring sizes set by `clip.hpc.rocev2`, and leaves them pending.
 The sysctls are also set per interface because the kernel uses the higher of the `all` and the
 per-interface value for `arp_ignore`, `arp_announce` and `rp_filter`: setting `all` alone can't lower a
 value an interface already has.
+
+The IPv6 default route of a table doesn't use the router learned from router advertisements: that route
+can be missing at first boot and changes while NetworkManager reconnects the interface, so the role
+rewrote `ipv6.routes` on the next run. On OpenStack the subnet's `gateway_ip`, the first address by
+default, belongs to the router port that sends the advertisements. Elsewhere, check
+`ip -6 route show dev <interface> default` and set `multirail_ipv6_gateways` if the router doesn't have
+the subnet's `::1` address. A link-local next hop (`fe80::…`) also works, since the route is bound to the
+interface.
 
 IPv6 global addresses are taken as gathered. If IPv6 privacy (temporary) addresses are enabled on the
 interfaces, the rules change whenever the temporary address does.
@@ -77,5 +87,6 @@ Another way to consume this role would be:
 ip rule show                                  # priority 201/202 rules per address
 ip route show table 201                       # subnet route(s) + default route
 ip route get 192.0.2.1 from <eth1 address>    # dev eth1 table eth1
+ip -6 route show table 202                    # subnet route(s) + default via the IPv6 gateway
 sysctl net.ipv4.conf.eth1.rp_filter           # 2
 ```

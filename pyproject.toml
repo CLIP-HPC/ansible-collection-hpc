@@ -9,5 +9,6 @@ dev = [
     "ansible-core>=2.19.7",
     "molecule>=26.3.0",
     "ansible-lint>=26.3.0",
-     "molecule-plugins[vagrant]>=25.8.12",
+    "molecule-plugins[vagrant]>=25.8.12",
+    "netaddr>=1.3.0",
 ]

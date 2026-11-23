@@ -18,6 +18,14 @@ argument_specs:
           IPv4 gateway per interface name, used for the default route in that interface's routing table.
           Interfaces without an entry use the first usable address of their primary IPv4 subnet.
         default: {}
+      multirail_ipv6_gateways:
+        type: dict
+        description: >-
+          IPv6 gateway per interface name, used for the default route in that interface's routing table.
+          Interfaces without an entry use the first usable address of their first global IPv6 subnet
+          (sorted, /128 addresses skipped), e.g. 2001:db8:1::1 for 2001:db8:1::/64. Only used for
+          interfaces with a global IPv6 address.
+        default: {}
       multirail_net_arp_ignore:
         type: int
         description: Value for net.ipv4.conf.{all,default,<interface>}.arp_ignore.

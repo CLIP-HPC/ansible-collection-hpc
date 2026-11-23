@@ -5,6 +5,11 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.20.0
+=======
+- multirail: **Breaking:** The default route in each interface's IPv6 table now goes via ``multirail_ipv6_gateways[<interface>]`` (new variable, default ``{}``), or else the first usable address of the interface's first global IPv6 subnet (``<prefix>::1``, OpenStack's default ``gateway_ip``), as IPv4 already does. It was read from the live main-table route learned from router advertisements, which can be missing at first boot and changes while NetworkManager reconnects the interface, so the run after every reconnect, including the role's own handler, rewrote ``ipv6.routes`` and reapplied both interfaces, and a missing route left ``::/0`` out silently. Existing hosts change once, from the router's link-local address to ``<prefix>::1``. Set ``multirail_ipv6_gateways`` where the IPv6 router doesn't have that address. The role now fails for an interface with only ``/128`` IPv6 addresses and no entry in ``multirail_ipv6_gateways``
+- multirail: Skip removing the legacy routing table block when ``/etc/iproute2/rt_tables`` doesn't exist. ``blockinfile`` failed on the missing file even with ``state: absent``, so the role failed on EL9 hosts whose iproute package no longer ships it (AlmaLinux 9.7)
+
 v3.19.1
 =======
 - slurm: With ``slurm_db_data_dir`` set, install the systemd drop-in ``mariadb.service.d/datadir-mount.conf`` with ``RequiresMountsFor=<slurm_db_data_dir>`` and reload systemd before ``geerlingguy.mysql`` starts MariaDB. MariaDB was only ordered after ``network.target``, so with the data directory on NFS it started on the empty mountpoint after a reboot, failed, and slurmdbd couldn't connect until MariaDB was started by hand. New variable ``slurm_db_service_name`` (default ``mariadb``) names the unit and is passed to ``geerlingguy.mysql`` as ``mysql_daemon``. Running MariaDB is not restarted; the ordering applies from the next start

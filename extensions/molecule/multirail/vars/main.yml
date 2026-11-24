@@ -1,0 +1,16 @@
+---
+# Each multirail interface is one end of a veth pair. The other end is in a network namespace that stands
+# in for the router of the interface's network: it has the subnet's first IPv4 and IPv6 address and sends
+# router advertisements with radvd, so the interface gets its IPv6 address with SLAAC as on OpenStack.
+# remote_ipv6 is an address on the router's loopback, outside the interface's subnet, so it is only
+# reachable through the default route of the interface's table.
+multirail_test_links:
+  - name: mr0
+    ipv4_prefix: 10.201.0
+    ipv6_prefix: "2001:db8:201:"
+    remote_ipv6: "2001:db8:ffff::201"
+  - name: mr1
+    ipv4_prefix: 10.202.0
+    ipv6_prefix: "2001:db8:202:"
+    remote_ipv6: "2001:db8:ffff::202"
+multirail_interfaces: "{{ multirail_test_links | map(attribute='name') | list }}"

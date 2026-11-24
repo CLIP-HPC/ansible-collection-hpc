@@ -1,0 +1,116 @@
+---
+- name: Prepare two multirail interfaces with IPv6 from router advertisements
+  hosts: all
+  become: true
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Install radvd and iproute
+      ansible.builtin.dnf:
+        name:
+          - radvd
+          - iproute
+        state: present
+
+    - name: Create the configuration directory for the test routers
+      ansible.builtin.file:
+        path: /etc/multirail-test
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Configure radvd for each test router
+      ansible.builtin.copy:
+        dest: "/etc/multirail-test/radvd-{{ item.name }}.conf"
+        content: |
+          interface {{ item.name }}r {
+            AdvSendAdvert on;
+            MinRtrAdvInterval 3;
+            MaxRtrAdvInterval 10;
+            prefix {{ item.ipv6_prefix }}:/64 {
+              AdvOnLink on;
+              AdvAutonomous on;
+            };
+          };
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ multirail_test_links }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    # The namespaces and veth pairs don't survive a reboot, so nothing here reboots the VM
+    - name: Create the router namespace and veth pair of each multirail interface
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          ip netns add {{ item.name }}-router
+          ip link add {{ item.name }} type veth peer name {{ item.name }}r
+          ip link set {{ item.name }}r netns {{ item.name }}-router
+          ip netns exec {{ item.name }}-router sysctl -qw net.ipv6.conf.all.forwarding=1
+          ip -n {{ item.name }}-router link set lo up
+          ip -n {{ item.name }}-router address add {{ item.remote_ipv6 }}/128 dev lo
+          ip -n {{ item.name }}-router address add {{ item.ipv4_prefix }}.1/24 dev {{ item.name }}r
+          ip -n {{ item.name }}-router address add {{ item.ipv6_prefix }}:1/64 dev {{ item.name }}r
+          ip -n {{ item.name }}-router link set {{ item.name }}r up
+        executable: /bin/bash
+        creates: "/run/netns/{{ item.name }}-router"
+      loop: "{{ multirail_test_links }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Start radvd in each router namespace
+      ansible.builtin.command:
+        cmd: >-
+          ip netns exec {{ item.name }}-router
+          radvd -C /etc/multirail-test/radvd-{{ item.name }}.conf -p /run/radvd-{{ item.name }}.pid
+        creates: "/run/radvd-{{ item.name }}.pid"
+      loop: "{{ multirail_test_links }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    # NetworkManager's udev rules leave veth devices unmanaged
+    - name: Let NetworkManager manage the multirail interfaces
+      ansible.builtin.command:
+        cmd: "nmcli device set {{ item.name }} managed yes"
+      changed_when: true
+      loop: "{{ multirail_test_links }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Create a NetworkManager connection for each multirail interface
+      community.general.nmcli:
+        conn_name: "multirail {{ item.name }}"
+        ifname: "{{ item.name }}"
+        type: ethernet
+        ip4: "{{ item.ipv4_prefix }}.10/24"
+        method6: auto
+        state: present
+      loop: "{{ multirail_test_links }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Activate the connection of each multirail interface
+      ansible.builtin.command:
+        cmd: "nmcli connection up 'multirail {{ item.name }}'"
+      changed_when: true
+      loop: "{{ multirail_test_links }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Wait until each multirail interface has a global IPv6 address and an IPv6 default route
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          ip -6 -o address show dev {{ item.name }} scope global | grep -q '{{ item.ipv6_prefix }}'
+          ip -6 route show default dev {{ item.name }} | grep -q 'proto ra'
+        executable: /bin/bash
+      changed_when: false
+      register: multirail_test_slaac
+      until: multirail_test_slaac.rc == 0
+      retries: 30
+      delay: 2
+      loop: "{{ multirail_test_links }}"
+      loop_control:
+        label: "{{ item.name }}"

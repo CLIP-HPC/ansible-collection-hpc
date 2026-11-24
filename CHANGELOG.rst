@@ -5,9 +5,14 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
-v3.20.0
+v3.21.0
 =======
 - slurm: **Breaking:** Remove ``pam_systemd`` from ``password-auth`` and ``system-auth`` on compute nodes instead of masking ``systemd-logind``, as the `pam_slurm_adopt documentation <https://slurm.schedmd.com/pam_slurm_adopt.html#PAM_CONFIG>`_ asks. With authselect the role edits the templates of the selected custom profile; if a vendor profile such as ``sssd`` is selected, it first creates and selects ``custom/<slurm_authselect_profile>`` (new variable, default ``slurm-adopt``) with the current features. Set ``slurm_authselect_profile`` to the name of a custom profile that other plays manage. Without authselect the role edits the files in ``/etc/pam.d``. SSH logins, ``su`` and ``login`` on compute nodes no longer get a logind session or a user manager. The role no longer stops, disables or masks ``systemd-logind``; nodes where it is masked stay masked until it is unmasked by hand
+
+v3.20.0
+=======
+- multirail: **Breaking:** The default route in each interface's IPv6 table now goes via ``multirail_ipv6_gateways[<interface>]`` (new variable, default ``{}``), or else the first usable address of the interface's first global IPv6 subnet (``<prefix>::1``, OpenStack's default ``gateway_ip``), as IPv4 already does. It was read from the live main-table route learned from router advertisements, which can be missing at first boot and changes while NetworkManager reconnects the interface, so the run after every reconnect, including the role's own handler, rewrote ``ipv6.routes`` and reapplied both interfaces, and a missing route left ``::/0`` out silently. Existing hosts change once, from the router's link-local address to ``<prefix>::1``. Set ``multirail_ipv6_gateways`` where the IPv6 router doesn't have that address. The role now fails for an interface with only ``/128`` IPv6 addresses and no entry in ``multirail_ipv6_gateways``
+- multirail: Skip removing the legacy routing table block when ``/etc/iproute2/rt_tables`` doesn't exist. ``blockinfile`` failed on the missing file even with ``state: absent``, so the role failed on EL9 hosts whose iproute package no longer ships it (AlmaLinux 9.7)
 
 v3.19.1
 =======

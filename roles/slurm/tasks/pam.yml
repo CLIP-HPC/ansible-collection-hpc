@@ -30,29 +30,117 @@
     backup: true
 
 
-# - name: pam | Fix pam_systemd lines in /etc/pam.d/ auth files
-#   tags:
-#     - pam
-#   ansible.builtin.lineinfile:
-#     path: "{{ item }}"
-#     regexp: '^\s*#?\s*-session\s+optional\s+pam_systemd\.so\s*$'
-#     line: "#-session     optional      pam_systemd.so"
-#     backup: true
-#   loop:
-#     - /etc/pam.d/system-auth
-#     - /etc/pam.d/password-auth
+# pam_systemd moves adopted SSH sessions out of the job cgroup into user-<uid>.slice, so the docs ask to remove it
+# from the files included by sshd and system-auth: https://slurm.schedmd.com/pam_slurm_adopt.html#PAM_CONFIG
+# With authselect these files are generated, and the next `authselect apply-changes` (also by other plays) would
+# revert an edit. The role therefore edits the templates of a custom profile: the selected one, or one it creates
+# from the selected vendor profile.
+- name: pam | Remove pam_systemd from the PAM stack
+  tags:
+    - pam
+  vars:
+    _slurm_pam_systemd_regexp: '^\s*-?session\s+(\[[^]]*\]|\S+)\s+\S*pam_systemd\.so'
+  block:
+    - name: pam | Get the selected authselect profile
+      ansible.builtin.command: authselect current --raw
+      register: _slurm_authselect_current
+      changed_when: false
+      # Fails without authselect, or if no profile is selected: the PAM files are then edited directly
+      failed_when: false
+      check_mode: false
+
+    - name: pam | Choose the PAM files to edit
+      vars:
+        _selected: "{{ _slurm_authselect_current.stdout.split() if _slurm_authselect_current.rc == 0 else [] }}"
+        _profile: >-
+          {{ (_selected | first) if (_selected | first | default('')).startswith('custom/')
+             else 'custom/' ~ slurm_authselect_profile }}
+      ansible.builtin.set_fact:
+        _slurm_authselect_used: "{{ _selected | length > 0 }}"
+        _slurm_authselect_selected: "{{ _selected | first | default('') }}"
+        _slurm_authselect_features: "{{ _selected[1:] }}"
+        _slurm_authselect_profile: "{{ _profile }}"
+        _slurm_pam_dir: "{{ ('/etc/authselect/' ~ _profile) if _selected | length > 0 else '/etc/pam.d' }}"
+
+    # Same layout as `authselect create-profile` in other plays: PAM and meta files symlinked, nsswitch.conf a copy
+    - name: pam | Create a custom authselect profile from the selected vendor profile
+      ansible.builtin.command:
+        cmd: >-
+          authselect create-profile {{ slurm_authselect_profile }} -b {{ _slurm_authselect_selected }}
+          --symlink-meta --symlink-pam
+        creates: "{{ _slurm_pam_dir }}"
+      when:
+        - _slurm_authselect_used
+        - _slurm_authselect_selected != _slurm_authselect_profile
+      register: _slurm_authselect_create
+
+    - name: pam | Select the custom authselect profile with the current features
+      ansible.builtin.command:
+        cmd: authselect select {{ _slurm_authselect_profile }} {{ _slurm_authselect_features | join(' ') }}
+      when:
+        - _slurm_authselect_used
+        - _slurm_authselect_selected != _slurm_authselect_profile
+        # In check mode a new profile doesn't exist yet
+        - not (ansible_check_mode and _slurm_authselect_create is changed)
+      changed_when: true
+
+    - name: pam | Read password-auth and system-auth
+      ansible.builtin.slurp:
+        src: "{{ _slurm_pam_dir }}/{{ item }}"
+      loop:
+        - password-auth
+        - system-auth
+      register: _slurm_pam_files
+      when: not (ansible_check_mode and _slurm_authselect_create is changed)
+
+    - name: pam | Remove pam_systemd from password-auth and system-auth
+      ansible.builtin.copy:
+        dest: "{{ item.source }}"
+        content: "{{ (item.content | b64decode).splitlines() | reject('search', _slurm_pam_systemd_regexp) | join('\n') }}\n"
+        # Templates of a new profile are symlinks into /usr/share/authselect: replace the link, don't write through it
+        follow: false
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ _slurm_pam_files.results | reject('skipped') }}"
+      loop_control:
+        label: "{{ item.source }}"
+      register: _slurm_pam_systemd_removed
+
+    - name: pam | Apply the authselect profile
+      ansible.builtin.command: authselect apply-changes
+      when:
+        - _slurm_authselect_used
+        - _slurm_pam_systemd_removed is changed
+      changed_when: true
+
+    - name: pam | Check the authselect configuration
+      ansible.builtin.command: authselect check
+      when: _slurm_authselect_used
+      changed_when: false
+      check_mode: false
+
+    - name: pam | Find active pam_systemd lines
+      ansible.builtin.command:
+        argv: [grep, -nE, "{{ _slurm_pam_systemd_regexp }}", /etc/pam.d/password-auth, /etc/pam.d/system-auth]
+      register: _slurm_pam_systemd_lines
+      changed_when: false
+      failed_when: _slurm_pam_systemd_lines.rc > 1
+      check_mode: false
+
+    - name: pam | Assert pam_systemd is not in the PAM stack
+      ansible.builtin.assert:
+        that: _slurm_pam_systemd_lines.rc == 1
+        fail_msg: >-
+          pam_systemd is still active and moves adopted SSH sessions out of the job:
+          {{ _slurm_pam_systemd_lines.stdout_lines }}
+      # In check mode pending changes haven't been applied yet
+      when: not (ansible_check_mode and (_slurm_authselect_create is changed or _slurm_pam_systemd_removed is changed))
 
 
 # - name: SELINUX fix context on /var/spool/slurm
 #   ansible.builtin.command: /sbin/restorecon -Fvri "{{ slurm_spool_dir }}"
 #   changed_when: true
-
-- name: Stop, disable, mask systemd-logind
-  ansible.builtin.systemd:
-    name: systemd-logind
-    state: stopped
-    enabled: false
-    masked: true
 
 - name: pam | Fix /etc/security/access.conf
   tags:

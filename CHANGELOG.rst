@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.20.0
+=======
+- slurm: **Breaking:** Remove ``pam_systemd`` from ``password-auth`` and ``system-auth`` on compute nodes instead of masking ``systemd-logind``, as the `pam_slurm_adopt documentation <https://slurm.schedmd.com/pam_slurm_adopt.html#PAM_CONFIG>`_ asks. With authselect the role edits the templates of the selected custom profile; if a vendor profile such as ``sssd`` is selected, it first creates and selects ``custom/<slurm_authselect_profile>`` (new variable, default ``slurm-adopt``) with the current features. Set ``slurm_authselect_profile`` to the name of a custom profile that other plays manage. Without authselect the role edits the files in ``/etc/pam.d``. SSH logins, ``su`` and ``login`` on compute nodes no longer get a logind session or a user manager. The role no longer stops, disables or masks ``systemd-logind``; nodes where it is masked stay masked until it is unmasked by hand
+
 v3.19.1
 =======
 - slurm: With ``slurm_db_data_dir`` set, install the systemd drop-in ``mariadb.service.d/datadir-mount.conf`` with ``RequiresMountsFor=<slurm_db_data_dir>`` and reload systemd before ``geerlingguy.mysql`` starts MariaDB. MariaDB was only ordered after ``network.target``, so with the data directory on NFS it started on the empty mountpoint after a reboot, failed, and slurmdbd couldn't connect until MariaDB was started by hand. New variable ``slurm_db_service_name`` (default ``mariadb``) names the unit and is passed to ``geerlingguy.mysql`` as ``mysql_daemon``. Running MariaDB is not restarted; the ordering applies from the next start

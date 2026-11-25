@@ -38,6 +38,7 @@
     group: root
     mode: '0755'
   become: true
+  register: rdma_exporter_download_dir_result
 
 - name: install | Ensure versioned extraction directory exists
   ansible.builtin.file:
@@ -47,6 +48,7 @@
     group: root
     mode: '0755'
   become: true
+  register: rdma_exporter_extract_dir_result
 
 - name: install | Download rdma_exporter release archive
   ansible.builtin.get_url:
@@ -56,6 +58,8 @@
     mode: '0644'
   become: true
   register: rdma_exporter_download
+  # In check mode a new download directory doesn't exist yet
+  when: not (ansible_check_mode and rdma_exporter_download_dir_result is changed)
 
 - name: install | Extract rdma_exporter archive
   ansible.builtin.unarchive:
@@ -64,6 +68,16 @@
     remote_src: true
     creates: "{{ rdma_exporter_download_dir }}/{{ rdma_exporter_version }}/rdma_exporter"
   become: true
+  # In check mode a new archive or extraction directory doesn't exist yet
+  when: >-
+    not (ansible_check_mode and (rdma_exporter_download is skipped or rdma_exporter_download is changed
+    or rdma_exporter_extract_dir_result is changed))
+
+- name: install | Check for extracted rdma_exporter binary
+  ansible.builtin.stat:
+    path: "{{ rdma_exporter_download_dir }}/{{ rdma_exporter_version }}/rdma_exporter"
+  register: rdma_exporter_extracted_binary
+  when: ansible_check_mode
 
 - name: install | Install rdma_exporter binary
   ansible.builtin.copy:
@@ -75,6 +89,8 @@
     mode: '0755'
   become: true
   notify: Restart rdma_exporter
+  # In check mode a new release isn't extracted yet
+  when: not ansible_check_mode or rdma_exporter_extracted_binary.stat.exists
 
 - name: install | Deploy rdma_exporter environment file
   ansible.builtin.template:
@@ -86,14 +102,25 @@
   become: true
   notify: Restart rdma_exporter
 
+# get_url only sends a HEAD request in check mode and reports a fetched file as
+# changed on every run: fetch the upstream files read-only, also in check mode,
+# and let copy compare their content
 - name: install | Fetch rdma_exporter systemd unit from upstream
-  ansible.builtin.get_url:
+  ansible.builtin.uri:
     url: "{{ rdma_exporter_systemd_unit_url }}"
+    return_content: true
+  check_mode: false
+  register: rdma_exporter_systemd_unit
+
+- name: install | Deploy rdma_exporter systemd unit
+  ansible.builtin.copy:
+    content: "{{ rdma_exporter_systemd_unit.content }}"
     dest: /etc/systemd/system/rdma_exporter.service
     owner: root
     group: root
     mode: '0644'
   become: true
+  register: rdma_exporter_unit_file
   notify: Restart rdma_exporter
 
 - name: install | Open firewalld port for rdma_exporter
@@ -111,8 +138,15 @@
   when: rdma_exporter_manage_hardware_counters | bool
   block:
     - name: install | Fetch rdma-hardware-counters enablement script from upstream
-      ansible.builtin.get_url:
+      ansible.builtin.uri:
         url: "{{ rdma_exporter_hw_counters_script_url }}"
+        return_content: true
+      check_mode: false
+      register: rdma_exporter_hw_counters_script
+
+    - name: install | Deploy rdma-hardware-counters enablement script
+      ansible.builtin.copy:
+        content: "{{ rdma_exporter_hw_counters_script.content }}"
         dest: /usr/local/sbin/rdma-enable-hardware-counters
         owner: root
         group: root
@@ -127,16 +161,31 @@
         mode: '0640'
 
     - name: install | Fetch rdma-hardware-counters systemd unit from upstream
-      ansible.builtin.get_url:
+      ansible.builtin.uri:
         url: "{{ rdma_exporter_hw_counters_service_url }}"
+        return_content: true
+      check_mode: false
+      register: rdma_exporter_hw_counters_unit
+
+    - name: install | Deploy rdma-hardware-counters systemd unit
+      ansible.builtin.copy:
+        content: "{{ rdma_exporter_hw_counters_unit.content }}"
         dest: /etc/systemd/system/rdma-hardware-counters.service
         owner: root
         group: root
         mode: '0644'
+      register: rdma_exporter_hw_counters_unit_file
 
     - name: install | Fetch rdma-hardware-counters udev rule from upstream
-      ansible.builtin.get_url:
+      ansible.builtin.uri:
         url: "{{ rdma_exporter_hw_counters_udev_rule_url }}"
+        return_content: true
+      check_mode: false
+      register: rdma_exporter_hw_counters_udev_rule
+
+    - name: install | Deploy rdma-hardware-counters udev rule
+      ansible.builtin.copy:
+        content: "{{ rdma_exporter_hw_counters_udev_rule.content }}"
         dest: /etc/udev/rules.d/90-rdma-hardware-counters.rules
         owner: root
         group: root
@@ -148,6 +197,8 @@
         name: rdma-hardware-counters
         enabled: true
         daemon_reload: true
+      # In check mode a new unit isn't written yet
+      when: not (ansible_check_mode and rdma_exporter_hw_counters_unit_file is changed)
 
 - name: install | Remove rdma-hardware-counters enablement stack
   become: true

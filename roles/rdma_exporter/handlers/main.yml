@@ -6,6 +6,8 @@
     state: restarted
     daemon_reload: true
   become: true
+  # In check mode a new or changed unit isn't written yet
+  when: not (ansible_check_mode and rdma_exporter_unit_file is changed)
 
 - name: Reload udev rules
   ansible.builtin.command: udevadm control --reload-rules

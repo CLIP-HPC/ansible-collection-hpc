@@ -33,6 +33,7 @@
     group: root
     mode: '0755'
   become: true
+  register: smartctl_exporter_download_dir_result
 
 - name: install | Download smartctl_exporter release archive
   ansible.builtin.get_url:
@@ -42,6 +43,8 @@
     mode: '0644'
   become: true
   register: smartctl_exporter_download
+  # In check mode a new download directory doesn't exist yet
+  when: not (ansible_check_mode and smartctl_exporter_download_dir_result is changed)
 
 - name: install | Extract smartctl_exporter archive
   ansible.builtin.unarchive:
@@ -50,6 +53,14 @@
     remote_src: true
     creates: "{{ smartctl_exporter_download_dir }}/smartctl_exporter-{{ smartctl_exporter_version }}.linux-{{ smartctl_exporter_arch }}/smartctl_exporter"
   become: true
+  # In check mode a new archive doesn't exist yet
+  when: not (ansible_check_mode and (smartctl_exporter_download is skipped or smartctl_exporter_download is changed))
+
+- name: install | Check for extracted smartctl_exporter binary
+  ansible.builtin.stat:
+    path: "{{ smartctl_exporter_download_dir }}/smartctl_exporter-{{ smartctl_exporter_version }}.linux-{{ smartctl_exporter_arch }}/smartctl_exporter"
+  register: smartctl_exporter_extracted_binary
+  when: ansible_check_mode
 
 - name: install | Install smartctl_exporter binary
   ansible.builtin.copy:
@@ -61,6 +72,8 @@
     mode: '0755'
   become: true
   notify: Restart smartctl_exporter
+  # In check mode a new release isn't extracted yet
+  when: not ansible_check_mode or smartctl_exporter_extracted_binary.stat.exists
 
 - name: install | Deploy smartctl_exporter systemd unit
   ansible.builtin.template:
@@ -70,6 +83,7 @@
     group: root
     mode: '0644'
   become: true
+  register: smartctl_exporter_unit_file
   notify: Restart smartctl_exporter
 
 - name: install | Open firewalld port for smartctl_exporter

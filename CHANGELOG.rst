@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.21.1
+=======
+- rocev2: Run the read-only MLX device discovery (``mst start``, ``mst status``, ``mlxconfig -d <device> q``) and the ``nmcli`` queries for the ethtool ring sizes in check mode too. They were skipped, so with ``--check`` the role found no devices and always failed with "None of the 0 MST device(s) found support mlxconfig queries", and failed on the missing ``rc`` of the skipped ``nmcli`` queries when ``rocev2_ethtool_ring_rx`` or ``rocev2_ethtool_ring_tx`` is set. ``mst start`` loads the MST kernel modules in check mode as well. In check mode on a host without the ``mft`` package, the role skips DCBX discovery and configuration and says so instead of failing on the missing ``mst``
+
 v3.21.0
 =======
 - slurm: **Breaking:** Remove ``pam_systemd`` from ``password-auth`` and ``system-auth`` on compute nodes, and stop masking ``systemd-logind``. The `pam_slurm_adopt documentation <https://slurm.schedmd.com/pam_slurm_adopt.html#PAM_CONFIG>`_ has asked to disable ``pam_systemd`` in all files included by sshd or system-auth all along; the advice to also stop and mask ``systemd-logind`` was dropped after Slurm 21.08. Masked nodes stay masked until ``systemd-logind`` is unmasked by hand. With authselect the role edits the templates of the selected custom profile; if a vendor profile such as ``sssd`` is selected, it first creates and selects ``custom/<slurm_authselect_profile>`` (new variable, default ``slurm-adopt``) with the current features. Set ``slurm_authselect_profile`` to the name of a custom profile that other plays manage. Without authselect the role edits the files in ``/etc/pam.d``. SSH logins, ``su`` and ``login`` on compute nodes no longer get a logind session or a user manager

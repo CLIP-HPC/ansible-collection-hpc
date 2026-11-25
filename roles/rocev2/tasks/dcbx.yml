@@ -1,15 +1,20 @@
 ---
+# The discovery tasks only read state (mst start only loads the MST kernel modules that
+# mst status needs to list devices), so they also run in check mode to report the firmware
+# changes the role would make.
 - name: dcbx | Start mst
   become: true
   ansible.builtin.command: "/usr/bin/mst start"
   changed_when: false
   failed_when: false
+  check_mode: false
 
 - name: dcbx | Retrieve MLX device
   become: true
   ansible.builtin.command: "/usr/bin/mst status"
   register: rocev2_mst_status
   changed_when: false
+  check_mode: false
 
 - name: dcbx | Store MLX devies
   ansible.builtin.set_fact:
@@ -22,6 +27,7 @@
   register: rocev2_mlx_current_settings
   changed_when: false
   failed_when: false
+  check_mode: false
 
 - name: dcbx | Report MLX devices without configurable firmware
   ansible.builtin.debug:

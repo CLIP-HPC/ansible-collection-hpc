@@ -2,8 +2,16 @@
 - name: Import install.yml tasks
   ansible.builtin.import_tasks: install.yml
 
+- name: Report skipped DCBX configuration in check mode
+  ansible.builtin.debug:
+    msg: >-
+      Skipping MLX device discovery and DCBX configuration: the mft package isn't installed yet,
+      so mst and mlxconfig aren't available in check mode.
+  when: ansible_check_mode and rocev2_mft_package is changed
+
 - name: Import dcbx.yml tasks
   ansible.builtin.import_tasks: dcbx.yml
+  when: not (ansible_check_mode and rocev2_mft_package is changed)
 
 - name: Import irq_affinity.yml tasks
   ansible.builtin.import_tasks: irq_affinity.yml

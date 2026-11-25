@@ -5,6 +5,11 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.22.0
+=======
+- slurm: Probe the node topology with ``slurmd -C --parameters=numa_node_as_socket`` in the role, with a 60 s task timeout, and write it to ``/etc/ansible/facts.d/slurmd_topology.fact`` as static JSON (mode ``0644``) instead of deploying an executable fact script that ran ``slurmd -C`` at every fact gathering. A ``slurmd -C`` stuck in ``sched_setaffinity`` can't be killed, and the script's ``subprocess.run(timeout=30)`` waited for it, so every fact gathering on the node hung until a reboot. A failed or timed-out probe now writes an empty fact (``slurm.conf`` then takes the topology from another host of the nodegroup or from ``ansible_facts``) and the role continues; the probe also runs in check mode. The topology is refreshed on every run of the role, not at every fact gathering. Hosts keep the old script until the role runs on them
+- New filter ``clip.hpc.slurmd_topology`` converts ``slurmd -C`` output to a dict
+
 v3.21.1
 =======
 - rocev2: Run the read-only MLX device discovery (``mst start``, ``mst status``, ``mlxconfig -d <device> q``) and the ``nmcli`` queries for the ethtool ring sizes in check mode too. They were skipped, so with ``--check`` the role found no devices and always failed with "None of the 0 MST device(s) found support mlxconfig queries", and failed on the missing ``rc`` of the skipped ``nmcli`` queries when ``rocev2_ethtool_ring_rx`` or ``rocev2_ethtool_ring_tx`` is set. ``mst start`` loads the MST kernel modules in check mode as well. In check mode on a host without the ``mft`` package, the role skips DCBX discovery and configuration and says so instead of failing on the missing ``mst``

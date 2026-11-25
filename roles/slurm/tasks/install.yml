@@ -48,15 +48,34 @@
     # setup runs executable *.fact files here as root: only root may write
     mode: "0755"
 
-- name: install | Deploy slurmd topology facts script
+# Probed here rather than from an executable local fact: a slurmd -C that
+# hangs (e.g. in sched_setaffinity, unkillable) would hang every fact
+# gathering on the node, while here the task timeout bounds it.
+- name: install | Probe slurmd node topology
+  tags: install
+  when: slurm_enable.get('slurmd', false) | bool
+  ansible.builtin.command: /usr/sbin/slurmd -C --parameters=numa_node_as_socket
+  changed_when: false
+  check_mode: false # read-only; slurm.conf needs the topology in check mode too
+  timeout: 60
+  register: slurm_slurmd_topology_probe
+  # A failed or hung probe (or no slurmd yet in check mode) leaves an empty
+  # fact; slurm.conf.j2 then uses another host of the nodegroup or falls back
+  # to ansible_facts
+  ignore_errors: true
+
+- name: install | Write slurmd topology fact
   tags: install
   when: slurm_enable.get('slurmd', false) | bool
   ansible.builtin.copy:
-    src: slurmd_topology.fact
+    content: >-
+      {{ (slurm_slurmd_topology_probe.stdout_lines | clip.hpc.slurmd_topology
+      if slurm_slurmd_topology_probe is succeeded else {}) | to_nice_json }}
     dest: /etc/ansible/facts.d/slurmd_topology.fact
     owner: root
     group: root
-    mode: "0755"
+    # static JSON: setup only runs executable *.fact files
+    mode: "0644"
 
 - name: install | Refresh local Ansible facts on slurmd nodes
   tags: install

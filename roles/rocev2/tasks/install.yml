@@ -4,6 +4,7 @@
     name: "mft"
     state: present
   become: true
+  register: rocev2_mft_package
 
 - name: install | Enable RoCE ECN packages
   become: true

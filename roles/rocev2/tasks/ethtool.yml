@@ -70,6 +70,7 @@
   register: rocev2_nm_connections
   changed_when: false
   failed_when: false
+  check_mode: false
   when: rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
 
 - name: ethtool | Report RoCE netdevs without an active NetworkManager connection
@@ -110,6 +111,7 @@
     label: "{{ item.item }}"
   register: rocev2_nm_device_states
   changed_when: false
+  check_mode: false
   when: rocev2_ethtool_ring_rx is not none or rocev2_ethtool_ring_tx is not none
 
 - name: ethtool | Report RoCE netdevs that are not active/up
@@ -160,6 +162,7 @@
     label: "{{ item.item }}"
   register: rocev2_current_ring_rx
   changed_when: false
+  check_mode: false
   when: rocev2_ethtool_ring_rx is not none
 
 - name: ethtool | Set ethtool.ring-rx where it differs from the desired value
@@ -196,6 +199,7 @@
     label: "{{ item.item }}"
   register: rocev2_current_ring_tx
   changed_when: false
+  check_mode: false
   when: rocev2_ethtool_ring_tx is not none
 
 - name: ethtool | Set ethtool.ring-tx where it differs from the desired value

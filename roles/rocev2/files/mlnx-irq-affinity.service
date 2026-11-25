@@ -5,6 +5,7 @@ Conflicts=irqbalance.service
 
 [Service]
 Type=oneshot
+RemainAfterExit=yes
 ExecStart=/usr/local/bin/mlnx-irq-affinity.sh
 
 [Install]

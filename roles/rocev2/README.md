@@ -7,9 +7,9 @@ This role configured NVIDIA NIC firmwware swettings to trust DSCP and configure 
 
 | Variable                    | Default   | Description                                                                                                                                       |
 |------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| `rocev2_mlx_qos_service_state` | `started` | State of the `mlnx-roce-qos` service.                                                                                                             |
+| `rocev2_mlx_qos_service_state` | `started` | State of the `mlnx-roce-qos` service set when the script or unit changes. `started` restarts the service then, so the updated QoS settings are applied. |
 | `rocev2_irq_affinity_enabled` | `false` | Whether to apply the IRQ affinity optimization (disable/mask `irqbalance`, install and run `mlnx-irq-affinity`). When `false` (the default), the role does not touch `irqbalance` and does not install, manage, or start the `mlnx-irq-affinity` service; an already-installed service from a previous run is left as-is. |
-| `rocev2_irq_affinity_service_state` | `started` | State of the `mlnx-irq-affinity` service. Only applies when `rocev2_irq_affinity_enabled` is `true`.                                          |
+| `rocev2_irq_affinity_service_state` | `started` | State of the `mlnx-irq-affinity` service. `started` restarts the service when the script or unit changes, so the updated IRQ affinity is applied. Only applies when `rocev2_irq_affinity_enabled` is `true`. |
 | `rocev2_ethtool_ring_rx`      | unset     | Desired `ethtool.ring-rx` value applied to the NetworkManager connection of every discovered RoCE NIC (`/sys/class/infiniband/mlx5_*`): an integer ring size, or an empty string (`""`) to remove an existing override. Left unset (the default), the role does not touch ring-rx at all. |
 | `rocev2_ethtool_ring_tx`      | unset     | Desired `ethtool.ring-tx` value applied to the NetworkManager connection of every discovered RoCE NIC (`/sys/class/infiniband/mlx5_*`): an integer ring size, or an empty string (`""`) to remove an existing override. Left unset (the default), the role does not touch ring-tx at all. |
 
@@ -26,6 +26,14 @@ currently has an override set; if it's already unmanaged, nothing changes. This 
 live-applied — the driver's own default ring size only takes effect the next time the interface
 reconnects or the host reboots, since that's when NetworkManager stops re-asserting a value it no
 longer manages.
+
+## QoS and IRQ affinity services
+
+`mlnx-roce-qos` and `mlnx-irq-affinity` are oneshot units with `RemainAfterExit=yes`: each runs its
+script once at boot and then stays `active (exited)`. The role starts a unit that isn't active and
+restarts it only when its script or unit file changes, so a run against a configured host doesn't
+re-apply QoS or IRQ affinity. To re-apply by hand, run `systemctl restart mlnx-roce-qos` (or
+`mlnx-irq-affinity`).
 
 ## IRQ Affinity
 

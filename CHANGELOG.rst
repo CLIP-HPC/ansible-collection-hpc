@@ -8,6 +8,7 @@ clip.hpc Release Notes
 v3.21.1
 =======
 - rocev2: Run the read-only MLX device discovery (``mst start``, ``mst status``, ``mlxconfig -d <device> q``) and the ``nmcli`` queries for the ethtool ring sizes in check mode too. They were skipped, so with ``--check`` the role found no devices and always failed with "None of the 0 MST device(s) found support mlxconfig queries", and failed on the missing ``rc`` of the skipped ``nmcli`` queries when ``rocev2_ethtool_ring_rx`` or ``rocev2_ethtool_ring_tx`` is set. ``mst start`` loads the MST kernel modules in check mode as well. In check mode on a host without the ``mft`` package, the role skips DCBX discovery and configuration and says so instead of failing on the missing ``mst``
+- rocev2: Add ``RemainAfterExit=yes`` to the oneshot units ``mlnx-roce-qos`` and ``mlnx-irq-affinity``, and restart them from the handlers when their script or unit file changes. The units were ``inactive (dead)`` after their script ran, so ``state: started`` re-ran ``mlnx-roce-qos.sh`` (and ``mlnx-irq-affinity.sh`` with ``rocev2_irq_affinity_enabled``) and reported a change on every run. On existing hosts the first run restarts the units once, because their unit files change
 
 v3.21.0
 =======

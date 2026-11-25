@@ -4,19 +4,21 @@
     post_reboot_delay: 30
 
 # handlers file for clip.hpc.rocev2
+# Both units are oneshot with RemainAfterExit=yes, so they stay active after the script ran and
+# 'started' would not run it again: restart them to re-apply an updated script or unit.
 - name: Restart MLNX RoCE QoS service
-  ansible.builtin.service:
+  ansible.builtin.systemd:
     name: mlnx-roce-qos.service
     enabled: true
-    state: "{{ rocev2_mlx_qos_service_state }}"
+    state: "{{ 'restarted' if rocev2_mlx_qos_service_state == 'started' else rocev2_mlx_qos_service_state }}"
     daemon_reload: true
   become: true
 
 - name: Restart MLNX IRQ affinity service
-  ansible.builtin.service:
+  ansible.builtin.systemd:
     name: mlnx-irq-affinity.service
     enabled: true
-    state: "{{ rocev2_irq_affinity_service_state }}"
+    state: "{{ 'restarted' if rocev2_irq_affinity_service_state == 'started' else rocev2_irq_affinity_service_state }}"
     daemon_reload: true
   become: true
 

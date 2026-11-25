@@ -4,7 +4,10 @@
   # slurm.conf
   ansible.builtin.command: scontrol show config
   changed_when: false
+  check_mode: false
   register: slurm_scontrol_config
+  # In check mode scontrol may not be installed or slurmctld not running yet
+  failed_when: slurm_scontrol_config.rc != 0 and not ansible_check_mode
 
 - name: facts | Create facts directory
   ansible.builtin.file:
@@ -26,3 +29,4 @@
     mode: "0644" # any user can run scontrol show config anyway
   register: slurm_template_facts
   notify: Reload facts
+  when: slurm_scontrol_config.rc == 0

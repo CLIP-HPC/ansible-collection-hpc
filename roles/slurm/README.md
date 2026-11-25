@@ -73,6 +73,30 @@ both in the nodegroup and in `slurm_node_features` appear once. The node stays i
 with slices, a dynamic node keeps the features it registered
 with until its node record is deleted and slurmd is restarted.
 
+SSH access to compute nodes (pam_slurm_adopt)
+---------------------------------------------
+
+On compute nodes (`slurm_enable.batch`) the role adds `pam_slurm_adopt` and `pam_access` to `/etc/pam.d/sshd`, so
+users can SSH only to nodes where they have a job, and the session is adopted into that job. Members of
+`slurm_ssh_access` and `ansible_user` may log in without a job.
+
+As the [Slurm documentation](https://slurm.schedmd.com/pam_slurm_adopt.html#PAM_CONFIG) asks, the role also removes
+`pam_systemd` from `password-auth` and `system-auth`: with `systemd-logind` running it moves adopted sessions out of
+the job into `user-<uid>.slice`. The role doesn't change `systemd-logind` itself.
+
+With authselect the files in `/etc/pam.d` are generated, so the role changes the profile instead, and the change
+survives `authselect apply-changes` by other plays:
+
+* A custom profile is selected: the role removes `pam_systemd` from its `password-auth` and `system-auth`
+  templates (symlinks to the base profile are replaced by copies) and applies the profile.
+* A vendor profile (`sssd`, `local`, ...) is selected: the role first creates `custom/<slurm_authselect_profile>`
+  from it (`--symlink-meta --symlink-pam`, default `slurm-adopt`) and selects it with the current features.
+* authselect isn't used: the role edits `/etc/pam.d/password-auth` and `/etc/pam.d/system-auth` directly.
+
+If other plays also manage a custom profile, set `slurm_authselect_profile` to its name, so that it doesn't matter
+which runs first. Templates copied from the base profile no longer follow updates of the `authselect` package.
+Local accounts skip `pam_slurm_adopt` through `pam_localuser` in the account stack; the role leaves that as is.
+
 Database data directory
 -----------------------
 

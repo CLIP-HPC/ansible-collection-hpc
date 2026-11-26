@@ -26,5 +26,5 @@
     - name: Assert the role asked for a reboot instead of rebooting
       ansible.builtin.assert:
         that:
-          - (reboot_required.content | b64decode) is search('(?m)^clip\.hpc\.doca: DOCA packages installed$')
+          - "'clip.hpc.doca: DOCA packages installed' in (reboot_required.content | b64decode).splitlines()"
         fail_msg: "/run/reboot-required doesn't name the DOCA packages."

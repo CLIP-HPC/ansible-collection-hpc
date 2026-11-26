@@ -2,8 +2,8 @@
 name: CI
 on:
   # Pushes to PR branches run CI only through pull_request, so each push starts one run.
-  # push covers merged PRs on main and release tags; tag runs publish once check passes
-  # and skip Molecule, so they rely on the main run of the tagged commit having passed.
+  # push covers merged PRs on main and release tags; tag runs test all roles before
+  # publishing (see force_all_roles below).
   push:
     branches:
       - main
@@ -31,5 +31,8 @@ jobs:
       platform: self-hosted
       molecule_env_file: ansible.env
       publish_to_automationhub: true
+      # A tag run would otherwise find no changed roles and skip Molecule, so publish
+      # would not wait for any scenario. Run all of them before publishing a release.
+      force_all_roles: ${{ github.ref_type == 'tag' }}
       # From requires_ansible in meta/runtime.yml (>=2.15.0) to the current stable release.
       sanity_ansible_versions: '["stable-2.15", "stable-2.16", "stable-2.17", "stable-2.18", "stable-2.19", "stable-2.20", "stable-2.21", "stable-2.22"]'

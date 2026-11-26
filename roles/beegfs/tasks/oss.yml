@@ -43,8 +43,11 @@
           'label': 'OSS device ' ~ item.dev,
           'zone': item.numa_zone,
           'service': 'BeeGFS storage port ' ~ item.port,
+          'warn_only': item.provisioned,
         }]
       }}
+  # A device resolved from its existing label keeps its port wherever it is
+  # attached, so a mismatch is only reported for it.
   loop: "{{ beegfs_oss_targets | rejectattr('numa_zone', 'none') | list }}"
   loop_control:
     label: "{{ item.dev }}"

@@ -1,8 +1,9 @@
 ---
 # Compares the NUMA node reported by sysfs for each entry in numa_checks
 # against that entry's zone. Expects numa_checks to be set by the caller as a
-# list of {path, label, zone, service} (service being the BeeGFS service
-# validated, for the error message). Loops instead of being included once per
+# list of {path, label, zone, service, warn_only} (service being the BeeGFS
+# service validated, for the error message; warn_only, optional, reports a
+# mismatch instead of failing). Loops instead of being included once per
 # entry, so all hosts run these tasks together.
 
 - name: Check availability of NUMA node info
@@ -37,3 +38,22 @@
     - item.content is defined
     - beegfs_numa_check_node | int >= 0
     - beegfs_numa_check_node | int != numa_check.zone | int
+    - not (numa_check.warn_only | default(false) | bool)
+
+- name: Warn on tuneBindToNumaZone mismatch
+  vars:
+    numa_check: "{{ item.item.item }}"
+    beegfs_numa_check_node: "{{ item.content | b64decode | trim }}"
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: {{ numa_check.label }} is attached to NUMA node
+      {{ beegfs_numa_check_node }}, but tuneBindToNumaZone is set to
+      {{ numa_check.zone }} for {{ numa_check.service }}.
+  loop: "{{ beegfs_numa_check_raw.results }}"
+  loop_control:
+    label: "{{ item.item.item.label }}"
+  when:
+    - item.content is defined
+    - beegfs_numa_check_node | int >= 0
+    - beegfs_numa_check_node | int != numa_check.zone | int
+    - numa_check.warn_only | default(false) | bool

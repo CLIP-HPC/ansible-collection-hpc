@@ -2,8 +2,10 @@
 # Resolves devices for each beegfs_oss entry missing them, label-first: any
 # device already labeled ST-<port>-<index> (from a previous run) is pinned to
 # that slot regardless of its current name - device names are not stable
-# across reboots. Fresh NUMA/name-based discovery only fills slots that were
-# never labeled (first bootstrap, or genuinely new disks). Tracks
+# across reboots. Fresh NUMA/name-based discovery only fills the slots of a
+# port without any label (first bootstrap), or, with
+# beegfs_oss_discovery_expand, a labeled port's missing slots and new
+# disks. Tracks
 # beegfs_oss_device_provisioned (device path -> bool) so oss.yml's format
 # guard can tell which devices are safe to skip.
 
@@ -53,7 +55,9 @@
       beegfs_oss port {{ item.key }} (numa_zone {{ item.value.numa_zone }})
       has no devices after discovery. Candidate disks
       ({{ beegfs_candidate_disk_names }}) either belong to a different NUMA
-      zone, are claimed by another beegfs_oss entry, or none exist.
+      zone (NUMA nodes read: {{ beegfs_disk_numa_map }}; disks missing there
+      have an unreadable NUMA node), are labeled for or claimed by another
+      beegfs_oss entry, or none exist.
   loop: "{{ beegfs_oss | dict2items }}"
   loop_control:
     label: "port {{ item.key }}"

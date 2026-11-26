@@ -44,7 +44,7 @@
     | reject('in', ansible_facts.devices.keys() | list)
     | list | length > 0
 
-- name: Determine candidate BeeGFS disks, excluding the OS disk and statically configured OSS devices
+- name: Determine candidate BeeGFS disks, excluding the OS disk, statically configured OSS devices, and empty or removable disks
   vars:
     # Devices an admin pinned to a beegfs_oss entry via its `devices` list
     # must not also be handed to meta auto-discovery (resolve_meta_device_impl.yml
@@ -58,15 +58,54 @@
         | map(attribute='value.devices') | flatten
         | map('basename') | list
       }}
+  # Zero-size and removable disks are BMC virtual media with nothing (or a
+  # floppy/ISO image) mapped, e.g. Cisco CIMC/vKVM vHDD/vFDD showing up as
+  # sda-sdc - never a storage target. `sectors` is an int on newer
+  # ansible-core and a string on older ones, `removable` is always a string.
   ansible.builtin.set_fact:
     beegfs_candidate_disk_names: >-
       {{
         ansible_facts.devices
-        | dict2items | map(attribute='key')
-        | select('match', beegfs_disk_device_regex)
+        | dict2items
+        | selectattr('key', 'match', beegfs_disk_device_regex)
+        | rejectattr('value.sectors', 'in', [0, '0'])
+        | rejectattr('value.removable', 'in', [1, '1'])
+        | map(attribute='key')
         | reject('in', beegfs_os_whole_disks)
         | reject('in', beegfs_statically_claimed_oss_disk_names)
         | sort | list
+      }}
+
+- name: Resolve each candidate disk's sysfs device path
+  # /sys/class/block/<disk> is a symlink into /sys/devices; its target shows
+  # the bus the disk hangs off (USB) and its PCI ancestor (NUMA node).
+  ansible.builtin.stat:
+    path: "/sys/class/block/{{ item }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  loop: "{{ beegfs_candidate_disk_names }}"
+  register: beegfs_disk_sysfs_stats
+
+- name: Record each candidate disk's sysfs device path
+  ansible.builtin.set_fact:
+    beegfs_disk_sysfs_paths: >-
+      {{
+        dict(beegfs_disk_sysfs_stats.results | map(attribute='item')
+             | zip(beegfs_disk_sysfs_stats.results | map(attribute='stat.lnk_source', default='')))
+      }}
+
+- name: Exclude USB-attached candidate disks
+  # BMC virtual media (CIMC/iDRAC/iLO) and USB sticks or drives that report
+  # a size and aren't flagged removable.
+  ansible.builtin.set_fact:
+    beegfs_candidate_disk_names: >-
+      {{
+        beegfs_candidate_disk_names
+        | reject('in', beegfs_disk_sysfs_paths | dict2items
+                       | selectattr('value', 'search', '/usb[0-9]+/')
+                       | map(attribute='key') | list)
+        | list
       }}
 
 - name: Fail if no BeeGFS candidate disks were found
@@ -81,42 +120,91 @@
   ansible.builtin.fail:
     msg: >-
       No candidate BeeGFS disks found after excluding the OS disk(s)
-      ({{ beegfs_os_whole_disks }}) and devices already statically claimed by
-      a beegfs_oss entry ({{ beegfs_statically_claimed_oss_disk_names }}).
+      ({{ beegfs_os_whole_disks }}), devices already statically claimed by
+      a beegfs_oss entry ({{ beegfs_statically_claimed_oss_disk_names }}),
+      and zero-size, removable, or USB-attached disks.
       Check beegfs_disk_device_regex ({{ beegfs_disk_device_regex }}) against
       this host's block devices.
   when: beegfs_candidate_disk_names | length == 0
 
 - name: Read NUMA node for each candidate disk
+  # /sys/block/<nvmeXnY>/device (and its /sys/class/block alias) is a
+  # symlink to the NVMe *controller* node (nvmeX), not to its PCI function,
+  # so numa_node isn't there - it's one more "device" hop up, at the
+  # controller's own device symlink. Other disks (SCSI, virtio) have no
+  # numa_node of their own: read it from the PCI function closest to the
+  # disk in its sysfs path (the HBA or virtio controller). A disk without
+  # a PCI ancestor isn't read and gets no NUMA node.
+  vars:
+    beegfs_disk_pci_functions: >-
+      {{ beegfs_disk_sysfs_paths[item] | regex_findall('[0-9a-f]{4,}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]') }}
   ansible.builtin.slurp:
-    # /sys/block/<nvmeXnY>/device (and its /sys/class/block alias) is a
-    # symlink to the NVMe *controller* node (nvmeX), not to its PCI
-    # function, so numa_node isn't there - it's one more "device" hop up, at
-    # the controller's own device symlink.
     src: >-
       {{
         ('/sys/class/nvme/' + (item | regex_replace('n[0-9]+$', '')) + '/device/numa_node')
         if (item is match('^nvme[0-9]+n[0-9]+$'))
-        else ('/sys/class/block/' + item + '/device/numa_node')
+        else ('/sys/bus/pci/devices/' + (beegfs_disk_pci_functions | last | default('')) + '/numa_node')
       }}
   loop: "{{ beegfs_candidate_disk_names }}"
   loop_control:
     label: "{{ item }}"
   register: beegfs_disk_numa_raw
+  when: (item is match('^nvme[0-9]+n[0-9]+$')) or (beegfs_disk_pci_functions | length > 0)
   ignore_errors: true
 
 - name: Initialize the disk-to-NUMA-node map
   ansible.builtin.set_fact:
     beegfs_disk_numa_map: {}
 
-- name: Record NUMA node per disk, negative/missing normalized to 0
+# -1 means the kernel has no NUMA affinity for the device (single-node hosts,
+# most VMs), which is node 0. A disk whose numa_node couldn't be read at all
+# has an unknown NUMA node and is left out of the map, so it never lands in
+# a NUMA zone's discovery pool.
+- name: Record NUMA node per disk, -1 normalized to 0, unreadable left out
   ansible.builtin.set_fact:
     beegfs_disk_numa_map: >-
       {{
         beegfs_disk_numa_map | combine({
-          item.item: ([0, (0 if (item.failed or item.content is not defined) else (item.content | b64decode | trim | int))] | max)
+          item.item: ([0, (item.content | b64decode | trim | int)] | max)
         })
       }}
-  loop: "{{ beegfs_disk_numa_raw.results | default([]) }}"
+  loop: "{{ beegfs_disk_numa_raw.results | default([]) | selectattr('content', 'defined') | list }}"
   loop_control:
     label: "{{ item.item }}"
+
+- name: Find existing BeeGFS storage target labels
+  # Read live from /dev/disk/by-label rather than from (possibly cached)
+  # facts: a missing label decides whether a disk gets formatted.
+  ansible.builtin.find:
+    paths: /dev/disk/by-label
+    patterns: "ST-*-*"
+    file_type: link
+  register: beegfs_oss_label_links
+
+- name: Resolve the device behind each storage target label
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  loop: >-
+    {{
+      beegfs_oss_label_links.files | map(attribute='path')
+      | select('match', '^/dev/disk/by-label/ST-[0-9]+-[0-9]+$')
+      | sort | list
+    }}
+  register: beegfs_oss_label_stats
+
+# Label -> device name for every ST-<port>-<index> label on this host, for
+# every port (also ports no longer in beegfs_oss): resolve_oss_port_devices.yml
+# pins them to their port and keeps them out of every discovery pool, and
+# meta discovery never picks them.
+- name: Record the device behind each storage target label
+  vars:
+    beegfs_oss_label_results: "{{ beegfs_oss_label_stats.results | selectattr('stat.lnk_source', 'defined') | list }}"
+  ansible.builtin.set_fact:
+    beegfs_oss_label_devices: >-
+      {{
+        dict(beegfs_oss_label_results | map(attribute='item') | map('basename')
+             | zip(beegfs_oss_label_results | map(attribute='stat.lnk_source') | map('basename')))
+      }}

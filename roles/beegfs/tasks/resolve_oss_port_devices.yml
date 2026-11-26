@@ -1,9 +1,12 @@
 ---
 # Included per beegfs_oss entry (oss_resolve_item, set by the caller's loop)
 # from resolve_oss_devices.yml. Resolves this port's devices label-first:
-# existing ST-<port>-<index> labels are pinned to their current device
-# regardless of name; any remaining index is filled from this NUMA zone's
-# fresh candidate pool, sorted by name (today's original tie-break policy).
+# every existing ST-<port>-<index> label is pinned to its current device
+# regardless of name or NUMA zone, and the labels decide how many slots the
+# port has. Only a port without any label yet (first bootstrap) takes its
+# NUMA zone's whole fresh candidate pool, sorted by name; a labeled port gets
+# fresh devices only with beegfs_oss_discovery_expand. Devices labeled for
+# any port are never in a pool.
 
 - name: Compute this port's NUMA-zone candidate pool
   ansible.builtin.set_fact:
@@ -15,20 +18,9 @@
         | map(attribute='name')
         | reject('equalto', beegfs_meta_dev_name | default(beegfs_meta_dev | default('') | basename))
         | reject('in', beegfs_oss_claimed_disk_names)
+        | reject('in', beegfs_oss_label_devices.values() | list)
         | sort | list
       }}
-
-- name: Determine this port's expected device count
-  ansible.builtin.set_fact:
-    beegfs_oss_resolve_expected_count: "{{ beegfs_oss_resolve_zone_pool | length }}"
-
-- name: Check existing labels for each expected device slot
-  ansible.builtin.stat:
-    path: "/dev/disk/by-label/ST-{{ oss_resolve_item.key }}-{{ item }}"
-  loop: "{{ range(0, beegfs_oss_resolve_expected_count | int) | list }}"
-  loop_control:
-    label: "ST-{{ oss_resolve_item.key }}-{{ item }}"
-  register: beegfs_oss_resolve_label_stats
 
 - name: Initialize this port's resolved-device map
   ansible.builtin.set_fact:
@@ -39,19 +31,51 @@
     beegfs_oss_resolve_resolved: >-
       {{
         beegfs_oss_resolve_resolved | combine({
-          item.item: ((item.stat.lnk_source if item.stat.islnk else item.stat.path) | basename)
+          (item.key | regex_replace('^ST-[0-9]+-', '') | int): item.value
         })
       }}
-    beegfs_oss_device_provisioned: >-
-      {{
-        beegfs_oss_device_provisioned | combine({
-          '/dev/' + ((item.stat.lnk_source if item.stat.islnk else item.stat.path) | basename): true
-        })
-      }}
-  loop: "{{ beegfs_oss_resolve_label_stats.results }}"
+    beegfs_oss_device_provisioned: "{{ beegfs_oss_device_provisioned | combine({'/dev/' + item.value: true}) }}"
+  loop: >-
+    {{
+      beegfs_oss_label_devices | dict2items
+      | selectattr('key', 'match', '^ST-' ~ oss_resolve_item.key ~ '-[0-9]+$')
+      | list
+    }}
   loop_control:
-    label: "slot {{ item.item }}"
-  when: item.stat.exists
+    label: "{{ item.key }}: {{ item.value }}"
+
+- name: Determine this port's expected device count
+  vars:
+    oss_resolve_labeled_count: >-
+      {{ ((beegfs_oss_resolve_resolved.keys() | max) + 1) if beegfs_oss_resolve_resolved else 0 }}
+    oss_resolve_expanded_count: >-
+      {{ [oss_resolve_labeled_count | int, (beegfs_oss_resolve_resolved | length) + (beegfs_oss_resolve_zone_pool | length)] | max }}
+  ansible.builtin.set_fact:
+    beegfs_oss_resolve_expected_count: >-
+      {{
+        (beegfs_oss_resolve_zone_pool | length) if (oss_resolve_labeled_count | int == 0)
+        else (oss_resolve_expanded_count if (beegfs_oss_discovery_expand | bool) else oss_resolve_labeled_count)
+      }}
+
+# A slot below the highest label without a device of its own would get a
+# fresh device, formatted, next to this port's existing targets.
+- name: Fail if a labeled port has a slot without a labeled device
+  vars:
+    oss_resolve_missing_slots: >-
+      {{ range(0, beegfs_oss_resolve_expected_count | int) | reject('in', beegfs_oss_resolve_resolved.keys() | list) | list }}
+  ansible.builtin.fail:
+    msg: >-
+      beegfs_oss port {{ oss_resolve_item.key }} has devices labeled
+      ST-{{ oss_resolve_item.key }}-<index> for slots
+      {{ beegfs_oss_resolve_resolved.keys() | sort | list }}, but none for
+      slot(s) {{ oss_resolve_missing_slots }}. Restore the missing device(s),
+      or set beegfs_oss_discovery_expand to fill them from the unlabeled
+      disks in numa_zone {{ oss_resolve_item.value.numa_zone }}
+      ({{ beegfs_oss_resolve_zone_pool }}), which are then formatted.
+  when:
+    - not (beegfs_oss_discovery_expand | bool)
+    - beegfs_oss_resolve_resolved | length > 0
+    - oss_resolve_missing_slots | length > 0
 
 - name: Fill remaining slots from the fresh candidate pool, excluding already-pinned/filled devices
   ansible.builtin.set_fact:
@@ -62,6 +86,19 @@
   loop: "{{ range(0, beegfs_oss_resolve_expected_count | int) | list | reject('in', beegfs_oss_resolve_resolved.keys() | list) | list }}"
   loop_control:
     label: "slot {{ item }}"
+  when: fill_pool | length > 0
+
+- name: Fail if the fresh candidate pool couldn't fill every slot
+  vars:
+    oss_resolve_missing_slots: >-
+      {{ range(0, beegfs_oss_resolve_expected_count | int) | reject('in', beegfs_oss_resolve_resolved.keys() | list) | list }}
+  ansible.builtin.fail:
+    msg: >-
+      beegfs_oss port {{ oss_resolve_item.key }} has no device for slot(s)
+      {{ oss_resolve_missing_slots }}: numa_zone
+      {{ oss_resolve_item.value.numa_zone }} has no unlabeled, unclaimed
+      candidate disk left.
+  when: oss_resolve_missing_slots | length > 0
 
 - name: Assemble this port's resolved device list, in index order
   ansible.builtin.set_fact:

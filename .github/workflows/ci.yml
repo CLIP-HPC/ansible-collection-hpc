@@ -24,8 +24,7 @@ concurrency:
 
 jobs:
   ci:
-    # TODO: replace with the v1.1.0 tag SHA (currently the feature/collection-ci-speedup head)
-    uses: vbc-it/github-action-workflows/.github/workflows/ansible-collection.yml@a4dfc32aeb97cc80b73f8a915c30bcd316ceadd4
+    uses: vbc-it/github-action-workflows/.github/workflows/ansible-collection.yml@35ed222e0af6476e5459285d3289a5bdf11a7ae8 # v1.1.0
     secrets:
       automationhub_token: ${{ secrets.SVC_TOWER_GITHUB_WRITE_API_TOKEN }}
     with:

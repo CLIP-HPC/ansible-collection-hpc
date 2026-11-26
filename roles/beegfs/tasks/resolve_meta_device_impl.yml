@@ -41,9 +41,19 @@
     beegfs_meta_already_provisioned: true
   when: beegfs_meta_label_stat.stat.exists
 
+# Skips disks labeled as a storage target (ST-<port>-<index>): a metadata
+# label missing next to existing storage labels must not reformat one of them.
 - name: Pick the metadata device - first disk in the lowest NUMA-node group (first bootstrap only)
+  vars:
+    beegfs_meta_fresh_candidates: >-
+      {{
+        beegfs_disk_numa_map
+        | dict2items(key_name='name', value_name='numa')
+        | rejectattr('name', 'in', beegfs_oss_label_devices.values() | list)
+        | sort(attribute='numa,name') | list
+      }}
   ansible.builtin.set_fact:
-    beegfs_meta_dev_name: "{{ beegfs_disk_groups[0][1][0].name }}"
+    beegfs_meta_dev_name: "{{ beegfs_meta_fresh_candidates[0].name }}"
     beegfs_meta_already_provisioned: false
   when: not beegfs_meta_label_stat.stat.exists
 

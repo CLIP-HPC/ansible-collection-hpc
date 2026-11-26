@@ -1,8 +1,12 @@
 ---
 # Compares the NUMA node reported by sysfs for each entry in numa_checks
 # against that entry's zone. Expects numa_checks to be set by the caller as a
-# list of {path, label, zone, service} (service being the BeeGFS service
-# validated, for the error message). Loops instead of being included once per
+# list of {path, label, zone, service, warn_only, alternatives} (service being
+# the BeeGFS service validated, for the error message). Optional: warn_only
+# reports a mismatch instead of failing; alternatives (label -> NUMA node
+# sysfs path, e.g. all NICs the service could use) reports a mismatch instead
+# of failing when none of them is on the entry's zone either, so there is
+# nothing local to switch to. Loops instead of being included once per
 # entry, so all hosts run these tasks together.
 
 - name: Check availability of NUMA node info
@@ -22,14 +26,49 @@
   register: beegfs_numa_check_raw
   when: item.stat.exists
 
+# An alternative without a readable NUMA node (e.g. an advanced filter syntax
+# entry instead of an interface name) never counts as local.
+- name: Read NUMA node of the alternatives
+  ansible.builtin.slurp:
+    src: "{{ item }}"
+  loop: >-
+    {{
+      numa_checks | map(attribute='alternatives', default={})
+      | map('dict2items') | flatten | map(attribute='value') | unique | list
+    }}
+  register: beegfs_numa_check_alt_raw
+  failed_when: false
+
+- name: Record NUMA node per alternative
+  vars:
+    beegfs_numa_check_alt_read: "{{ beegfs_numa_check_alt_raw.results | selectattr('content', 'defined') | list }}"
+  ansible.builtin.set_fact:
+    beegfs_numa_check_alt_nodes: >-
+      {{
+        dict(beegfs_numa_check_alt_read | map(attribute='item')
+             | zip(beegfs_numa_check_alt_read | map(attribute='content') | map('b64decode') | map('trim') | map('int')))
+      }}
+
 - name: Fail on tuneBindToNumaZone mismatch
   vars:
     numa_check: "{{ item.item.item }}"
     beegfs_numa_check_node: "{{ item.content | b64decode | trim }}"
+    beegfs_numa_check_local_alternatives: >-
+      {{
+        numa_check.alternatives | default({}) | dict2items
+        | selectattr('value', 'in', beegfs_numa_check_alt_nodes | dict2items
+                                    | selectattr('value', 'equalto', numa_check.zone | int)
+                                    | map(attribute='key') | list)
+        | map(attribute='key') | list
+      }}
   ansible.builtin.fail:
     msg: >-
       {{ numa_check.label }} is attached to NUMA node {{ beegfs_numa_check_node }},
       but tuneBindToNumaZone is set to {{ numa_check.zone }} for {{ numa_check.service }}.
+      {% if beegfs_numa_check_local_alternatives | length > 0 %}
+      {{ beegfs_numa_check_local_alternatives | join(', ') }} is attached to
+      NUMA node {{ numa_check.zone }} - put it first.
+      {% endif %}
   loop: "{{ beegfs_numa_check_raw.results }}"
   loop_control:
     label: "{{ item.item.item.label }}"
@@ -37,3 +76,35 @@
     - item.content is defined
     - beegfs_numa_check_node | int >= 0
     - beegfs_numa_check_node | int != numa_check.zone | int
+    - not (numa_check.warn_only | default(false) | bool)
+    - numa_check.alternatives is not defined or beegfs_numa_check_local_alternatives | length > 0
+
+- name: Warn on tuneBindToNumaZone mismatch
+  vars:
+    numa_check: "{{ item.item.item }}"
+    beegfs_numa_check_node: "{{ item.content | b64decode | trim }}"
+    beegfs_numa_check_local_alternatives: >-
+      {{
+        numa_check.alternatives | default({}) | dict2items
+        | selectattr('value', 'in', beegfs_numa_check_alt_nodes | dict2items
+                                    | selectattr('value', 'equalto', numa_check.zone | int)
+                                    | map(attribute='key') | list)
+        | map(attribute='key') | list
+      }}
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: {{ numa_check.label }} is attached to NUMA node
+      {{ beegfs_numa_check_node }}, but tuneBindToNumaZone is set to
+      {{ numa_check.zone }} for {{ numa_check.service }}.
+      {% if numa_check.alternatives is defined and not (numa_check.warn_only | default(false) | bool) %}
+      None of {{ numa_check.alternatives.keys() | join(', ') }} is attached to
+      NUMA node {{ numa_check.zone }}, so its traffic crosses NUMA nodes.
+      {% endif %}
+  loop: "{{ beegfs_numa_check_raw.results }}"
+  loop_control:
+    label: "{{ item.item.item.label }}"
+  when:
+    - item.content is defined
+    - beegfs_numa_check_node | int >= 0
+    - beegfs_numa_check_node | int != numa_check.zone | int
+    - (numa_check.warn_only | default(false) | bool) or (numa_check.alternatives is defined and beegfs_numa_check_local_alternatives | length == 0)

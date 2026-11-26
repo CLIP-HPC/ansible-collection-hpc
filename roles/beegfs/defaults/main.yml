@@ -118,7 +118,16 @@ beegfs_oss_path_prefix: "/data/beegfs/beegfs_oss"
 beegfs_oss: {}
 # Regex matching candidate whole-disk device names eligible for BeeGFS OSS
 # auto-discovery. Only used for beegfs_oss entries that omit `devices`.
+# Zero-size, removable, and USB-attached disks (e.g. BMC virtual media) and
+# disks whose NUMA node can't be read are never candidates. Narrow it, e.g. to
+# '^nvme[0-9]+n[0-9]+$', on hosts with other disks that must not be used.
 beegfs_disk_device_regex: '^(nvme[0-9]+n[0-9]+|vd[a-z]|sd[a-z])$'
+# Let a discovered beegfs_oss entry that already has ST-<port>-<index> labels
+# take unlabeled disks from its numa_zone: they fill slots without a labeled
+# device and are added after the labeled ones, and are formatted. Without it
+# a labeled entry keeps exactly its labeled devices, and the role fails if a
+# slot below its highest label has no device.
+beegfs_oss_discovery_expand: false
 # Device path -> bool, populated by resolve_oss_devices.yml: true if that
 # device was resolved from an existing ST-<port>-<idx> filesystem label
 # (already provisioned in a previous run), false if freshly discovered.

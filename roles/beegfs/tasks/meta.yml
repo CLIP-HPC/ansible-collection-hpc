@@ -1,5 +1,97 @@
 ---
 
+# Resolved and validated first, before the metadata device is formatted and
+# beegfs-setup-meta runs, so a NIC/NUMA config error stops the run before
+# anything on the host changes.
+- name: Default the metadata service's interfaces to beegfs_meta_interfaces or beegfs_interfaces
+  ansible.builtin.set_fact:
+    beegfs_meta_resolved_interfaces: "{{ beegfs_meta_interfaces | default([], true) or beegfs_interfaces }}"
+  tags: interfaces
+
+# Mirrors the per-OSS NIC ordering in oss_discovery.yml: without it the meta
+# service would prefer whichever NIC happens to come first in
+# beegfs_interfaces, even if it sits on the other NUMA zone than the one
+# tuneBindToNumaZone pins the service to.
+- name: Order the metadata service's interfaces NUMA-local NIC(s) first
+  when:
+    - beegfs_meta_interfaces | default([], true) | length == 0
+    - beegfs_meta_tune_bind_to_numa_zone is not none
+    - beegfs_meta_tune_bind_to_numa_zone | string | length > 0
+    - beegfs_interfaces | length > 0
+  tags: interfaces
+  block:
+    - name: Map each configured BeeGFS interface to its NUMA node
+      ansible.builtin.import_tasks: nic_numa_map.yml
+
+    # beegfs_numa_nic_fallback decides whether the non-local NIC(s) follow as
+    # an HA fallback or are left out, so meta only ever uses local NIC(s).
+    - name: Put the NIC(s) local to the metadata service's NUMA zone first
+      ansible.builtin.set_fact:
+        beegfs_meta_resolved_interfaces: >-
+          {{ local_nics + ((beegfs_interfaces | reject('in', local_nics) | list) if beegfs_numa_nic_fallback | bool else []) }}
+      vars:
+        local_nic_names: >-
+          {{
+            beegfs_nic_numa_map
+            | dict2items(key_name='nic', value_name='numa')
+            | selectattr('numa', 'equalto', beegfs_meta_tune_bind_to_numa_zone | int)
+            | map(attribute='nic') | list
+          }}
+        local_nics: "{{ beegfs_interfaces | select('in', local_nic_names) | list }}"
+
+    # An empty connInterfacesFile would let BeeGFS use every interface, the
+    # opposite of what beegfs_numa_nic_fallback=false asks for.
+    - name: Fail if no configured NIC is local to the metadata service's NUMA zone while fallback is disabled
+      ansible.builtin.fail:
+        msg: >-
+          None of beegfs_interfaces {{ beegfs_interfaces }} is attached to NUMA
+          zone {{ beegfs_meta_tune_bind_to_numa_zone }}, which the metadata
+          service is bound to, and beegfs_numa_nic_fallback is false - add a
+          local NIC, set beegfs_meta_interfaces, or enable the fallback.
+      when: beegfs_meta_resolved_interfaces | length == 0
+
+# With beegfs_numa_nic_fallback the remaining NICs are an HA fallback, so only
+# the preferred one must be local, and a remote one is only reported when none
+# of the service's or beegfs_interfaces' NICs is local; without it every NIC
+# must be.
+- name: Validate metadata NIC(s) are attached to the configured NUMA zone
+  when:
+    - beegfs_meta_tune_bind_to_numa_zone is not none
+    - beegfs_meta_tune_bind_to_numa_zone | string | length > 0
+  tags: interfaces
+  block:
+    - name: Reset the metadata NIC(s) to validate
+      ansible.builtin.set_fact:
+        beegfs_meta_numa_checks: []
+
+    - name: Collect the metadata NIC(s) to validate
+      vars:
+        meta_nic_names: "{{ (beegfs_meta_resolved_interfaces + beegfs_interfaces) | unique | list }}"
+        meta_nic_check: >-
+          {{
+            {'path': '/sys/class/net/' ~ item ~ '/device/numa_node',
+             'label': ('Preferred NIC' if beegfs_numa_nic_fallback | bool else 'NIC') ~ ' ' ~ item,
+             'zone': beegfs_meta_tune_bind_to_numa_zone,
+             'service': 'the BeeGFS metadata service'}
+          }}
+        meta_nic_alternatives: >-
+          {{
+            {'alternatives': dict(meta_nic_names
+                                  | zip(meta_nic_names | map('regex_replace', '^', '/sys/class/net/') | map('regex_replace', '$', '/device/numa_node')))}
+          }}
+      ansible.builtin.set_fact:
+        beegfs_meta_numa_checks: >-
+          {{
+            beegfs_meta_numa_checks
+            + [meta_nic_check | combine(meta_nic_alternatives if beegfs_numa_nic_fallback | bool else {})]
+          }}
+      loop: "{{ beegfs_meta_resolved_interfaces[:1] if beegfs_numa_nic_fallback | bool else beegfs_meta_resolved_interfaces }}"
+
+    - name: Validate the collected metadata NIC(s)
+      ansible.builtin.import_tasks: numa_check.yml
+      vars:
+        numa_checks: "{{ beegfs_meta_numa_checks }}"
+
 - name: Create directory for BeeGFS metadata
   ansible.builtin.file:
     path: "{{ beegfs_meta_path }}"
@@ -111,83 +203,6 @@
     - beegfs_meta_force_format | bool
     - beegfs_meta_registration_token.content is defined
   notify: Restart BeeGFS meta service
-
-- name: Default the metadata service's interfaces to beegfs_meta_interfaces or beegfs_interfaces
-  ansible.builtin.set_fact:
-    beegfs_meta_resolved_interfaces: "{{ beegfs_meta_interfaces | default([], true) or beegfs_interfaces }}"
-  tags: interfaces
-
-# Mirrors the per-OSS NIC ordering in oss_discovery.yml: without it the meta
-# service would prefer whichever NIC happens to come first in
-# beegfs_interfaces, even if it sits on the other NUMA zone than the one
-# tuneBindToNumaZone pins the service to.
-- name: Order the metadata service's interfaces NUMA-local NIC(s) first
-  when:
-    - beegfs_meta_interfaces | default([], true) | length == 0
-    - beegfs_meta_tune_bind_to_numa_zone is not none
-    - beegfs_meta_tune_bind_to_numa_zone | string | length > 0
-    - beegfs_interfaces | length > 0
-  tags: interfaces
-  block:
-    - name: Map each configured BeeGFS interface to its NUMA node
-      ansible.builtin.import_tasks: nic_numa_map.yml
-
-    # beegfs_numa_nic_fallback decides whether the non-local NIC(s) follow as
-    # an HA fallback or are left out, so meta only ever uses local NIC(s).
-    - name: Put the NIC(s) local to the metadata service's NUMA zone first
-      ansible.builtin.set_fact:
-        beegfs_meta_resolved_interfaces: >-
-          {{ local_nics + ((beegfs_interfaces | reject('in', local_nics) | list) if beegfs_numa_nic_fallback | bool else []) }}
-      vars:
-        local_nic_names: >-
-          {{
-            beegfs_nic_numa_map
-            | dict2items(key_name='nic', value_name='numa')
-            | selectattr('numa', 'equalto', beegfs_meta_tune_bind_to_numa_zone | int)
-            | map(attribute='nic') | list
-          }}
-        local_nics: "{{ beegfs_interfaces | select('in', local_nic_names) | list }}"
-
-    # An empty connInterfacesFile would let BeeGFS use every interface, the
-    # opposite of what beegfs_numa_nic_fallback=false asks for.
-    - name: Fail if no configured NIC is local to the metadata service's NUMA zone while fallback is disabled
-      ansible.builtin.fail:
-        msg: >-
-          None of beegfs_interfaces {{ beegfs_interfaces }} is attached to NUMA
-          zone {{ beegfs_meta_tune_bind_to_numa_zone }}, which the metadata
-          service is bound to, and beegfs_numa_nic_fallback is false - add a
-          local NIC, set beegfs_meta_interfaces, or enable the fallback.
-      when: beegfs_meta_resolved_interfaces | length == 0
-
-# With beegfs_numa_nic_fallback the remaining NICs are an HA fallback, so only
-# the preferred one must be local; without it every NIC must be.
-- name: Validate metadata NIC(s) are attached to the configured NUMA zone
-  when:
-    - beegfs_meta_tune_bind_to_numa_zone is not none
-    - beegfs_meta_tune_bind_to_numa_zone | string | length > 0
-  tags: interfaces
-  block:
-    - name: Reset the metadata NIC(s) to validate
-      ansible.builtin.set_fact:
-        beegfs_meta_numa_checks: []
-
-    - name: Collect the metadata NIC(s) to validate
-      ansible.builtin.set_fact:
-        beegfs_meta_numa_checks: >-
-          {{
-            beegfs_meta_numa_checks + [{
-              'path': '/sys/class/net/' ~ item ~ '/device/numa_node',
-              'label': ('Preferred NIC' if beegfs_numa_nic_fallback | bool else 'NIC') ~ ' ' ~ item,
-              'zone': beegfs_meta_tune_bind_to_numa_zone,
-              'service': 'the BeeGFS metadata service',
-            }]
-          }}
-      loop: "{{ beegfs_meta_resolved_interfaces[:1] if beegfs_numa_nic_fallback | bool else beegfs_meta_resolved_interfaces }}"
-
-    - name: Validate the collected metadata NIC(s)
-      ansible.builtin.import_tasks: numa_check.yml
-      vars:
-        numa_checks: "{{ beegfs_meta_numa_checks }}"
 
 - name: Create connInterfacesFile for BeeGFS metadata server
   vars:

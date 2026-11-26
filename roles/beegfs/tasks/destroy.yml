@@ -23,7 +23,7 @@
     - { name: "beegfs-mgmtd.service", enable: "{{ beegfs_enable.mgmt | default(false) }}" }
     - { name: "beegfs-meta.service", enable: "{{ beegfs_enable.meta | default(false) }}" }
     - { name: "beegfs-mon.service", enable: "{{ beegfs_enable.mon | default(false) }}" }
-    - { name: beegfs-oss-tuning, enable: "{{ beegfs_enable.tuning | default(false) }}" }
+    - { name: "beegfs-oss-tuning.service", enable: "{{ beegfs_enable.tuning | default(false) }}" }
 
 - name: Stop BeeGFS storage services
   become: true

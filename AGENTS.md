@@ -14,7 +14,7 @@
 - Syntax check a playbook: `ansible-playbook --syntax-check playbooks/<playbook>.yml`
 - Dry run with diff: `ansible-playbook -C <playbook>.yml --diff`
 - Molecule scenarios live under `extensions/molecule/<role>/<platform>/` (e.g. `slurm/rhel9`, `slurm/rhel10`, `beegfs/rhel10`, `doca/rhel9`), not in `roles/<role>/molecule/`, and share `extensions/molecule/config.yml` (Galaxy requirements from `tests/requirements.yml`) and the inventory in `extensions/molecule/inventory/`. The default test sequence includes an idempotence step.
-- CI (`.github/workflows/ci.yml`) delegates to the reusable workflow `vbc-it/github-action-workflows/.github/workflows/ansible-collection.yml` on a self-hosted runner with `molecule_env_file: ansible.env`, and publishes to Automation Hub on success.
+- CI (`.github/workflows/ci.yml`) delegates to the reusable workflow `vbc-it/github-action-workflows/.github/workflows/ansible-collection.yml` on a self-hosted runner with `molecule_env_file: ansible.env`, and publishes to Automation Hub on success. It runs on pull requests, pushes to `main`, tags, and a weekly schedule; tag and scheduled runs test all roles, so a release publishes only after every Molecule scenario passes. Otherwise Molecule runs the scenarios of changed roles, or of all roles when `plugins/`, shared `extensions/molecule/` files, `tests/requirements.yml`, `pyproject.toml`, `uv.lock` or `ansible.env` change. Keep `sanity_ansible_versions` in line with `requires_ansible` in `meta/runtime.yml`.
 - Run `ansible-lint` before every commit.
 
 ## Conventions

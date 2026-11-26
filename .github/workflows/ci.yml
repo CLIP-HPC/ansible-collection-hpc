@@ -1,18 +1,38 @@
 ---
 name: CI
 on:
-  # Run CI against all pushes (direct commits, also merged PRs), Pull Requests
+  # Pushes to PR branches run CI only through pull_request, so each push starts one run.
+  # push covers merged PRs on main and release tags; tag runs test all roles before
+  # publishing (see force_all_roles below).
   push:
+    branches:
+      - main
+    tags:
+      - '*'
   pull_request:
-  # schedule:
-  #   - cron: '0 6 * * *'
+  # Weekly run of all roles and scenarios to catch drift such as new AlmaLinux point
+  # releases or box versions. workflow_dispatch runs all roles too.
+  schedule:
+    - cron: '0 4 * * 1'
   workflow_dispatch:
+
+# A newer push to a PR cancels its running CI. Runs for main, tags (publishing) and the
+# schedule each get their own group, so they are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ci:
-    uses: vbc-it/github-action-workflows/.github/workflows/ansible-collection.yml@v1.0.0
+    uses: vbc-it/github-action-workflows/.github/workflows/ansible-collection.yml@35ed222e0af6476e5459285d3289a5bdf11a7ae8 # v1.1.0
     secrets:
       automationhub_token: ${{ secrets.SVC_TOWER_GITHUB_WRITE_API_TOKEN }}
     with:
       platform: self-hosted
       molecule_env_file: ansible.env
       publish_to_automationhub: true
+      # A tag run would otherwise find no changed roles and skip Molecule, so publish
+      # would not wait for any scenario. Run all of them before publishing a release.
+      force_all_roles: ${{ github.ref_type == 'tag' }}
+      # From requires_ansible in meta/runtime.yml (>=2.15.0) to the current stable release.
+      sanity_ansible_versions: '["stable-2.15", "stable-2.16", "stable-2.17", "stable-2.18", "stable-2.19", "stable-2.20", "stable-2.21", "stable-2.22"]'

@@ -11,6 +11,8 @@ v3.23.0
 - beegfs: Leave zero-size, removable, and USB-attached disks out of metadata and OSS device auto-discovery. Cisco CIMC/vKVM virtual media (``sda``-``sdc``, 0 bytes) matched ``beegfs_disk_device_regex`` and were planned as new storage targets
 - beegfs: Read the NUMA node of a non-NVMe candidate disk from the closest PCI device in its sysfs path (HBA, virtio controller), and leave a disk whose NUMA node can't be read out of discovery. It was read from ``/sys/class/block/<disk>/device/numa_node``, which SCSI and virtio disks don't have, so every such disk was put in zone 0
 - beegfs: An OSS device resolved from its existing label that is attached to another NUMA node than its port's ``numa_zone`` now gives a warning instead of failing the run, since the device keeps its port
+- beegfs: With ``beegfs_numa_nic_fallback``, a metadata service or OSS port whose preferred NIC is on another NUMA node than its ``tuneBindToNumaZone`` now gives a warning instead of failing when none of its NICs and none of ``beegfs_interfaces`` is on that NUMA node. A host with all BeeGFS NICs on one NUMA node couldn't run a service on the other. It still fails when a local NIC exists, and names it
+- beegfs: Order and check the metadata service's NICs before formatting the metadata device and running ``beegfs-setup-meta``. A failing check left a fresh host with a formatted, set-up metadata target
 
 v3.22.0
 =======

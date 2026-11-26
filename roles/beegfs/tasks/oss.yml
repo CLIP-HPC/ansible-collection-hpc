@@ -53,20 +53,31 @@
     label: "{{ item.dev }}"
 
 # With beegfs_numa_nic_fallback the remaining NICs are an HA fallback, so only
-# the preferred one must be local; without it every NIC must be.
+# the preferred one must be local, and a remote one is only reported when none
+# of the port's or beegfs_interfaces' NICs is local; without it every NIC must
+# be.
 - name: Collect OSS NIC(s) to validate against their port's NUMA zone
   vars:
     oss_port: "{{ item.0 }}"
     oss_nic: "{{ item.1 }}"
+    oss_nic_names: "{{ (oss_port.interfaces + beegfs_interfaces) | unique | list }}"
+    oss_nic_check: >-
+      {{
+        {'path': '/sys/class/net/' ~ oss_nic ~ '/device/numa_node',
+         'label': ('Preferred NIC' if beegfs_numa_nic_fallback | bool else 'NIC') ~ ' ' ~ oss_nic,
+         'zone': oss_port.numa_zone,
+         'service': 'BeeGFS storage port ' ~ oss_port.port}
+      }}
+    oss_nic_alternatives: >-
+      {{
+        {'alternatives': dict(oss_nic_names
+                              | zip(oss_nic_names | map('regex_replace', '^', '/sys/class/net/') | map('regex_replace', '$', '/device/numa_node')))}
+      }}
   ansible.builtin.set_fact:
     beegfs_oss_numa_checks: >-
       {{
-        beegfs_oss_numa_checks + [{
-          'path': '/sys/class/net/' ~ oss_nic ~ '/device/numa_node',
-          'label': ('Preferred NIC' if beegfs_numa_nic_fallback | bool else 'NIC') ~ ' ' ~ oss_nic,
-          'zone': oss_port.numa_zone,
-          'service': 'BeeGFS storage port ' ~ oss_port.port,
-        }]
+        beegfs_oss_numa_checks
+        + [oss_nic_check | combine(oss_nic_alternatives if beegfs_numa_nic_fallback | bool else {})]
       }}
   loop: "{{ beegfs_oss_ports | rejectattr('numa_zone', 'none') | list | subelements('interfaces') }}"
   loop_control:

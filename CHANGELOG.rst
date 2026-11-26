@@ -5,6 +5,10 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.23.1
+=======
+- beegfs: With ``beegfs_state: absent``, stop ``beegfs-oss-tuning.service`` together with the other BeeGFS services. The item was listed without the ``.service`` suffix, so it never matched the ``service_facts`` keys and was always skipped, leaving the service running
+
 v3.23.0
 =======
 - beegfs: **Breaking:** OSS device auto-discovery now resolves every existing ``ST-<port>-<index>`` label first, for all ports, and the labels set how many devices a port has, instead of the number of disks in the port's ``numa_zone``. Labeled devices outside the zone filled extra slots of the first port, a device labeled for a later port could be taken by an earlier one, and the remaining slots took unlabeled disks that were then formatted next to the live targets. A device labeled for any port is no longer picked for another port or as the metadata device. A port with labels only gets unlabeled disks with ``beegfs_oss_discovery_expand`` (new variable, default ``false``), which fills slots without a labeled device and adds new disks; without it, unlabeled disks in the zone stay unused and the role fails if a slot below the port's highest label has no device. Set it for the run that adds or replaces disks

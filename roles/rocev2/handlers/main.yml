@@ -2,6 +2,7 @@
 - name: Reboot server
   ansible.builtin.reboot:
     post_reboot_delay: 30
+  when: rocev2_reboot | bool
 
 # handlers file for clip.hpc.rocev2
 # Both units are oneshot with RemainAfterExit=yes, so they stay active after the script ran and

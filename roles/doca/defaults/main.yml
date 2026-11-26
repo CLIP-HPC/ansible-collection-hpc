@@ -5,3 +5,6 @@ doca_profile: doca-ofed
 _doca_arch: "{{ (ansible_architecture == 'aarch64') | ternary('arm64-sbsa', 'x86_64') }}"
 doca_repo_url: "https://linux.mellanox.com/public/repo/doca/{{ doca_version }}/rhel{{ ansible_distribution_major_version }}/{{ _doca_arch }}/"
 doca_use_upstream_repo: true
+# Reboot the host when the DOCA packages are installed. When false the role only reports that
+# a reboot is required (doca_reboot_required fact, /run/reboot-required).
+doca_reboot: false

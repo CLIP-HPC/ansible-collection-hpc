@@ -17,3 +17,14 @@
           mlnx-ofa_kernel is not installed via DKMS.
           dkms status output was:
           {{ dkms_status.stdout }}
+
+    - name: Read /run/reboot-required
+      ansible.builtin.slurp:
+        src: /run/reboot-required
+      register: reboot_required
+
+    - name: Assert the role asked for a reboot instead of rebooting
+      ansible.builtin.assert:
+        that:
+          - (reboot_required.content | b64decode) is search('(?m)^clip\.hpc\.doca: DOCA packages installed$')
+        fail_msg: "/run/reboot-required doesn't name the DOCA packages."

@@ -79,6 +79,23 @@
   loop_control:
     label: "{{ item.item }}"
 
+# Built from the query, which also runs in check mode, so a dry run reports the settings that
+# would change and the reboot they need, although the mlxconfig set commands below are skipped.
+- name: dcbx | Reset MLX firmware settings to change
+  ansible.builtin.set_fact:
+    rocev2_mlx_pending_settings: []
+
+- name: dcbx | Store MLX firmware settings to change
+  ansible.builtin.set_fact:
+    rocev2_mlx_pending_settings: "{{ rocev2_mlx_pending_settings + [item.0.0.key ~ ' ' ~ item.0.1 ~ '=' ~ item.1] }}"
+  loop: >-
+    {{
+      (rocev2_lldp_nb_dcbx_ports | dict2items | subelements('value', skip_missing=True) | product([1]) | list)
+      + (rocev2_lldp_nb_rx_mode_ports | dict2items | subelements('value', skip_missing=True) | product([2]) | list)
+      + (rocev2_lldp_nb_tx_mode_ports | dict2items | subelements('value', skip_missing=True) | product([2]) | list)
+    }}
+  loop_control:
+    label: "{{ item.0.0.key }} / {{ item.0.1 }}={{ item.1 }}"
 
 - name: dcbx | Enable LLDP DCBX on all ports
   become: true
@@ -116,5 +133,38 @@
   changed_when: true
   notify: Reboot server
 
+# mlxconfig only changes the configuration for the next boot: the settings take effect after a reboot.
+- name: dcbx | Record that the MLX firmware settings need a reboot
+  ansible.builtin.set_fact:
+    rocev2_reboot_required: true
+  when: rocev2_mlx_pending_settings | length > 0
+
+- name: dcbx | Report MLX firmware settings that need a reboot
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'Would change' if ansible_check_mode else 'Changed' }} MLX firmware settings that take
+      effect after a reboot: {{ rocev2_mlx_pending_settings | join(', ') }}.
+      {{
+        ('The host ' ~ ('would be' if ansible_check_mode else 'is') ~ ' rebooted now (rocev2_reboot is true).')
+        if rocev2_reboot | bool else
+        'rocev2_reboot is false, so the host is not rebooted: reboot it to apply them (see /run/reboot-required).'
+      }}
+  when: rocev2_reboot_required | bool
+
+- name: dcbx | Mark that a reboot is required
+  become: true
+  ansible.builtin.lineinfile:
+    path: /run/reboot-required
+    line: "clip.hpc.rocev2: MLX firmware settings changed"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - rocev2_reboot_required | bool
+    - not rocev2_reboot | bool
+
+# Runs the Reboot server handler, which only reboots with rocev2_reboot, before the QoS service
+# is started below.
 - name: dcbx | Flush handlers
   ansible.builtin.meta: flush_handlers

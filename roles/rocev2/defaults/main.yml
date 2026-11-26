@@ -1,5 +1,8 @@
 ---
 # defaults file for clip.hpc.rocev2
+# Reboot the host when the MLX firmware settings change. When false the role only reports that
+# a reboot is required (rocev2_reboot_required fact, /run/reboot-required).
+rocev2_reboot: false
 rocev2_mlx_qos_service_state: started
 rocev2_irq_affinity_enabled: false
 rocev2_irq_affinity_service_state: started

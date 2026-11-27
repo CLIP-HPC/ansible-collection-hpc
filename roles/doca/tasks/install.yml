@@ -21,6 +21,37 @@
   register: _doca_install
   notify: Reboot machine
 
+# The new kernel modules are only loaded after a reboot.
+- name: install | Record whether the DOCA packages need a reboot
+  ansible.builtin.set_fact:
+    doca_reboot_required: "{{ _doca_install is changed }}"
+
+- name: install | Report that the DOCA packages need a reboot
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'Would install' if ansible_check_mode else 'Installed' }} the DOCA packages ({{ doca_profile }}),
+      whose drivers are loaded after a reboot.
+      {{
+        ('The host ' ~ ('would be' if ansible_check_mode else 'is') ~ ' rebooted now (doca_reboot is true).')
+        if doca_reboot | bool else
+        'doca_reboot is false, so the host is not rebooted: reboot it to load them (see /run/reboot-required).'
+      }}
+  when: doca_reboot_required | bool
+
+- name: install | Mark that a reboot is required
+  become: true
+  ansible.builtin.lineinfile:
+    path: /run/reboot-required
+    line: "clip.hpc.doca: DOCA packages installed"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - doca_reboot_required | bool
+    - not doca_reboot | bool
+
+# Runs the Reboot machine handler, which only reboots with doca_reboot.
 - name: install | Notify handlers
   ansible.builtin.meta: flush_handlers
 

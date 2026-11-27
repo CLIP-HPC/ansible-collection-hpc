@@ -5,6 +5,11 @@ clip.hpc Release Notes
 .. contents:: Topics
 
 
+v3.24.0
+=======
+- rocev2: **Breaking:** Only reboot after changing the MLX firmware (LLDP DCBX) settings with ``rocev2_reboot: true`` (new variable, default ``false``). The role rebooted the host right away, on every affected host of the play at once, and a check-mode run didn't show it. Without ``rocev2_reboot``, the role now sets the fact ``rocev2_reboot_required``, adds a line to ``/run/reboot-required`` and prints the devices and settings it changed, so the caller can reboot through its own path, such as ``scontrol reboot ASAP``. In check mode it prints the settings it would change and that they need a reboot. Set ``rocev2_reboot: true`` to keep the automatic reboot
+- doca: **Breaking:** Only reboot after installing the DOCA packages with ``doca_reboot: true`` (new variable, default ``false``). Without it, the role now sets the fact ``doca_reboot_required``, adds a line to ``/run/reboot-required`` and prints that a reboot is needed, also in check mode. Set ``doca_reboot: true`` to keep the automatic reboot
+
 v3.23.1
 =======
 - beegfs: With ``beegfs_state: absent``, stop ``beegfs-oss-tuning.service`` together with the other BeeGFS services. The item was listed without the ``.service`` suffix, so it never matched the ``service_facts`` keys and was always skipped, leaving the service running

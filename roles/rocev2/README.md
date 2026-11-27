@@ -7,6 +7,7 @@ This role configured NVIDIA NIC firmwware swettings to trust DSCP and configure 
 
 | Variable                    | Default   | Description                                                                                                                                       |
 |------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `rocev2_reboot` | `false` | Reboot the host right after the role changes the MLX firmware (LLDP DCBX) settings, which only take effect after a reboot. When `false` (the default), the role doesn't reboot and reports that a reboot is required instead (see [Reboot](#reboot)). |
 | `rocev2_mlx_qos_service_state` | `started` | State of the `mlnx-roce-qos` service set when the script or unit changes. `started` restarts the service then, so the updated QoS settings are applied. |
 | `rocev2_irq_affinity_enabled` | `false` | Whether to apply the IRQ affinity optimization (disable/mask `irqbalance`, install and run `mlnx-irq-affinity`). When `false` (the default), the role does not touch `irqbalance` and does not install, manage, or start the `mlnx-irq-affinity` service; an already-installed service from a previous run is left as-is. |
 | `rocev2_irq_affinity_service_state` | `started` | State of the `mlnx-irq-affinity` service. `started` restarts the service when the script or unit changes, so the updated IRQ affinity is applied. Only applies when `rocev2_irq_affinity_enabled` is `true`. |
@@ -26,6 +27,23 @@ currently has an override set; if it's already unmanaged, nothing changes. This 
 live-applied — the driver's own default ring size only takes effect the next time the interface
 reconnects or the host reboots, since that's when NetworkManager stops re-asserting a value it no
 longer manages.
+
+## Reboot
+
+The role sets `LLDP_NB_DCBX_P<n>`, `LLDP_NB_RX_MODE_P<n>` and `LLDP_NB_TX_MODE_P<n>` with
+`mlxconfig` on every configurable MLX device where they differ. `mlxconfig` changes the
+configuration for the next boot, so the settings only take effect after a reboot. The role:
+
+- sets the fact `rocev2_reboot_required` to `true` when it changes a setting (`false` otherwise),
+- prints the devices and settings it changes, also in check mode, where it reports the settings it
+  would change,
+- with `rocev2_reboot: false` (the default), adds the line `clip.hpc.rocev2: MLX firmware settings
+  changed` to `/run/reboot-required` and doesn't reboot. Reboot the host through your own path,
+  such as `scontrol reboot ASAP` for a Slurm node or one storage server at a time,
+- with `rocev2_reboot: true`, reboots the host right away, before it starts the QoS service.
+
+A later run doesn't see the settings as pending: `mlxconfig` reports the next-boot values, which
+are already set. `/run/reboot-required` stays until the host reboots.
 
 ## QoS and IRQ affinity services
 

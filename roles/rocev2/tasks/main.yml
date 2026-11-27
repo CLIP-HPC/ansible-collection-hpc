@@ -1,4 +1,8 @@
 ---
+- name: Reset reboot required flag
+  ansible.builtin.set_fact:
+    rocev2_reboot_required: false
+
 - name: Import install.yml tasks
   ansible.builtin.import_tasks: install.yml
 
